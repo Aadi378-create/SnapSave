@@ -1,0 +1,1871 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SnapSave - AI Concierge Grocery Optimizer</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <!-- FontAwesome -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+
+    <style>
+      :root {
+        --bg-dark: #060913;
+        --bg-surface: #0c1222;
+        --bg-card: rgba(14, 22, 40, 0.7);
+        --bg-card-hover: rgba(20, 32, 58, 0.85);
+        --border: rgba(255, 255, 255, 0.08);
+        --border-bright: rgba(255, 255, 255, 0.15);
+        --primary: #3b82f6;
+        --primary-glow: rgba(59, 130, 246, 0.28);
+        --primary-hover: #2563eb;
+        --accent-cyan: #06b6d4;
+        --accent-green: #10b981;
+        --accent-orange: #f97316;
+        --accent-purple: #8b5cf6;
+        --text-main: #f8fafc;
+        --text-muted: #94a3b8;
+        --text-dim: #475569;
+        --font-title: "Outfit", sans-serif;
+        --font-body: "Plus Jakarta Sans", sans-serif;
+        --font-mono: "JetBrains Mono", monospace;
+        --radius-sm: 8px;
+        --radius-md: 12px;
+        --radius-lg: 18px;
+        --radius-xl: 24px;
+        --ease: cubic-bezier(0.4, 0, 0.2, 1);
+        --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+
+      body {
+        font-family: var(--font-body);
+        background-color: var(--bg-dark);
+        color: var(--text-main);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow-x: hidden;
+        background-image:
+          radial-gradient(ellipse 90% 60% at 20% -10%, rgba(59, 130, 246, 0.12) 0%, transparent 60%),
+          radial-gradient(ellipse 70% 50% at 85% 90%, rgba(6, 182, 212, 0.08) 0%, transparent 55%),
+          radial-gradient(ellipse 50% 50% at 50% 50%, rgba(139, 92, 246, 0.04) 0%, transparent 70%);
+        background-attachment: fixed;
+      }
+
+      /* ── Scrollbars ── */
+      ::-webkit-scrollbar { width: 6px; height: 6px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); border-radius: 3px; }
+      ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+
+      /* ── Glass Components ── */
+      .glass-panel {
+        background: var(--bg-card);
+        backdrop-filter: blur(24px);
+        -webkit-backdrop-filter: blur(24px);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      }
+
+      /* ── Buttons ── */
+      .btn {
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        color: #fff;
+        border: none;
+        padding: 10px 18px;
+        border-radius: var(--radius-md);
+        font-family: var(--font-body);
+        font-weight: 600;
+        font-size: 13.5px;
+        cursor: pointer;
+        transition: all 0.2s var(--ease);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        position: relative;
+        overflow: hidden;
+      }
+      .btn:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 24px rgba(59, 130, 246, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+      }
+      .btn:active:not(:disabled) { transform: translateY(0); }
+      .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+      .btn-secondary {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-bright);
+        color: var(--text-main);
+        box-shadow: none;
+      }
+      .btn-secondary:hover:not(:disabled) {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: rgba(255, 255, 255, 0.25);
+        transform: translateY(-1px);
+      }
+
+      .btn-accent {
+        background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+        box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+      }
+      .btn-accent:hover:not(:disabled) {
+        box-shadow: 0 6px 24px rgba(16, 185, 129, 0.45);
+      }
+
+      .btn-danger {
+        background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+        box-shadow: 0 4px 16px rgba(239, 68, 68, 0.25);
+      }
+      .btn-danger:hover:not(:disabled) {
+        box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+      }
+
+      .btn-icon {
+        width: 38px;
+        height: 38px;
+        padding: 0;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      /* ── Input Controls ── */
+      .input-control {
+        width: 100%;
+        padding: 12px 16px;
+        background: rgba(10, 16, 32, 0.75);
+        border: 1px solid var(--border-bright);
+        border-radius: var(--radius-md);
+        color: var(--text-main);
+        font-family: var(--font-body);
+        font-size: 14px;
+        outline: none;
+        transition: all 0.2s var(--ease);
+      }
+      .input-control:hover {
+        background: rgba(12, 20, 40, 0.9);
+        border-color: rgba(255, 255, 255, 0.22);
+      }
+      .input-control:focus {
+        border-color: var(--primary);
+        background: rgba(14, 24, 48, 1);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+      }
+
+      /* ── Header ── */
+      header {
+        background: rgba(6, 9, 19, 0.88);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-bottom: 1px solid var(--border);
+        padding: 12px 28px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+
+      .header-logo {
+        font-family: var(--font-title);
+        font-size: 22px;
+        font-weight: 800;
+        background: linear-gradient(135deg, #93c5fd 0%, #3b82f6 50%, #06b6d4 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        letter-spacing: -0.02em;
+      }
+
+      .header-right {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .user-pill {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--border);
+        padding: 5px 12px 5px 6px;
+        border-radius: 30px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .user-avatar {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: 700;
+        color: white;
+      }
+
+      /* ── Layout Workspace ── */
+      #workspace-container {
+        display: grid;
+        grid-template-columns: 280px 1fr 340px;
+        flex: 1;
+        height: calc(100vh - 65px);
+        overflow: hidden;
+      }
+
+      /* ── Left Sidebar (Addresses & Short Nav) ── */
+      .sidebar-left {
+        border-right: 1px solid var(--border);
+        background: rgba(6, 9, 19, 0.5);
+        padding: 20px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        overflow-y: auto;
+      }
+
+      .sidebar-section-title {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      /* ── Address Cards ── */
+      .address-card {
+        background: rgba(14, 22, 40, 0.6);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 12px 14px;
+        transition: all 0.2s var(--ease);
+        position: relative;
+        cursor: pointer;
+      }
+      .address-card:hover {
+        background: rgba(20, 32, 58, 0.8);
+        border-color: rgba(59, 130, 246, 0.35);
+        transform: translateY(-1px);
+      }
+      .address-card.selected {
+        border-color: var(--primary);
+        background: rgba(59, 130, 246, 0.08);
+        box-shadow: 0 0 16px rgba(59, 130, 246, 0.15);
+      }
+      .address-card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 4px;
+      }
+      .address-card-title {
+        font-weight: 700;
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .address-card-body {
+        font-size: 12px;
+        color: var(--text-muted);
+        line-height: 1.4;
+      }
+      .address-actions {
+        display: flex;
+        gap: 6px;
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+      }
+      .address-btn-tiny {
+        background: transparent;
+        border: none;
+        font-size: 11px;
+        color: var(--text-muted);
+        cursor: pointer;
+        padding: 2px 6px;
+        border-radius: 4px;
+        transition: all 0.15s;
+      }
+      .address-btn-tiny:hover {
+        color: var(--text-main);
+        background: rgba(255, 255, 255, 0.08);
+      }
+      .address-btn-tiny.delete:hover {
+        color: #ef4444;
+        background: rgba(239, 68, 68, 0.12);
+      }
+
+      /* ── Center ChatGPT Conversational Stream ── */
+      .chat-main {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        background: rgba(6, 9, 19, 0.25);
+        position: relative;
+      }
+
+      .chat-stream {
+        flex: 1;
+        overflow-y: auto;
+        padding: 28px 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        max-width: 860px;
+        width: 100%;
+        margin: 0 auto;
+      }
+
+      /* Welcome Hero in empty chat */
+      .chat-welcome {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        margin: auto;
+        padding: 40px 20px;
+        max-width: 600px;
+      }
+      .chat-welcome-icon {
+        width: 68px;
+        height: 68px;
+        border-radius: 20px;
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(6, 182, 212, 0.2) 100%);
+        border: 1px solid rgba(59, 130, 246, 0.35);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 30px;
+        color: var(--accent-cyan);
+        margin-bottom: 20px;
+        box-shadow: 0 0 30px rgba(59, 130, 246, 0.2);
+      }
+      .chat-welcome-title {
+        font-family: var(--font-title);
+        font-size: 26px;
+        font-weight: 700;
+        margin-bottom: 8px;
+        background: linear-gradient(135deg, #f8fafc 0%, #94a3b8 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      .chat-welcome-desc {
+        color: var(--text-muted);
+        font-size: 14px;
+        line-height: 1.6;
+        margin-bottom: 24px;
+      }
+
+      .prompt-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: center;
+      }
+      .prompt-chip {
+        background: rgba(14, 22, 40, 0.7);
+        border: 1px solid var(--border);
+        padding: 9px 14px;
+        border-radius: 30px;
+        font-size: 12.5px;
+        color: var(--text-main);
+        cursor: pointer;
+        transition: all 0.2s var(--ease);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .prompt-chip:hover {
+        background: rgba(59, 130, 246, 0.15);
+        border-color: rgba(59, 130, 246, 0.4);
+        transform: translateY(-2px);
+      }
+
+      /* ── Chat Messages ── */
+      .message-wrapper {
+        display: flex;
+        gap: 12px;
+        animation: msgSlide 0.25s var(--spring) both;
+      }
+      @keyframes msgSlide {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      .message-wrapper.customer {
+        flex-direction: row-reverse;
+      }
+
+      .message-avatar {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        flex-shrink: 0;
+        font-weight: 700;
+      }
+      .message-avatar.customer {
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        color: white;
+      }
+      .message-avatar.moderator {
+        background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+        color: white;
+      }
+      .message-avatar.ai {
+        background: linear-gradient(135deg, #06b6d4 0%, #0284c7 100%);
+        color: white;
+      }
+      .message-avatar.system {
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--text-muted);
+      }
+
+      .message-bubble {
+        max-width: 76%;
+        padding: 13px 18px;
+        border-radius: 16px;
+        font-size: 14px;
+        line-height: 1.6;
+        position: relative;
+      }
+      .message-wrapper.customer .message-bubble {
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        color: white;
+        border-bottom-right-radius: 4px;
+        box-shadow: 0 4px 20px rgba(37, 99, 235, 0.25);
+      }
+      .message-wrapper.moderator .message-bubble {
+        background: rgba(139, 92, 246, 0.12);
+        border: 1px solid rgba(139, 92, 246, 0.3);
+        color: var(--text-main);
+        border-bottom-left-radius: 4px;
+      }
+      .message-wrapper.ai .message-bubble {
+        background: rgba(6, 182, 212, 0.08);
+        border: 1px solid rgba(6, 182, 212, 0.22);
+        color: var(--text-main);
+        border-bottom-left-radius: 4px;
+      }
+      .message-wrapper.system .message-bubble {
+        background: rgba(14, 22, 40, 0.6);
+        border: 1px solid var(--border);
+        color: var(--text-muted);
+        font-size: 12.5px;
+        border-radius: var(--radius-sm);
+        margin: 0 auto;
+        text-align: center;
+      }
+
+      .message-sender {
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 4px;
+        color: var(--text-muted);
+      }
+      .message-time {
+        font-size: 10px;
+        color: rgba(255, 255, 255, 0.4);
+        margin-top: 6px;
+        text-align: right;
+      }
+
+      /* ── Chat Prompt Dock (ChatGPT Style) ── */
+      .chat-dock-container {
+        padding: 14px 24px 20px;
+        background: linear-gradient(to top, rgba(6, 9, 19, 0.95) 80%, transparent 100%);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        max-width: 860px;
+        width: 100%;
+        margin: 0 auto;
+      }
+
+      .chat-address-selector-chip {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 11.5px;
+        color: var(--text-muted);
+        background: rgba(14, 22, 40, 0.8);
+        border: 1px solid var(--border);
+        padding: 4px 12px;
+        border-radius: 20px;
+        align-self: flex-start;
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+      .chat-address-selector-chip:hover {
+        color: var(--primary);
+        border-color: rgba(59, 130, 246, 0.35);
+      }
+
+      .chat-dock {
+        display: flex;
+        align-items: flex-end;
+        gap: 10px;
+        background: rgba(14, 22, 40, 0.85);
+        border: 1px solid var(--border-bright);
+        border-radius: 18px;
+        padding: 8px 12px 8px 16px;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+        transition: all 0.2s var(--ease);
+      }
+      .chat-dock:focus-within {
+        border-color: var(--primary);
+        box-shadow: 0 8px 32px rgba(59, 130, 246, 0.25);
+        background: rgba(16, 26, 48, 0.95);
+      }
+
+      .chat-textarea {
+        flex: 1;
+        background: transparent;
+        border: none;
+        outline: none;
+        color: var(--text-main);
+        font-family: var(--font-body);
+        font-size: 14.5px;
+        line-height: 1.5;
+        resize: none;
+        max-height: 120px;
+        min-height: 24px;
+        padding: 6px 0;
+      }
+      .chat-textarea::placeholder {
+        color: #64748b;
+      }
+
+      /* ── Right Sidebar (Live Order Tracker & Summary) ── */
+      .sidebar-right {
+        border-left: 1px solid var(--border);
+        background: rgba(6, 9, 19, 0.5);
+        padding: 20px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        overflow-y: auto;
+      }
+
+      .tracker-box {
+        background: rgba(14, 22, 40, 0.7);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      /* ── Stepper ── */
+      .order-stepper {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        position: relative;
+        padding-left: 26px;
+      }
+      .order-stepper::before {
+        content: "";
+        position: absolute;
+        top: 8px;
+        bottom: 8px;
+        left: 8px;
+        width: 2px;
+        background: rgba(255, 255, 255, 0.08);
+      }
+
+      .step-item {
+        position: relative;
+        font-size: 12.5px;
+        color: var(--text-muted);
+        transition: all 0.25s;
+      }
+      .step-item::before {
+        content: "";
+        position: absolute;
+        left: -22px;
+        top: 3px;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #0d1629;
+        border: 2px solid rgba(255, 255, 255, 0.15);
+      }
+      .step-item.completed {
+        color: #94a3b8;
+      }
+      .step-item.completed::before {
+        background: var(--accent-green);
+        border-color: var(--accent-green);
+        box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+      }
+      .step-item.active {
+        color: #93c5fd;
+        font-weight: 700;
+      }
+      .step-item.active::before {
+        background: var(--primary);
+        border-color: #93c5fd;
+        box-shadow: 0 0 14px rgba(59, 130, 246, 0.7);
+        animation: pulseDot 2s infinite;
+      }
+      @keyframes pulseDot {
+        0%, 100% { transform: scale(1); box-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
+        50% { transform: scale(1.3); box-shadow: 0 0 18px rgba(59, 130, 246, 0.8); }
+      }
+
+      /* ── Quote Summary Card ── */
+      .quote-card {
+        background: rgba(10, 16, 32, 0.6);
+        border: 1px solid rgba(59, 130, 246, 0.3);
+        border-radius: var(--radius-md);
+        padding: 14px;
+      }
+      .quote-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 13px;
+        margin-bottom: 6px;
+      }
+      .quote-row.savings {
+        color: var(--accent-green);
+        font-weight: 700;
+      }
+      .quote-row.total {
+        font-size: 15px;
+        font-weight: 800;
+        border-top: 1px solid var(--border);
+        padding-top: 8px;
+        margin-top: 8px;
+      }
+
+      /* ── Modal Overlays ── */
+      .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.75);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 500;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s var(--ease);
+        padding: 20px;
+      }
+      .modal-overlay.active {
+        opacity: 1;
+        pointer-events: all;
+      }
+      .modal-content {
+        width: 100%;
+        max-width: 480px;
+        padding: 30px;
+        border-radius: var(--radius-xl);
+        transform: translateY(20px) scale(0.97);
+        transition: transform 0.3s var(--spring);
+      }
+      .modal-overlay.active .modal-content {
+        transform: translateY(0) scale(1);
+      }
+
+      /* ── Mobile Layout Switching ── */
+      .mobile-tabs-container {
+        display: none;
+        background: rgba(6, 9, 19, 0.95);
+        border-bottom: 1px solid var(--border);
+        padding: 8px 16px;
+        gap: 8px;
+      }
+      .mobile-tab-btn {
+        flex: 1;
+        padding: 8px;
+        background: transparent;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        color: var(--text-muted);
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+      }
+      .mobile-tab-btn.active {
+        background: var(--primary);
+        border-color: var(--primary);
+        color: white;
+      }
+
+      @media (max-width: 900px) {
+        .mobile-tabs-container { display: flex; }
+        #workspace-container {
+          display: block;
+          height: calc(100vh - 65px - 45px);
+        }
+        .sidebar-left, .chat-main, .sidebar-right {
+          display: none !important;
+        }
+        .sidebar-left.mobile-active,
+        .chat-main.mobile-active,
+        .sidebar-right.mobile-active {
+          display: flex !important;
+          height: 100% !important;
+        }
+      }
+
+      /* Auth Screen */
+      #auth-section {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        padding: 24px;
+      }
+      .login-card {
+        width: 100%;
+        max-width: 440px;
+        padding: 40px 32px;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Maintenance Banner -->
+    <div
+      id="maintenance-banner"
+      style="
+        display: none;
+        background: linear-gradient(90deg, #f59e0b, #d97706);
+        color: #000;
+        font-weight: 700;
+        font-size: 13px;
+        padding: 10px 20px;
+        text-align: center;
+      "
+    >
+      <i class="fa-solid fa-triangle-exclamation"></i>
+      <span id="maintenance-banner-text" style="margin-left: 8px;"
+        >Notice</span
+      >
+    </div>
+
+    <!-- ── AUTH SECTION ── -->
+    <section id="auth-section">
+      <div class="login-card glass-panel">
+        <div class="header-logo" style="justify-content: center; font-size: 32px; margin-bottom: 8px;">
+          <i class="fa-solid fa-bolt-lightning" style="color: var(--accent-cyan)"></i> SnapSave
+        </div>
+        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 28px;">
+          Your AI-powered grocery concierge. Type your list, we find lowest prices and deliver.
+        </p>
+
+        <div id="auth-alert-container"></div>
+
+        <!-- Phone Input Flow -->
+        <div id="phone-flow">
+          <div style="margin-bottom: 16px; text-align: left;">
+            <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px; display: block;">Phone Number</label>
+            <div style="display:flex; align-items:center; background:rgba(8,14,28,0.75); border:1px solid rgba(255,255,255,0.13); border-radius:12px; overflow:hidden; transition:border-color 0.2s, box-shadow 0.2s;" id="phone-input-wrap">
+              <span style="padding:13px 12px 13px 16px; font-size:13px; font-weight:700; color:var(--primary); background:rgba(59,130,246,0.08); border-right:1px solid rgba(255,255,255,0.1); white-space:nowrap; flex-shrink:0;">🇮🇳 +91</span>
+              <input
+                type="tel"
+                id="login-phone"
+                style="flex:1; padding:13px 14px; background:transparent; border:none; color:#f1f5f9; font-size:14px; outline:none; font-family:inherit;"
+                placeholder="98765 43210"
+                maxlength="10"
+                onkeypress="if(event.key==='Enter') sendOTP()"
+              />
+            </div>
+          </div>
+          <div id="recaptcha-container" style="margin-bottom: 16px;"></div>
+          <button id="btn-send-otp" class="btn" style="width: 100%; margin-bottom: 12px;" onclick="sendOTP()">
+            <i class="fa-solid fa-paper-plane"></i> Send Verification Code
+          </button>
+        </div>
+
+        <!-- OTP Verify Flow -->
+        <div id="otp-flow" style="display: none;">
+          <div style="margin-bottom: 16px; text-align: left;">
+            <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px; display: block;">6-Digit OTP</label>
+            <input
+              type="text"
+              id="login-otp"
+              class="input-control"
+              placeholder="123456"
+              maxlength="6"
+              style="letter-spacing: 0.3em; font-size: 18px; text-align: center; font-family: var(--font-mono);"
+              onkeypress="if(event.key==='Enter') verifyOTP()"
+            />
+          </div>
+          <button id="btn-verify-otp" class="btn btn-accent" style="width: 100%; margin-bottom: 12px;" onclick="verifyOTP()">
+            <i class="fa-solid fa-check"></i> Verify &amp; Continue
+          </button>
+          <button class="btn btn-secondary" style="width: 100%;" onclick="showPhoneFlow()">
+            <i class="fa-solid fa-arrow-left"></i> Change Number
+          </button>
+        </div>
+
+        <!-- Quick Demo Login -->
+        <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border);">
+          <button class="btn btn-secondary" style="width: 100%; font-size: 12.5px;" onclick="quickLogin()">
+            <i class="fa-solid fa-wand-magic-sparkles" style="color: var(--accent-cyan);"></i> Quick Demo Login
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── MAIN DASHBOARD ── -->
+    <div id="dashboard-app" style="display: none; flex: 1; flex-direction: column;">
+      <!-- Sticky Header -->
+      <header>
+        <div class="header-logo">
+          <i class="fa-solid fa-bolt-lightning" style="color: var(--accent-cyan)"></i> SnapSave
+        </div>
+        <div class="header-right">
+          <div class="user-pill">
+            <div class="user-avatar" id="user-avatar">U</div>
+            <span id="user-name">Customer</span>
+          </div>
+          <button class="btn btn-secondary btn-icon" onclick="openHelp()" title="Support &amp; Help">
+            <i class="fa-solid fa-headset"></i>
+          </button>
+          <button class="btn btn-secondary btn-icon" onclick="handleLogout()" title="Logout">
+            <i class="fa-solid fa-arrow-right-from-bracket"></i>
+          </button>
+        </div>
+      </header>
+
+      <!-- Mobile Tabs -->
+      <div class="mobile-tabs-container">
+        <button class="mobile-tab-btn active" onclick="switchMobileTab('chat')">
+          <i class="fa-solid fa-comments"></i> Chat
+        </button>
+        <button class="mobile-tab-btn" onclick="switchMobileTab('tracker')">
+          <i class="fa-solid fa-clock-rotate-left"></i> Order Status
+        </button>
+        <button class="mobile-tab-btn" onclick="switchMobileTab('addresses')">
+          <i class="fa-solid fa-location-dot"></i> Addresses
+        </button>
+      </div>
+
+      <!-- 3-Column Workspace -->
+      <div id="workspace-container">
+        <!-- 1. Left Sidebar: Addresses & Shortcuts -->
+        <aside class="sidebar-left" id="sidebar-left">
+          <button class="btn btn-primary" style="width: 100%; justify-content: flex-start; padding: 10px 16px; font-weight: 600;" onclick="startNewOrder()">
+            <i class="fa-solid fa-plus"></i> New Order
+          </button>
+          
+          <div class="sidebar-section-title" style="margin-top: 12px;">
+            <span><i class="fa-solid fa-clock-rotate-left" style="color: var(--accent-orange);"></i> Order History</span>
+          </div>
+          <div id="mini-history-list" style="display: flex; flex-direction: column; gap: 8px; flex: 1; overflow-y: auto;">
+            <!-- Populated via JS -->
+          </div>
+
+          <div style="margin-top: auto; padding-top: 14px; border-top: 1px solid var(--border);">
+            <div class="sidebar-section-title" style="margin-bottom: 8px;">
+              <span><i class="fa-solid fa-location-dot" style="color: var(--primary);"></i> Addresses</span>
+              <button class="address-btn-tiny" onclick="showAddAddressModal()">
+                <i class="fa-solid fa-plus"></i> Add
+              </button>
+            </div>
+            <div id="addresses-list" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;">
+              <!-- Populated via JS -->
+            </div>
+            
+            <button class="btn btn-secondary" style="width: 100%; font-size: 12.5px;" onclick="showGroceryModal()">
+              <i class="fa-solid fa-list-check"></i> Form-based List
+            </button>
+          </div>
+        </aside>
+
+        <!-- 2. Center: ChatGPT-Like Conversational Grocery Stream -->
+        <main class="chat-main" id="chat-main">
+          <div class="chat-stream" id="chat-stream">
+            <!-- Welcome Hero if empty -->
+            <div class="chat-welcome" id="chat-welcome">
+              <div class="chat-welcome-icon">
+                <i class="fa-solid fa-basket-shopping"></i>
+              </div>
+              <h2 class="chat-welcome-title">What groceries do you need?</h2>
+              <p class="chat-welcome-desc">
+                Simply type your grocery list below just like talking to ChatGPT. Our live concierges will scan Zepto, Blinkit, Instamart &amp; BigBasket to find the lowest price and bring everything to your door.
+              </p>
+              <div class="prompt-chips">
+                <div class="prompt-chip" onclick="usePrompt('2 packets Maggi, 1kg Basmati Rice, 500ml Milk')">
+                  <i class="fa-solid fa-bolt" style="color: var(--accent-cyan)"></i> 2x Maggi, 1kg Rice, 500ml Milk
+                </div>
+                <div class="prompt-chip" onclick="usePrompt('1kg Sugar, 1kg Aashirvaad Atta, 1 packet Amul Butter')">
+                  <i class="fa-solid fa-bolt" style="color: var(--accent-cyan)"></i> 1kg Sugar, Atta, Butter
+                </div>
+                <div class="prompt-chip" onclick="usePrompt('6 Eggs, 1 loaf Brown Bread, 1L Fresh Milk')">
+                  <i class="fa-solid fa-bolt" style="color: var(--accent-cyan)"></i> Eggs, Bread &amp; Milk
+                </div>
+              </div>
+            </div>
+            <!-- Messages injected here -->
+          </div>
+
+          <!-- Bottom Prompt Composer -->
+          <div class="chat-dock-container">
+            <div class="chat-address-selector-chip" onclick="showAddAddressModal()" id="dock-address-chip">
+              <i class="fa-solid fa-location-dot" style="color: var(--primary);"></i>
+              <span id="dock-address-text">No delivery address set</span>
+              <i class="fa-solid fa-chevron-right" style="font-size: 10px;"></i>
+            </div>
+
+            <div class="chat-dock">
+              <textarea
+                id="chat-textarea"
+                class="chat-textarea"
+                placeholder="Type your grocery list (e.g. 2L Milk, 1kg Tomatoes, 6 Eggs)..."
+                rows="1"
+              ></textarea>
+              <button id="btn-send-chat" class="btn btn-icon" onclick="handleSendChat()" title="Send List">
+                <i class="fa-solid fa-arrow-up"></i>
+              </button>
+            </div>
+          </div>
+        </main>
+
+        <!-- 3. Right Sidebar: Active Live Order Tracker -->
+        <aside class="sidebar-right" id="sidebar-right">
+          <div class="sidebar-section-title">
+            <span><i class="fa-solid fa-bolt" style="color: var(--accent-cyan)"></i> Live Order Status</span>
+          </div>
+
+          <div id="active-order-container">
+            <!-- Populated via JS -->
+            <div class="tracker-box" style="text-align: center; color: var(--text-muted); font-size: 13px;">
+              <i class="fa-solid fa-bag-shopping" style="font-size: 28px; color: var(--border-bright); margin-bottom: 8px;"></i>
+              <p>No active order in progress.</p>
+              <p style="font-size: 11.5px; margin-top: 4px;">Type your items in the chat to place an order!</p>
+            </div>
+          </div>
+
+        </aside>
+      </div>
+    </div>
+
+    <!-- ── MODAL: ADD / EDIT ADDRESS ── -->
+    <div id="address-modal" class="modal-overlay">
+      <div class="modal-content glass-panel">
+        <h3 style="font-family: var(--font-title); font-size: 20px; margin-bottom: 6px;">
+          <i class="fa-solid fa-location-dot" style="color: var(--primary);"></i> Add Delivery Address
+        </h3>
+        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">
+          Your address will be securely saved for fast 1-click ordering.
+        </p>
+
+        <div id="address-alert-container"></div>
+
+        <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px;">
+          <input type="text" id="addr-title" class="input-control" placeholder="Label (e.g. Home, Office, Hostel)" />
+          <input type="text" id="addr-street" class="input-control" placeholder="Flat No, Building, Street Details" />
+          <div style="display: flex; gap: 10px;">
+            <input type="text" id="addr-city" class="input-control" placeholder="City (e.g. Pune)" value="Pune" />
+            <input type="text" id="addr-state" class="input-control" placeholder="State" value="Maharashtra" />
+          </div>
+          <input type="text" id="addr-postal" class="input-control" placeholder="Postal Code (e.g. 411004)" value="411004" />
+        </div>
+
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+          <button class="btn btn-secondary" onclick="hideAddAddressModal()">Cancel</button>
+          <button id="btn-save-address" class="btn btn-accent" onclick="saveAddress()">
+            <i class="fa-solid fa-floppy-disk"></i> Save Address
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── MODAL: GROCERY BUILDER (TABLE MODE) ── -->
+    <div id="grocery-modal" class="modal-overlay">
+      <div class="modal-content glass-panel" style="max-width: 540px;">
+        <h3 style="font-family: var(--font-title); font-size: 20px; margin-bottom: 6px;">
+          <i class="fa-solid fa-cart-flatbed" style="color: var(--accent-cyan);"></i> Grocery List Builder
+        </h3>
+        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">
+          Add line items with exact quantities for your concierge ticket.
+        </p>
+
+        <div id="grocery-alert-container"></div>
+
+        <div style="margin-bottom: 14px;">
+          <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Select Address</label>
+          <select id="grocery-addr-select" class="input-control" style="margin-top: 6px;"></select>
+        </div>
+
+        <div id="grocery-items-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 240px; overflow-y: auto; margin-bottom: 14px; padding-right: 4px;"></div>
+
+        <button class="btn btn-secondary" style="width: 100%; margin-bottom: 20px; font-size: 12px;" onclick="addGroceryRow()">
+          <i class="fa-solid fa-plus"></i> Add Another Product
+        </button>
+
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+          <button class="btn btn-secondary" onclick="hideGroceryModal()">Cancel</button>
+          <button id="btn-submit-grocery" class="btn" onclick="submitStructuredGroceryList()">
+            <i class="fa-solid fa-paper-plane"></i> Submit Grocery List
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── MODAL: PROFILE ONBOARDING ── -->
+    <div id="profile-modal" class="modal-overlay">
+      <div class="modal-content glass-panel">
+        <h3 style="font-family: var(--font-title); font-size: 20px; margin-bottom: 6px;">
+          <i class="fa-solid fa-user-check" style="color: var(--primary);"></i> Complete Profile
+        </h3>
+        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">
+          Welcome to SnapSave! Please enter your name and email to proceed.
+        </p>
+        <div id="profile-alert-container"></div>
+        <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px;">
+          <input type="text" id="prof-first" class="input-control" placeholder="First Name" />
+          <input type="text" id="prof-last" class="input-control" placeholder="Last Name" />
+          <input type="email" id="prof-email" class="input-control" placeholder="Email Address" />
+        </div>
+        <button id="btn-save-profile" class="btn" style="width: 100%;" onclick="saveProfile()">
+          <i class="fa-solid fa-arrow-right"></i> Save &amp; Start Ordering
+        </button>
+      </div>
+    </div>
+
+    <!-- ── MODAL: SUPPORT & HELP ── -->
+    <div id="help-modal" class="modal-overlay">
+      <div class="modal-content glass-panel" style="max-width: 520px; max-height: 80vh; display: flex; flex-direction: column;">
+        <h3 style="font-family: var(--font-title); font-size: 20px; margin-bottom: 4px;">
+          <i class="fa-solid fa-headset" style="color: var(--accent-cyan);"></i> SnapSave Support
+        </h3>
+        <p style="color: var(--text-muted); font-size: 12.5px; margin-bottom: 14px;">
+          Have a question or issue? Chat directly with the SnapSave admin team.
+        </p>
+        <div id="help-thread" style="flex: 1; min-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; padding: 4px;"></div>
+        <div style="display: flex; gap: 8px;">
+          <input type="text" id="help-input" class="input-control" placeholder="Type your message to support..." />
+          <button class="btn btn-icon" onclick="sendHelp()"><i class="fa-solid fa-paper-plane"></i></button>
+        </div>
+        <button class="btn btn-secondary" style="margin-top: 10px;" onclick="closeHelp()">Close</button>
+      </div>
+    </div>
+
+    <!-- ── MODAL: ORDER FEEDBACK ── -->
+    <div id="feedback-modal" class="modal-overlay">
+      <div class="modal-content glass-panel" style="text-align: center;">
+        <div style="font-size: 32px; color: #fbbf24; margin-bottom: 8px;">★</div>
+        <h3 style="font-family: var(--font-title); font-size: 20px; margin-bottom: 6px;">How was your order?</h3>
+        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">
+          Your feedback helps our concierges improve your savings and delivery speed.
+        </p>
+        <div id="star-rating-container" style="font-size: 28px; color: #fbbf24; cursor: pointer; display: flex; justify-content: center; gap: 8px; margin-bottom: 20px;">
+          <span onclick="setRating(1)">★</span>
+          <span onclick="setRating(2)">★</span>
+          <span onclick="setRating(3)">★</span>
+          <span onclick="setRating(4)">★</span>
+          <span onclick="setRating(5)">★</span>
+        </div>
+        <textarea id="feedback-notes" class="input-control" placeholder="What went well or what was confusing?" rows="2" style="margin-bottom: 20px;"></textarea>
+        <div style="display: flex; gap: 10px;">
+          <button class="btn btn-secondary" style="flex: 1;" onclick="closeFeedbackModal()">Skip</button>
+          <button class="btn btn-accent" style="flex: 1;" onclick="submitOrderFeedback()">Submit Feedback</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Firebase & Frontend Logic -->
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+      import {
+        getAuth,
+        RecaptchaVerifier,
+        signInWithPhoneNumber,
+        signOut,
+        onAuthStateChanged,
+      } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+      const API_BASE =
+        window.location.hostname === "localhost" ||
+        window.location.hostname === "127.0.0.1"
+          ? "http://127.0.0.1:8000"
+          : window.location.origin;
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyC2usgMofYuKhLrmERkuYgFY0WmNkfMXIY",
+        authDomain: "snapsave-501c7.firebaseapp.com",
+        projectId: "snapsave-501c7",
+        storageBucket: "snapsave-501c7.firebasestorage.app",
+        messagingSenderId: "20754709166",
+        appId: "1:20754709166:web:22949551e251e0e9078b3f",
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+
+      let confirmationResult = null;
+      let recaptchaVerifier = null;
+      let idToken = null;
+      let currentUser = null;
+      let savedAddresses = [];
+      let activeOrder = null;
+      let selectedHistoryOrderId = null;
+      let chatPollingInterval = null;
+      let selectedRating = 5;
+      let pendingFeedbackOrderId = null;
+
+      const CUST_STORAGE_KEY = 'snapsave_customer_token';
+
+      // Auto check session via Firebase (real OTP logins)
+      onAuthStateChanged(auth, async (user) => {
+        if (user) {
+          try {
+            idToken = await user.getIdToken(true);
+            localStorage.setItem(CUST_STORAGE_KEY, idToken);
+            await checkUserSession();
+          } catch (err) {
+            console.error("Auth state token error:", err);
+          }
+        } else {
+          // Firebase has no session — try restoring a saved test/demo token
+          const saved = localStorage.getItem(CUST_STORAGE_KEY);
+          if (saved && !currentUser) {
+            idToken = saved;
+            try {
+              await checkUserSession();
+            } catch (e) {
+              localStorage.removeItem(CUST_STORAGE_KEY);
+              idToken = null;
+            }
+          }
+        }
+      });
+
+      // ── Quick Demo Login ──
+      window.quickLogin = async function () {
+        try {
+          const rawPhone = document.getElementById("login-phone").value.trim() || "9876543210";
+          const phone = rawPhone.startsWith("+") ? rawPhone : "+91" + rawPhone.replace(/\s/g, "");
+          const res = await fetch(`${API_BASE}/api/auth/test-token?phone=${encodeURIComponent(phone)}&uid=test_uid_customer_concierge`);
+          if (!res.ok) throw new Error("Could not obtain test token from server");
+          const data = await res.json();
+          idToken = data.idToken;
+          localStorage.setItem(CUST_STORAGE_KEY, idToken);
+          await checkUserSession();
+        } catch (err) {
+          alert("Quick login failed: " + err.message);
+        }
+      };
+
+      window.sendOTP = async function () {
+        const rawPhone = document.getElementById("login-phone").value.trim();
+        const phone = rawPhone.startsWith("+") ? rawPhone : "+91" + rawPhone.replace(/\s/g, "");
+        if (!rawPhone) return alert("Please enter your 10-digit mobile number.");
+        setLoading("btn-send-otp", true);
+        try {
+          if (recaptchaVerifier) {
+            recaptchaVerifier.clear();
+            recaptchaVerifier = null;
+          }
+          document.getElementById("recaptcha-container").innerHTML = "";
+          recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", { size: "normal" });
+          await recaptchaVerifier.render();
+          confirmationResult = await signInWithPhoneNumber(auth, phone, recaptchaVerifier);
+          document.getElementById("phone-flow").style.display = "none";
+          document.getElementById("otp-flow").style.display = "block";
+        } catch (err) {
+          alert("Failed to send OTP: " + err.message);
+        } finally {
+          setLoading("btn-send-otp", false);
+        }
+      };
+
+      window.verifyOTP = async function () {
+        const code = document.getElementById("login-otp").value.trim();
+        if (!code) return alert("Please enter the OTP code.");
+        setLoading("btn-verify-otp", true);
+        try {
+          const res = await confirmationResult.confirm(code);
+          idToken = await res.user.getIdToken(true);
+          localStorage.setItem(CUST_STORAGE_KEY, idToken);
+          await checkUserSession();
+        } catch (err) {
+          alert("Verification failed: " + err.message);
+        } finally {
+          setLoading("btn-verify-otp", false);
+        }
+      };
+
+      window.showPhoneFlow = function () {
+        document.getElementById("phone-flow").style.display = "block";
+        document.getElementById("otp-flow").style.display = "none";
+      };
+
+      window.handleLogout = async function () {
+        try { await signOut(auth); } catch (e) {}
+        idToken = null;
+        currentUser = null;
+        clearInterval(chatPollingInterval);
+        localStorage.removeItem(CUST_STORAGE_KEY);
+        document.getElementById("auth-section").style.display = "flex";
+        document.getElementById("dashboard-app").style.display = "none";
+      };
+
+      async function checkUserSession() {
+        try {
+          const me = await apiRequest("/api/auth/me");
+          currentUser = me;
+          if (!me.first_name || !me.last_name || me.email.includes("@snapsave.com")) {
+            document.getElementById("profile-modal").classList.add("active");
+          } else {
+            document.getElementById("profile-modal").classList.remove("active");
+            startDashboard(me);
+          }
+        } catch (err) {
+          console.error("Session check failed:", err);
+          window.handleLogout();
+        }
+      }
+
+      window.saveProfile = async function () {
+        const first = document.getElementById("prof-first").value.trim();
+        const last = document.getElementById("prof-last").value.trim();
+        const email = document.getElementById("prof-email").value.trim();
+        if (!first || !last || !email) return alert("Please fill in all profile fields.");
+        setLoading("btn-save-profile", true);
+        try {
+          await apiRequest("/api/auth/profile", "PUT", { first_name: first, last_name: last, email });
+          document.getElementById("profile-modal").classList.remove("active");
+          await checkUserSession();
+        } catch (err) {
+          alert("Failed to save profile: " + err.message);
+        } finally {
+          setLoading("btn-save-profile", false);
+        }
+      };
+
+      async function startDashboard(user) {
+        document.getElementById("auth-section").style.display = "none";
+        document.getElementById("dashboard-app").style.display = "flex";
+        document.getElementById("user-name").innerText = `${user.first_name} ${user.last_name}`;
+        document.getElementById("user-avatar").innerText = `${user.first_name[0]}${user.last_name[0]}`.toUpperCase();
+
+        await Promise.all([loadAddresses(), loadOrders(), pollMessages(), checkMaintenance()]);
+
+        clearInterval(chatPollingInterval);
+        chatPollingInterval = setInterval(async () => {
+          await Promise.all([pollMessages(), loadOrders(), checkMaintenance()]);
+        }, 8000);
+      }
+
+      // ── Address Management ──
+      async function loadAddresses() {
+        try {
+          savedAddresses = await apiRequest("/api/addresses");
+          renderAddresses();
+        } catch (e) {
+          console.error("Error loading addresses:", e);
+        }
+      }
+
+      function renderAddresses() {
+        const list = document.getElementById("addresses-list");
+        const select = document.getElementById("grocery-addr-select");
+        const dockChipText = document.getElementById("dock-address-text");
+        list.innerHTML = "";
+        select.innerHTML = "";
+
+        if (!savedAddresses.length) {
+          list.innerHTML = `<p style="font-size:12px;color:var(--text-muted);text-align:center;padding:12px;">No addresses saved yet.</p>`;
+          dockChipText.innerText = "No delivery address set — click to add";
+          select.innerHTML = `<option value="">-- Add an address first --</option>`;
+          return;
+        }
+
+        const defaultAddr = savedAddresses.find(a => a.is_default) || savedAddresses[0];
+        dockChipText.innerText = `Deliver to: ${defaultAddr.title} (${defaultAddr.street_address.slice(0, 20)}...)`;
+
+        savedAddresses.forEach(addr => {
+          const card = document.createElement("div");
+          card.className = `address-card ${addr.is_default ? "selected" : ""}`;
+          card.innerHTML = `
+            <div class="address-card-header">
+              <span class="address-card-title">
+                <i class="fa-solid fa-house" style="color: var(--primary);"></i> ${addr.title}
+              </span>
+              ${addr.is_default ? '<span style="font-size:9px;font-weight:700;color:var(--accent-green);background:rgba(16,185,129,0.15);padding:2px 6px;border-radius:10px;">DEFAULT</span>' : ""}
+            </div>
+            <div class="address-card-body">${addr.street_address}, ${addr.city}</div>
+            <div class="address-actions">
+              ${!addr.is_default ? `<button class="address-btn-tiny" onclick="setDefaultAddress('${addr.id}')">Set Default</button>` : ""}
+              <button class="address-btn-tiny delete" onclick="deleteAddress('${addr.id}')"><i class="fa-solid fa-trash"></i> Delete</button>
+            </div>
+          `;
+          list.appendChild(card);
+
+          const opt = document.createElement("option");
+          opt.value = addr.id;
+          opt.innerText = `${addr.title} (${addr.street_address}, ${addr.city})`;
+          if (addr.is_default) opt.selected = true;
+          select.appendChild(opt);
+        });
+      }
+
+      window.showAddAddressModal = () => document.getElementById("address-modal").classList.add("active");
+      window.hideAddAddressModal = () => document.getElementById("address-modal").classList.remove("active");
+
+      window.saveAddress = async function () {
+        const title = document.getElementById("addr-title").value.trim();
+        const street = document.getElementById("addr-street").value.trim();
+        const city = document.getElementById("addr-city").value.trim();
+        const state = document.getElementById("addr-state").value.trim();
+        const postal = document.getElementById("addr-postal").value.trim();
+
+        if (!title || !street || !city || !state || !postal) return alert("Please fill in all address details.");
+
+        setLoading("btn-save-address", true);
+        try {
+          await apiRequest("/api/addresses", "POST", {
+            title, street_address: street, city, state, postal_code: postal,
+            latitude: 18.5204, longitude: 73.8567,
+            is_default: savedAddresses.length === 0
+          });
+          hideAddAddressModal();
+          await loadAddresses();
+        } catch (err) {
+          alert("Failed to save address: " + err.message);
+        } finally {
+          setLoading("btn-save-address", false);
+        }
+      };
+
+      window.setDefaultAddress = async function (id) {
+        try {
+          await apiRequest(`/api/addresses/${id}/default`, "PUT");
+          await loadAddresses();
+        } catch (err) {
+          alert("Failed to set default: " + err.message);
+        }
+      };
+
+      window.deleteAddress = async function (id) {
+        if (!confirm("Are you sure you want to delete this address?")) return;
+        try {
+          await apiRequest(`/api/addresses/${id}`, "DELETE");
+          await loadAddresses();
+        } catch (err) {
+          alert("Failed to delete address: " + err.message);
+        }
+      };
+
+      // ── Conversational Grocery Ordering (ChatGPT Flow) ──
+      window.usePrompt = (text) => {
+        const txt = document.getElementById("chat-textarea");
+        txt.value = text;
+        txt.focus();
+      };
+
+      window.handleSendChat = async function () {
+        const textarea = document.getElementById("chat-textarea");
+        const message = textarea.value.trim();
+        if (!message) return;
+
+        // Check if user has an address
+        if (!savedAddresses.length) {
+          alert("Please add a delivery address first so we know where to send your groceries.");
+          showAddAddressModal();
+          return;
+        }
+
+        const defaultAddr = savedAddresses.find(a => a.is_default) || savedAddresses[0];
+
+        // Send to backend
+        setLoading("btn-send-chat", true);
+        textarea.value = "";
+        try {
+          // If message looks like groceries, place order directly
+          const isGroceryLike = message.length > 5 && !message.toLowerCase().startsWith("where is") && !message.toLowerCase().startsWith("hello") && !message.toLowerCase().startsWith("hi");
+          if (isGroceryLike && (!activeOrder || ["delivered", "completed", "cancelled"].includes(activeOrder.status))) {
+            await apiRequest("/api/orders", "POST", {
+              address_id: defaultAddr.id,
+              items_text: message
+            });
+            await loadOrders();
+          } else {
+            await apiRequest(`/api/chat/${currentUser.id}/send`, "POST", { 
+              message, 
+              order_id: activeOrder ? activeOrder.id : null 
+            });
+          }
+          await pollMessages();
+        } catch (err) {
+          alert("Could not send: " + err.message);
+        } finally {
+          setLoading("btn-send-chat", false);
+        }
+      };
+
+      document.getElementById("chat-textarea").addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          if (!document.getElementById("btn-send-chat").disabled) {
+            handleSendChat();
+          }
+        }
+      });
+
+      // ── Chat Stream Polling & Rendering ──
+      let _lastMsgSignature = "";
+      async function pollMessages() {
+        if (!currentUser) return;
+        try {
+          const msgs = await apiRequest(`/api/chat/${currentUser.id}/messages`);
+          // Skip re-render if nothing changed
+          const sig = msgs.map(m => m.id + m.message.length).join("|");
+          if (sig === _lastMsgSignature) return;
+          _lastMsgSignature = sig;
+          renderChatMessages(msgs);
+        } catch (e) {
+          console.error("Error polling messages:", e);
+        }
+      }
+
+      function renderChatMessages(allMsgs) {
+        const container = document.getElementById("chat-stream");
+        const welcome = document.getElementById("chat-welcome");
+        
+        let msgs = [];
+        if (activeOrder) {
+          msgs = allMsgs.filter(m => m.order_id === activeOrder.id);
+        } else {
+          msgs = allMsgs.filter(m => !m.order_id);
+        }
+
+        if (!msgs.length) {
+          if (welcome) welcome.style.display = "flex";
+          container.querySelectorAll(".message-wrapper").forEach(m => m.remove());
+          return;
+        }
+        if (welcome) welcome.style.display = "none";
+
+        // Keep DOM clean
+        container.querySelectorAll(".message-wrapper").forEach(m => m.remove());
+
+        msgs.forEach(m => {
+          const role = m.sender_role.toLowerCase();
+          const wrapper = document.createElement("div");
+          // If admin, we use the moderator styling
+          const roleClass = (role === "admin") ? "moderator" : role;
+          wrapper.className = `message-wrapper ${roleClass}`;
+
+          let avatarIcon = '<i class="fa-solid fa-user"></i>';
+          let senderLabel = "You";
+          if (role === "moderator" || role === "admin") {
+            avatarIcon = '<i class="fa-solid fa-user-shield"></i>';
+            senderLabel = "Concierge Specialist";
+          } else if (role === "ai") {
+            avatarIcon = '<i class="fa-solid fa-robot"></i>';
+            senderLabel = "AI Assistant";
+          } else if (role === "system") {
+            avatarIcon = '<i class="fa-solid fa-bolt"></i>';
+            senderLabel = "System";
+          }
+
+          const timeStr = m.created_at ? new Date(m.created_at + "Z").toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
+
+          // Check if message is a price quote with confirmation action
+          let confirmActionHtml = "";
+          if (m.message.includes("Tap Confirm Order to proceed") && activeOrder && activeOrder.status === "awaiting_customer") {
+            confirmActionHtml = `
+              <div style="margin-top: 12px;">
+                <button class="btn btn-accent" style="width: 100%;" onclick="confirmActiveOrder('${activeOrder.id}')">
+                  <i class="fa-solid fa-circle-check"></i> Confirm &amp; Place Order (₹${parseFloat(activeOrder.final_price).toFixed(2)})
+                </button>
+              </div>
+            `;
+          }
+
+          wrapper.innerHTML = `
+            <div class="message-avatar ${role}">${avatarIcon}</div>
+            <div class="message-bubble">
+              <div class="message-sender">${senderLabel}</div>
+              <div style="white-space: pre-wrap;">${m.message}</div>
+              ${confirmActionHtml}
+              ${timeStr ? `<div class="message-time">${timeStr}</div>` : ""}
+            </div>
+          `;
+          container.appendChild(wrapper);
+        });
+
+        container.scrollTop = container.scrollHeight;
+      }
+
+      // ── Active Order Tracker ──
+      let _lastOrderSignature = "";
+      async function loadOrders() {
+        try {
+          const orders = await apiRequest("/api/orders");
+
+          // Skip re-render if nothing changed
+          const sig = orders.map(o => o.id + o.status + o.final_price).join("|");
+          if (sig === _lastOrderSignature) return;
+          _lastOrderSignature = sig;
+
+          const active = orders.find(o => !["delivered", "cancelled", "completed"].includes(o.status));
+          
+          if (selectedHistoryOrderId) {
+            activeOrder = orders.find(o => o.id === selectedHistoryOrderId) || null;
+          } else {
+            activeOrder = active || null;
+          }
+          
+          renderActiveTracker(activeOrder); // Tracker always shows the currently viewed order
+          renderRecentHistory(orders);
+        } catch (e) {
+          console.error("Error loading orders:", e);
+        }
+      }
+
+      function renderActiveTracker(order) {
+        const container = document.getElementById("active-order-container");
+        if (!order) {
+          container.innerHTML = `
+            <div class="tracker-box" style="text-align: center; color: var(--text-muted); font-size: 13px;">
+              <i class="fa-solid fa-bag-shopping" style="font-size: 28px; color: var(--border-bright); margin-bottom: 8px;"></i>
+              <p>No active order in progress.</p>
+              <p style="font-size: 11.5px; margin-top: 4px;">Type your items in the chat to place an order!</p>
+            </div>
+          `;
+          return;
+        }
+
+        const stages = ["pending_review", "reviewing", "awaiting_customer", "awaiting_payment", "confirmed", "placed", "delivered"];
+        const curIdx = stages.indexOf(order.status);
+
+        container.innerHTML = `
+          <div class="tracker-box">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--text-muted);">#${order.id.slice(0, 8)}</span>
+              <span class="badge ${order.status}">${order.status.replace(/_/g, " ")}</span>
+            </div>
+
+            <div class="order-stepper">
+              <div class="step-item ${curIdx >= 0 ? (curIdx === 0 ? "active" : "completed") : ""}">1. List Submitted</div>
+              <div class="step-item ${curIdx >= 1 ? (curIdx === 1 ? "active" : "completed") : ""}">2. Concierge Scanning Stores</div>
+              <div class="step-item ${curIdx >= 2 ? (curIdx === 2 ? "active" : "completed") : ""}">3. Review Price Quote</div>
+              <div class="step-item ${curIdx >= 4 ? (curIdx === 4 ? "active" : "completed") : (curIdx >= 3 ? "active" : "")}">4. Order Placed &amp; Packing</div>
+              <div class="step-item ${curIdx >= 5 ? "completed" : ""}">5. Delivered to Door</div>
+            </div>
+
+            ${order.status === "awaiting_customer" ? `
+              <div class="quote-card">
+                <div class="quote-row"><span>Subtotal</span><span>₹${parseFloat(order.subtotal).toFixed(2)}</span></div>
+                <div class="quote-row savings"><span>You Save</span><span>-₹${parseFloat(order.savings).toFixed(2)}</span></div>
+                <div class="quote-row total"><span>Final Price</span><span>₹${parseFloat(order.final_price).toFixed(2)}</span></div>
+                <button class="btn btn-accent" style="width: 100%; margin-top: 10px;" onclick="confirmActiveOrder('${order.id}')">
+                  <i class="fa-solid fa-check"></i> Confirm Order
+                </button>
+              </div>
+            ` : ""}
+            
+            ${order.status === "delivered" ? `
+              <div style="margin-top: 16px;">
+                <button class="btn btn-primary" style="width: 100%;" onclick="openFeedbackModal('${order.id}')">
+                  <i class="fa-solid fa-star"></i> Rate Your Experience
+                </button>
+              </div>
+            ` : ""}
+          </div>
+        `;
+      }
+
+      window.startNewOrder = async function() {
+        selectedHistoryOrderId = null;
+        await loadOrders();
+        await pollMessages();
+      };
+
+      window.viewHistoryOrder = async function(orderId) {
+        selectedHistoryOrderId = orderId;
+        await loadOrders();
+        await pollMessages();
+      };
+
+      function renderRecentHistory(orders) {
+        const container = document.getElementById("mini-history-list");
+        const completed = orders.filter(o => ["delivered", "completed", "cancelled"].includes(o.status));
+        container.innerHTML = "";
+        if (!completed.length) {
+          container.innerHTML = `<p style="font-size: 11.5px; color: var(--text-muted); padding: 0 10px;">No completed orders yet.</p>`;
+          return;
+        }
+        completed.forEach(o => {
+          const row = document.createElement("div");
+          const isSelected = selectedHistoryOrderId === o.id;
+          row.style.cssText = `background: ${isSelected ? 'rgba(59, 130, 246, 0.2)' : 'rgba(14,22,40,0.5)'}; border: 1px solid ${isSelected ? 'var(--primary)' : 'var(--border)'}; border-radius: 8px; padding: 10px; font-size: 12px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.2s;`;
+          row.onclick = () => viewHistoryOrder(o.id);
+          row.innerHTML = `
+            <div>
+              <div style="font-weight:600;">#${o.id.slice(0, 6)} • ₹${parseFloat(o.final_price).toFixed(2)}</div>
+              <div style="font-size:10px;color:var(--accent-green);">Saved ₹${parseFloat(o.savings).toFixed(2)}</div>
+            </div>
+            <span class="badge ${o.status}" style="font-size:9px;">${o.status}</span>
+          `;
+          container.appendChild(row);
+        });
+      }
+
+      window.confirmActiveOrder = async function (id) {
+        try {
+          await apiRequest(`/api/customer/orders/${id}/confirm`, "PUT");
+          await loadOrders();
+          await pollMessages();
+        } catch (err) {
+          alert("Confirmation failed: " + err.message);
+        }
+      };
+
+      // ── Form-Based List Builder Modal ──
+      window.showGroceryModal = () => {
+        document.getElementById("grocery-modal").classList.add("active");
+        const list = document.getElementById("grocery-items-list");
+        list.innerHTML = "";
+        addGroceryRow();
+      };
+      window.hideGroceryModal = () => document.getElementById("grocery-modal").classList.remove("active");
+
+      window.addGroceryRow = (name = "", qty = 1) => {
+        const list = document.getElementById("grocery-items-list");
+        const row = document.createElement("div");
+        row.style.cssText = "display: flex; gap: 8px; align-items: center;";
+        row.innerHTML = `
+          <input type="text" class="input-control g-name" placeholder="Item (e.g. Amul Milk 1L)" value="${name}" style="flex: 1;" />
+          <input type="number" class="input-control g-qty" min="1" value="${qty}" style="width: 70px; text-align: center;" />
+          <button class="btn btn-secondary btn-icon" style="flex-shrink:0;" onclick="this.parentElement.remove()"><i class="fa-solid fa-trash" style="color:#ef4444;"></i></button>
+        `;
+        list.appendChild(row);
+      };
+
+      window.submitStructuredGroceryList = async function () {
+        const addressId = document.getElementById("grocery-addr-select").value;
+        const rows = document.querySelectorAll("#grocery-items-list > div");
+        const items = [];
+        rows.forEach(r => {
+          const name = r.querySelector(".g-name").value.trim();
+          const qty = parseInt(r.querySelector(".g-qty").value, 10) || 1;
+          if (name) items.push({ name, quantity: qty });
+        });
+
+        if (!items.length) return alert("Please add at least one item.");
+        if (!addressId) return alert("Please select a delivery address.");
+
+        setLoading("btn-submit-grocery", true);
+        try {
+          await apiRequest("/api/orders", "POST", { address_id: addressId, items });
+          hideGroceryModal();
+          await loadOrders();
+          await pollMessages();
+        } catch (err) {
+          alert("Submission failed: " + err.message);
+        } finally {
+          setLoading("btn-submit-grocery", false);
+        }
+      };
+
+      // ── Help & Support ──
+      window.openHelp = async function () {
+        document.getElementById("help-modal").classList.add("active");
+        await loadHelpMessages();
+      };
+      window.closeHelp = () => document.getElementById("help-modal").classList.remove("active");
+
+      async function loadHelpMessages() {
+        try {
+          const msgs = await apiRequest("/api/help/messages");
+          const thread = document.getElementById("help-thread");
+          thread.innerHTML = "";
+          if (!msgs.length) {
+            thread.innerHTML = `<div style="font-size:12.5px;color:var(--text-muted);text-align:center;margin:auto;">Send a message to contact our admin team directly.</div>`;
+            return;
+          }
+          msgs.forEach(m => {
+            const isMe = m.sender_role === "CUSTOMER";
+            const b = document.createElement("div");
+            b.style.cssText = `padding: 10px 14px; border-radius: 12px; font-size: 13px; max-width: 80%; ${isMe ? "background:#2563eb;color:white;align-self:flex-end;" : "background:rgba(255,255,255,0.08);color:var(--text-main);align-self:flex-start;"}`;
+            b.innerHTML = `<div style="font-size:10px;opacity:0.7;margin-bottom:2px;">${isMe ? "You" : "SnapSave Admin"}</div><div>${m.message}</div>`;
+            thread.appendChild(b);
+          });
+          thread.scrollTop = thread.scrollHeight;
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      window.sendHelp = async function () {
+        const inp = document.getElementById("help-input");
+        const txt = inp.value.trim();
+        if (!txt) return;
+        inp.value = "";
+        try {
+          await apiRequest("/api/help", "POST", { message: txt });
+          await loadHelpMessages();
+        } catch (e) {
+          alert("Error: " + e.message);
+        }
+      };
+
+      // ── Maintenance Banner ──
+      async function checkMaintenance() {
+        try {
+          const s = await apiRequest("/api/status");
+          const banner = document.getElementById("maintenance-banner");
+          if (s.maintenance_mode) {
+            banner.style.display = "block";
+            document.getElementById("maintenance-banner-text").innerText = "SnapSave is currently undergoing maintenance. New orders will resume shortly.";
+          } else if (!s.orders_enabled) {
+            banner.style.display = "block";
+            document.getElementById("maintenance-banner-text").innerText = "We are currently catching up with high order volume. New orders will open in a moment.";
+          } else {
+            banner.style.display = "none";
+          }
+        } catch (e) {}
+      }
+
+      // Mobile Tab switcher
+      window.switchMobileTab = (tab) => {
+        document.querySelectorAll(".mobile-tab-btn").forEach(b => b.classList.remove("active"));
+        document.getElementById("sidebar-left").classList.remove("mobile-active");
+        document.getElementById("chat-main").classList.remove("mobile-active");
+        document.getElementById("sidebar-right").classList.remove("mobile-active");
+
+        if (tab === "chat") {
+          document.querySelectorAll(".mobile-tab-btn")[0].classList.add("active");
+          document.getElementById("chat-main").classList.add("mobile-active");
+        } else if (tab === "tracker") {
+          document.querySelectorAll(".mobile-tab-btn")[1].classList.add("active");
+          document.getElementById("sidebar-right").classList.add("mobile-active");
+        } else if (tab === "addresses") {
+          document.querySelectorAll(".mobile-tab-btn")[2].classList.add("active");
+          document.getElementById("sidebar-left").classList.add("mobile-active");
+        }
+      };
+
+      window.setRating = function (rating) {
+        selectedRating = rating;
+        const spans = document.querySelectorAll("#star-rating-container span");
+        spans.forEach((s, idx) => {
+          s.style.opacity = idx < rating ? "1" : "0.3";
+        });
+      };
+
+      window.openFeedbackModal = function(orderId) {
+        pendingFeedbackOrderId = orderId;
+        selectedRating = 5;
+        document.getElementById("star-rating-container").innerHTML = `
+          <span onclick="setRating(1)">★</span>
+          <span onclick="setRating(2)">★</span>
+          <span onclick="setRating(3)">★</span>
+          <span onclick="setRating(4)">★</span>
+          <span onclick="setRating(5)">★</span>
+        `;
+        document.getElementById("feedback-modal").classList.add("active");
+      };
+
+      window.closeFeedbackModal = function () {
+        document.getElementById("feedback-modal").classList.remove("active");
+        pendingFeedbackOrderId = null;
+      };
+
+      window.submitOrderFeedback = async function () {
+        const notes = document.getElementById("feedback-notes").value.trim();
+        try {
+          if (pendingFeedbackOrderId) {
+            await apiRequest("/api/feedback", "POST", {
+              order_id: pendingFeedbackOrderId,
+              rating: selectedRating,
+              what_went_well: notes || "Good service",
+              what_was_confusing: null,
+              would_use_again: selectedRating >= 3,
+            });
+          }
+          window.closeFeedbackModal();
+        } catch (e) {
+          console.error("Feedback submit error:", e);
+          window.closeFeedbackModal();
+        }
+      };
+
+      // API Request Wrapper
+      async function apiRequest(endpoint, method = "GET", body = null) {
+        const headers = { "Content-Type": "application/json" };
+        if (idToken) headers["Authorization"] = `Bearer ${idToken}`;
+        const opt = { method, headers };
+        if (body) opt.body = JSON.stringify(body);
+        const res = await fetch(`${API_BASE}${endpoint}`, opt);
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ detail: "Server error" }));
+          let msg = `HTTP ${res.status}`;
+          if (typeof err.detail === "string") {
+            msg = err.detail;
+          } else if (Array.isArray(err.detail)) {
+            msg = err.detail.map(d => (d.loc ? d.loc.slice(1).join(".") + ": " : "") + (d.msg || JSON.stringify(d))).join(", ");
+          } else if (typeof err.detail === "object" && err.detail !== null) {
+            msg = JSON.stringify(err.detail);
+          } else if (err.message) {
+            msg = err.message;
+          }
+          throw new Error(msg);
+        }
+        return await res.json();
+      }
+
+      function setLoading(id, loading) {
+        const btn = document.getElementById(id);
+        if (!btn) return;
+        if (loading) {
+          if (!btn.disabled) btn.dataset.origHtml = btn.innerHTML;
+          btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`;
+          btn.disabled = true;
+        } else {
+          if (btn.dataset.origHtml) btn.innerHTML = btn.dataset.origHtml;
+          btn.disabled = false;
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+env/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+*service-account*.json
+firebase-service-account.json
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs / temporary files
+*.log
+*.tmp
+out*.txt
+output*.txt
+
+# Browser/session data
+browser_profile/
+*_cookies.json
+cookies.json
+
+# Firebase generated/cache
+.firebase/
+.firebase/hosting..cache/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

@@ -1,0 +1,47 @@
+{
+  "milk": [
+    "zepto",
+    "bigbasket"
+  ],
+  "bread": [
+    "bigbasket"
+  ],
+  "maggi": [
+    "jiomart",
+    "zepto",
+    "bigbasket",
+    "blinkit",
+    "instamart",
+    "flipkart",
+    "amazon"
+  ],
+  "rice": [
+    "zepto",
+    "bigbasket"
+  ],
+  "basmati rice raw": [
+    "jiomart",
+    "blinkit",
+    "bigbasket",
+    "zepto",
+    "instamart",
+    "flipkart",
+    "amazon"
+  ],
+  "drink": [
+    "jiomart",
+    "bigbasket",
+    "blinkit",
+    "zepto",
+    "instamart",
+    "flipkart",
+    "amazon"
+  ],
+  "eggs": [
+    "bigbasket"
+  ],
+  "napkins": [
+    "zepto",
+    "bigbasket"
+  ]
+}

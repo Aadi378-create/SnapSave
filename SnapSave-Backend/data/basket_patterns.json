@@ -1,0 +1,12 @@
+{
+  "maggi": ["onion", "green chilli", "butter"],
+  "bread": ["butter", "jam"],
+  "milk": ["bread", "eggs", "banana"],
+  "paneer": ["tomato", "onion", "ginger", "garlic"],
+  "tea": ["milk", "sugar", "biscuits"],
+  "coffee": ["milk", "sugar"],
+  "rice": ["dal", "ghee"],
+  "pasta": ["cheese", "tomato sauce"],
+  "chips": ["soft drink"],
+  "popcorn": ["soft drink"]
+}

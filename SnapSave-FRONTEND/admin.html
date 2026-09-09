@@ -1,0 +1,3712 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SnapSave - Concierge Management Console</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <!-- Icon sets -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+
+    <style>
+      :root {
+        --bg-dark: #070b14;
+        --bg-card: rgba(16, 22, 38, 0.7);
+        --bg-card-hover: rgba(20, 28, 48, 0.85);
+        --border: rgba(255, 255, 255, 0.07);
+        --border-bright: rgba(255, 255, 255, 0.13);
+        --primary: #3b82f6;
+        --primary-glow: rgba(59, 130, 246, 0.25);
+        --primary-hover: #2563eb;
+        --accent-green: #10b981;
+        --accent-cyan: #06b6d4;
+        --accent-orange: #f97316;
+        --accent-purple: #8b5cf6;
+        --text-main: #f1f5f9;
+        --text-muted: #64748b;
+        --text-dim: #374151;
+        --font-title: "Outfit", sans-serif;
+        --font-body: "Plus Jakarta Sans", sans-serif;
+        --radius-sm: 8px;
+        --radius-md: 12px;
+        --radius-lg: 16px;
+        --radius-xl: 20px;
+        --ease: cubic-bezier(0.4, 0, 0.2, 1);
+        --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+
+      body {
+        font-family: var(--font-body);
+        background-color: var(--bg-dark);
+        color: var(--text-main);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow-x: hidden;
+        background-image:
+          radial-gradient(ellipse 70% 50% at 12% 18%, rgba(139,92,246,0.07) 0%, transparent 55%),
+          radial-gradient(ellipse 60% 45% at 88% 80%, rgba(59,130,246,0.06) 0%, transparent 55%),
+          radial-gradient(ellipse 50% 60% at 50% 45%, rgba(6,182,212,0.03) 0%, transparent 65%);
+      }
+
+      /* ── Glass Panel ── */
+      .glass-panel {
+        background: var(--bg-card);
+        backdrop-filter: blur(24px);
+        -webkit-backdrop-filter: blur(24px);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        box-shadow: 0 4px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
+        transition: border-color 0.25s var(--ease), box-shadow 0.25s var(--ease);
+      }
+      .glass-panel:hover {
+        border-color: var(--border-bright);
+        box-shadow: 0 8px 40px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06);
+      }
+
+      /* ── Buttons ── */
+      .btn {
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        color: #fff;
+        border: none;
+        padding: 11px 18px;
+        border-radius: var(--radius-md);
+        font-family: var(--font-body);
+        font-weight: 600;
+        font-size: 13px;
+        cursor: pointer;
+        transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        box-shadow: 0 4px 14px rgba(59,130,246,0.28), inset 0 1px 0 rgba(255,255,255,0.15);
+        position: relative;
+        overflow: hidden;
+        letter-spacing: 0.01em;
+      }
+      .btn::after { content: ''; position: absolute; inset: 0; background: rgba(255,255,255,0); transition: background 0.15s; }
+      .btn:hover:not(:disabled)::after { background: rgba(255,255,255,0.08); }
+      .btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(59,130,246,0.4), inset 0 1px 0 rgba(255,255,255,0.15); }
+      .btn:active:not(:disabled) { transform: translateY(0); box-shadow: 0 2px 8px rgba(59,130,246,0.2); }
+      .btn:disabled { opacity: 0.48; cursor: not-allowed; }
+
+      .btn-secondary {
+        background: rgba(255,255,255,0.06);
+        border: 1px solid var(--border-bright);
+        color: var(--text-main);
+        box-shadow: none;
+      }
+      .btn-secondary:hover:not(:disabled) { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.18); box-shadow: none; transform: translateY(-1px); }
+
+      .btn-accent {
+        background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+        box-shadow: 0 4px 14px rgba(16,185,129,0.28), inset 0 1px 0 rgba(255,255,255,0.15);
+      }
+      .btn-accent:hover:not(:disabled) { box-shadow: 0 8px 24px rgba(16,185,129,0.4), inset 0 1px 0 rgba(255,255,255,0.15); }
+
+      .btn-danger {
+        background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+        box-shadow: 0 4px 14px rgba(239,68,68,0.22);
+      }
+      .btn-danger:hover:not(:disabled) { box-shadow: 0 8px 24px rgba(239,68,68,0.38); }
+
+      /* ── Input Controls ── */
+      .input-group { margin-bottom: 16px; }
+      .input-group label {
+        display: block;
+        margin-bottom: 7px;
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+      .input-control {
+        width: 100%;
+        padding: 11px 14px;
+        background: rgba(8, 14, 28, 0.75);
+        border: 1px solid var(--border-bright);
+        border-radius: var(--radius-md);
+        color: var(--text-main);
+        font-family: var(--font-body);
+        font-size: 13px;
+        outline: none;
+        transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease), background 0.2s;
+      }
+      .input-control:hover { border-color: rgba(255,255,255,0.18); background: rgba(8, 14, 28, 0.9); }
+      .input-control:focus { border-color: var(--primary); background: rgba(8, 14, 28, 1); box-shadow: 0 0 0 3px rgba(59,130,246,0.14); }
+
+      /* ── Toggle Switches ── */
+      .switch {
+        position: relative;
+        display: inline-block;
+        width: 44px;
+        height: 24px;
+        flex-shrink: 0;
+      }
+      .switch input { opacity: 0; width: 0; height: 0; }
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        inset: 0;
+        background: rgba(71,85,105,0.8);
+        transition: all 0.3s var(--ease);
+        border-radius: 24px;
+        box-shadow: inset 0 1px 3px rgba(0,0,0,0.4);
+      }
+      .slider:before {
+        position: absolute;
+        content: '';
+        height: 18px; width: 18px;
+        left: 3px; bottom: 3px;
+        background: white;
+        transition: all 0.3s var(--ease);
+        border-radius: 50%;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.25);
+      }
+      input:checked + .slider { background: linear-gradient(135deg, var(--primary), #1d4ed8); box-shadow: 0 0 0 2px rgba(59,130,246,0.2); }
+      input:checked + .slider:before { transform: translateX(20px); box-shadow: 0 2px 6px rgba(59,130,246,0.35); }
+
+      /* ── Login Screen ── */
+      #auth-section {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex: 1;
+        padding: 24px;
+        min-height: 100vh;
+      }
+
+      .login-card {
+        width: 100%;
+        max-width: 420px;
+        padding: 52px 40px;
+        text-align: center;
+        position: relative;
+      }
+      .login-card::before {
+        content: '';
+        position: absolute;
+        inset: -1px;
+        border-radius: calc(var(--radius-lg) + 1px);
+        background: linear-gradient(135deg, rgba(139,92,246,0.4) 0%, rgba(59,130,246,0.15) 50%, rgba(249,115,22,0.2) 100%);
+        z-index: -1;
+        opacity: 0.65;
+      }
+      .login-card::after {
+        content: '';
+        position: absolute;
+        inset: -60px;
+        background: radial-gradient(ellipse 65% 55% at 50% 50%, rgba(139,92,246,0.09) 0%, transparent 70%);
+        z-index: -2;
+        pointer-events: none;
+      }
+
+      .logo-display {
+        font-family: var(--font-title);
+        font-size: 36px;
+        font-weight: 700;
+        margin-bottom: 10px;
+        background: linear-gradient(135deg, #c4b5fd 0%, #8b5cf6 50%, #fb923c 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        filter: drop-shadow(0 0 28px rgba(139,92,246,0.35));
+      }
+
+      .login-subtitle {
+        color: var(--text-muted);
+        font-size: 13px;
+        margin-bottom: 38px;
+        letter-spacing: 0.02em;
+      }
+
+      /* ── Header ── */
+      header {
+        background: rgba(7, 11, 20, 0.9);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-bottom: 1px solid var(--border);
+        padding: 14px 28px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        position: sticky;
+        top: 0;
+        z-index: 90;
+        box-shadow: 0 1px 0 rgba(255,255,255,0.04);
+      }
+
+      .header-logo {
+        font-family: var(--font-title);
+        font-size: 20px;
+        font-weight: 700;
+        background: linear-gradient(135deg, #c4b5fd 0%, #8b5cf6 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .header-profile {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+
+      /* ── Role Badges ── */
+      .role-badge {
+        font-size: 10px;
+        font-weight: 700;
+        padding: 3px 10px;
+        border-radius: 20px;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+      }
+      .role-badge.role-admin {
+        background: linear-gradient(135deg, rgba(249,115,22,0.22) 0%, rgba(234,88,12,0.12) 100%);
+        color: #fb923c;
+        border: 1px solid rgba(249,115,22,0.35);
+        box-shadow: 0 0 12px rgba(249,115,22,0.15);
+      }
+      .role-badge.role-moderator {
+        background: linear-gradient(135deg, rgba(139,92,246,0.22) 0%, rgba(109,40,217,0.12) 100%);
+        color: #c4b5fd;
+        border: 1px solid rgba(139,92,246,0.35);
+        box-shadow: 0 0 12px rgba(139,92,246,0.15);
+      }
+
+      /* ── Metrics Grid ── */
+      .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 16px;
+        padding: 20px 24px;
+        border-bottom: 1px solid var(--border);
+        background: rgba(7,11,20,0.4);
+      }
+      @media (max-width: 1200px) { .metrics-grid { grid-template-columns: repeat(3, 1fr); } }
+      @media (max-width: 768px)  { .metrics-grid { grid-template-columns: repeat(2, 1fr); } }
+
+      .metric-card {
+        background: rgba(18, 26, 48, 0.6);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 16px 18px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        transition: all 0.25s var(--ease);
+        position: relative;
+        overflow: hidden;
+      }
+      .metric-card::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, transparent 60%);
+        pointer-events: none;
+      }
+      .metric-card:hover {
+        border-color: var(--border-bright);
+        background: rgba(22, 32, 58, 0.75);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+      }
+
+      .metric-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 11px;
+        background: rgba(139,92,246,0.15);
+        color: var(--accent-purple);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        flex-shrink: 0;
+        transition: transform 0.25s var(--spring);
+        border: 1px solid rgba(139,92,246,0.2);
+      }
+      .metric-card:hover .metric-icon { transform: scale(1.1) rotate(-4deg); }
+
+      .metric-label {
+        font-size: 10px;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 4px;
+        font-weight: 600;
+      }
+      .metric-value {
+        font-family: var(--font-title);
+        font-size: 22px;
+        font-weight: 700;
+        line-height: 1;
+      }
+
+      /* ── Workspace Layout ── */
+      #workspace-container {
+        flex: 1;
+        overflow: hidden;
+        border-top: 1px solid var(--border);
+      }
+      #workspace-container.view-queue {
+        display: flex;
+        flex-direction: column;
+      }
+      #workspace-container.view-queue #panel-queue { display: flex !important; flex: 1; flex-direction: column; border-right: none; }
+      #workspace-container.view-queue #panel-chat,
+      #workspace-container.view-queue #panel-ticket { display: none !important; }
+
+      #workspace-container.view-ticket {
+        display: grid;
+        grid-template-columns: 1fr 380px;
+        height: calc(100vh - 105px);
+      }
+      #workspace-container.view-ticket #panel-queue { display: none !important; }
+      #workspace-container.view-ticket #panel-chat { display: flex !important; flex-direction: column; }
+      #workspace-container.view-ticket #panel-ticket { display: flex !important; flex-direction: column; overflow-y: auto; }
+
+      .orders-tab-bar {
+        display: flex;
+        background: rgba(7,11,20,0.85);
+        border-bottom: 1px solid var(--border);
+        padding: 0 20px;
+        flex-shrink: 0;
+      }
+      .orders-tab {
+        padding: 13px 24px;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-muted);
+        background: transparent;
+        border: none;
+        border-bottom: 2px solid transparent;
+        cursor: pointer;
+        transition: all 0.2s var(--ease);
+        font-family: var(--font-body);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .orders-tab:hover { color: var(--text-main); background: rgba(255,255,255,0.03); }
+      .orders-tab.active {
+        color: var(--primary);
+        border-bottom-color: var(--primary);
+        background: rgba(59,130,246,0.04);
+      }
+      .orders-tab .tab-count {
+        background: rgba(59,130,246,0.2);
+        color: var(--primary);
+        font-size: 10px;
+        font-weight: 700;
+        padding: 2px 7px;
+        border-radius: 10px;
+        min-width: 18px;
+        text-align: center;
+      }
+
+      /* ── Mobile Tabs ── */
+      .mobile-tabs-container {
+        display: none;
+        background: rgba(7,11,20,0.95);
+        border-bottom: 1px solid var(--border);
+        padding: 10px 16px;
+        gap: 8px;
+        z-index: 80;
+      }
+      .mobile-tab-btn {
+        flex: 1;
+        background: transparent;
+        border: 1px solid var(--border-bright);
+        color: var(--text-muted);
+        padding: 11px;
+        border-radius: var(--radius-sm);
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        transition: all 0.22s var(--ease);
+      }
+      .mobile-tab-btn:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.15); }
+      .mobile-tab-btn.active {
+        background: linear-gradient(135deg, rgba(139,92,246,0.8), rgba(109,40,217,0.9));
+        border-color: rgba(139,92,246,0.5);
+        color: white;
+        box-shadow: 0 4px 14px rgba(139,92,246,0.32);
+      }
+
+      @media (max-width: 1024px) {
+        .mobile-tabs-container { display: flex; }
+        .orders-tab-bar { display: none; }
+        #workspace-container { display: flex !important; flex-direction: column; height: auto; flex: 1; }
+        .col-panel { display: none !important; flex: 1; border-right: none !important; }
+        .col-panel.mobile-show { display: flex !important; }
+      }
+
+      /* ── Column Panels ── */
+      .col-panel {
+        border-right: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        background: rgba(7,11,20,0.35);
+      }
+
+      .panel-header {
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--border);
+        font-weight: 700;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.09em;
+        color: var(--text-main);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: linear-gradient(135deg, rgba(59,130,246,0.04) 0%, rgba(139,92,246,0.04) 100%);
+        flex-shrink: 0;
+      }
+
+      .panel-scrollable {
+        flex: 1;
+        overflow-y: auto;
+        padding: 16px;
+      }
+      .panel-scrollable::-webkit-scrollbar { width: 4px; }
+      .panel-scrollable::-webkit-scrollbar-track { background: transparent; }
+      .panel-scrollable::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+      .panel-scrollable::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.13); }
+
+      /* ── Queue Cards ── */
+      .queue-card {
+        background: rgba(18, 26, 48, 0.55);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 13px 14px 13px 18px;
+        cursor: pointer;
+        margin-bottom: 10px;
+        transition: all 0.22s var(--ease);
+        position: relative;
+      }
+      .queue-card::before {
+        content: '';
+        position: absolute;
+        left: 0; top: 0; bottom: 0;
+        width: 3px;
+        border-radius: 3px 0 0 3px;
+        background: rgba(255,255,255,0.08);
+        transition: background 0.2s;
+      }
+      .queue-card[data-status="pending_review"]::before  { background: var(--accent-cyan); }
+      .queue-card[data-status="reviewing"]::before       { background: var(--accent-orange); }
+      .queue-card[data-status="awaiting_customer"]::before { background: var(--primary); }
+      .queue-card[data-status="awaiting_payment"]::before { background: var(--accent-orange); }
+      .queue-card[data-status="confirmed"]::before       { background: var(--accent-green); }
+      .queue-card[data-status="placed"]::before          { background: var(--accent-green); }
+      .queue-card[data-status="delivered"]::before       { background: #34d399; }
+
+      .queue-card:hover {
+        border-color: rgba(59,130,246,0.35);
+        background: rgba(22, 32, 60, 0.75);
+        transform: translateX(3px);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+      }
+      .queue-card.selected {
+        border-color: rgba(139,92,246,0.45);
+        background: rgba(139,92,246,0.08);
+        box-shadow: 0 0 0 2px rgba(139,92,246,0.15), 0 4px 16px rgba(139,92,246,0.1);
+      }
+
+      .queue-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 7px;
+      }
+
+      /* ── Badges ── */
+      .badge {
+        padding: 3px 8px;
+        border-radius: 20px;
+        font-size: 9px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        display: inline-flex;
+        align-items: center;
+      }
+      .badge.pending_review    { background: rgba(6,182,212,0.15);  color: var(--accent-cyan);   border: 1px solid rgba(6,182,212,0.22); }
+      .badge.reviewing         { background: rgba(249,115,22,0.15); color: var(--accent-orange); border: 1px solid rgba(249,115,22,0.22); }
+      .badge.awaiting_customer { background: rgba(59,130,246,0.15); color: #93c5fd;              border: 1px solid rgba(59,130,246,0.22); }
+      .badge.awaiting_payment { background: rgba(249,115,22,0.15); color: #f97316; }
+      .badge.confirmed         { background: rgba(16,185,129,0.15); color: var(--accent-green);  border: 1px solid rgba(16,185,129,0.22); }
+      .badge.placed            { background: rgba(16,185,129,0.22); color: #34d399;              border: 1px solid rgba(16,185,129,0.3); }
+      .badge.delivered         { background: rgba(16,185,129,0.3);  color: #34d399;              border: 1px solid rgba(16,185,129,0.4); }
+      .badge.cancelled         { background: rgba(239,68,68,0.15);  color: #f87171;              border: 1px solid rgba(239,68,68,0.22); }
+
+      /* ── User Row ── */
+      .user-row { padding: 12px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; }
+
+      /* ── Chat ── */
+      .chat-container { display: flex; flex-direction: column; height: 100%; }
+
+      .chat-messages {
+        flex: 1;
+        padding: 16px 20px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      .chat-messages::-webkit-scrollbar { width: 4px; }
+      .chat-messages::-webkit-scrollbar-track { background: transparent; }
+      .chat-messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.07); border-radius: 2px; }
+
+      .chat-bubble {
+        max-width: 85%;
+        padding: 12px 16px;
+        border-radius: 16px;
+        line-height: 1.65;
+        font-size: 13.5px;
+        animation: msgIn 0.3s var(--spring) both;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        word-break: break-word;
+      }
+      @keyframes msgIn {
+        from { opacity: 0; transform: translateY(8px) scale(0.97); }
+        to   { opacity: 1; transform: translateY(0) scale(1); }
+      }
+
+      .chat-bubble.customer  { background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; align-self: flex-end; border-bottom-right-radius: 3px; box-shadow: 0 4px 16px rgba(59,130,246,0.25); }
+      .chat-bubble.moderator { background: linear-gradient(135deg, #7c3aed, #4c1d95); color: white; align-self: flex-start; border-bottom-left-radius: 3px; box-shadow: 0 4px 16px rgba(124,58,237,0.22); }
+      .chat-bubble.ai        { background: rgba(6,182,212,0.1); border: 1px solid rgba(6,182,212,0.22); color: var(--text-main); align-self: flex-start; border-bottom-left-radius: 3px; }
+      .chat-bubble.system    { background: rgba(18,28,52,0.6); border: 1px solid var(--border); color: var(--text-muted); font-size: 11px; align-self: center; max-width: 90%; border-radius: var(--radius-sm); padding: 7px 14px; box-shadow: none; }
+
+      .chat-sender { font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.55); margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.07em; }
+      .chat-bubble.system .chat-sender { display: none; }
+      .chat-timestamp { font-size: 8px; color: rgba(255,255,255,0.35); margin-top: 4px; text-align: right; }
+      .chat-bubble.system .chat-timestamp { display: none; }
+
+      .chat-composer {
+        border-top: 1px solid var(--border);
+        padding: 14px 18px;
+        display: flex;
+        gap: 10px;
+        background: rgba(7,11,20,0.75);
+        align-items: center;
+      }
+
+      /* ── Right Sidebar / Ticket Panel ── */
+      .right-sidebar {
+        padding: 20px;
+        overflow-y: auto;
+        background: rgba(7,11,20,0.45);
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .right-sidebar::-webkit-scrollbar { width: 4px; }
+      .right-sidebar::-webkit-scrollbar-track { background: transparent; }
+      .right-sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.07); border-radius: 2px; }
+      .right-sidebar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.12); }
+
+      .detail-card {
+        background: rgba(16, 24, 46, 0.55);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 18px;
+        transition: border-color 0.2s var(--ease);
+      }
+      .detail-card:hover { border-color: var(--border-bright); }
+
+      /* ── Alerts ── */
+      .alert {
+        padding: 11px 15px;
+        border-radius: var(--radius-sm);
+        font-size: 12px;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border: 1px solid transparent;
+        animation: alertIn 0.25s var(--ease);
+      }
+      @keyframes alertIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+      .alert-error   { background: rgba(239,68,68,0.1);  border-color: rgba(239,68,68,0.22);  color: #f87171; }
+      .alert-success { background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.22); color: #34d399; }
+
+      /* ── Loading Spinner ── */
+      .loading-spinner {
+        width: 14px; height: 14px;
+        border: 2px solid rgba(255,255,255,0.22);
+        border-radius: 50%;
+        border-top-color: white;
+        animation: spin 0.7s linear infinite;
+        flex-shrink: 0;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+
+      /* ── Panel Section Title ── */
+      .panel-section-title {
+        font-size: 10px;
+        font-weight: 700;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.09em;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+      .panel-section-title i { font-size: 11px; }
+      .panel-section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); margin-left: 4px; }
+
+      /* ── Admin Switch Card ── */
+      .admin-switch-card {
+        background: rgba(10, 16, 32, 0.6);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 14px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        transition: all 0.2s var(--ease);
+      }
+      .admin-switch-card:hover { border-color: var(--border-bright); background: rgba(10, 16, 32, 0.75); }
+      .admin-switch-card .switch-label-group { display: flex; flex-direction: column; gap: 3px; }
+      .admin-switch-card .switch-name { font-size: 13px; font-weight: 600; color: var(--text-main); }
+      .admin-switch-card .switch-desc { font-size: 10px; color: var(--text-muted); }
+
+      /* ── Assignment Row ── */
+      .assignment-row {
+        background: rgba(10, 16, 32, 0.55);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 12px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        transition: all 0.2s var(--ease);
+      }
+      .assignment-row:hover { border-color: var(--border-bright); background: rgba(10, 16, 32, 0.7); }
+      .assignment-row .customer-label { font-size: 12px; font-weight: 600; color: var(--text-main); display: flex; align-items: center; gap: 6px; }
+      .assignment-row .customer-label i { color: var(--accent-purple); font-size: 11px; }
+
+      /* ── Panel Header Icon ── */
+      .panel-header-icon {
+        width: 28px; height: 28px;
+        border-radius: 7px;
+        background: rgba(249,115,22,0.15);
+        color: var(--accent-orange);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 12px;
+        border: 1px solid rgba(249,115,22,0.2);
+      }
+
+      /* ── Admin Nav Rail ── */
+      .admin-nav {
+        position: fixed;
+        top: 0; left: 0; bottom: 0;
+        width: 220px;
+        background: rgba(5, 8, 18, 0.98);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-right: 1px solid var(--border);
+        z-index: 95;
+        display: none;
+        flex-direction: column;
+        padding: 18px 10px;
+        gap: 4px;
+      }
+      body.admin-shell .admin-nav { display: flex; }
+      body.admin-shell header,
+      body.admin-shell #dashboard-metrics,
+      body.admin-shell #dashboard-main,
+      body.admin-shell #beta-program-view { margin-left: 220px; }
+
+      .admin-nav-logo {
+        font-family: var(--font-title);
+        font-size: 17px;
+        font-weight: 700;
+        background: linear-gradient(135deg, #fb923c 0%, #f97316 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 4px 10px 20px;
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 8px;
+      }
+
+      .admin-nav-item {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        padding: 11px 14px;
+        border-radius: var(--radius-md);
+        color: var(--text-muted);
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        border: 1px solid transparent;
+        transition: all 0.2s var(--ease);
+        background: transparent;
+        text-align: left;
+        width: 100%;
+        position: relative;
+      }
+      .admin-nav-item i { width: 17px; text-align: center; font-size: 14px; transition: transform 0.2s var(--ease); }
+      .admin-nav-item:hover { background: rgba(255,255,255,0.06); color: var(--text-main); transform: translateX(3px); }
+      .admin-nav-item:hover i { transform: scale(1.1); }
+      .admin-nav-item.active {
+        background: linear-gradient(135deg, rgba(249,115,22,0.2) 0%, rgba(234,88,12,0.1) 100%);
+        color: #fb923c;
+        border-color: rgba(249,115,22,0.35);
+        box-shadow: inset 3px 0 0 rgba(249,115,22,0.6);
+      }
+
+      .admin-nav-badge {
+        margin-left: auto;
+        background: linear-gradient(135deg, #ef4444, #b91c1c);
+        color: white;
+        font-size: 9px;
+        font-weight: 700;
+        min-width: 18px;
+        height: 18px;
+        border-radius: 9px;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 0 5px;
+        box-shadow: 0 2px 6px rgba(239,68,68,0.4);
+        animation: badgePop 0.3s var(--spring);
+      }
+      @keyframes badgePop { from { transform: scale(0); } to { transform: scale(1); } }
+
+      /* ── Admin Sections ── */
+      .admin-section {
+        display: none;
+        flex: 1;
+        padding: 28px 32px;
+        overflow-y: auto;
+        background: linear-gradient(135deg, rgba(59,130,246,0.015) 0%, rgba(139,92,246,0.015) 100%);
+      }
+      .admin-section.active { display: block; }
+      .admin-section::-webkit-scrollbar { width: 4px; }
+      .admin-section::-webkit-scrollbar-track { background: transparent; }
+      .admin-section::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+      .admin-section::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.13); }
+
+      .admin-section h2.section-title {
+        font-family: var(--font-title);
+        font-size: 26px;
+        font-weight: 700;
+        margin-bottom: 6px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: linear-gradient(135deg, var(--primary) 0%, var(--accent-purple) 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+      .admin-section .section-sub { color: var(--text-muted); font-size: 13px; margin-bottom: 28px; }
+
+      /* ── Data Rows ── */
+      .data-row {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        background: rgba(16,24,46,0.5);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 16px;
+        margin-bottom: 10px;
+        transition: all 0.22s var(--ease);
+      }
+      .data-row:hover { border-color: var(--border-bright); background: rgba(20,30,58,0.65); transform: translateX(2px); }
+      .data-row .dr-main { flex: 1; }
+      .data-row .dr-title { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+      .data-row .dr-sub { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+
+      /* ── Dev access buttons ── */
+      .dev-access-divider {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 24px 0 18px;
+        color: var(--text-muted);
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.09em;
+      }
+      .dev-access-divider::before, .dev-access-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+      .btn-mod {
+        background: linear-gradient(135deg, rgba(139,92,246,0.85), rgba(109,40,217,0.95));
+        border: 1px solid rgba(139,92,246,0.4);
+        box-shadow: 0 4px 14px rgba(139,92,246,0.22);
+      }
+      .btn-mod:hover:not(:disabled) { box-shadow: 0 6px 20px rgba(139,92,246,0.38); }
+
+      .btn-admin-login {
+        background: linear-gradient(135deg, rgba(249,115,22,0.85), rgba(234,88,12,0.95));
+        border: 1px solid rgba(249,115,22,0.4);
+        box-shadow: 0 4px 14px rgba(249,115,22,0.22);
+      }
+      .btn-admin-login:hover:not(:disabled) { box-shadow: 0 6px 20px rgba(249,115,22,0.38); }
+
+      @media (max-width: 1024px) {
+        body.admin-shell .admin-nav { display: none; }
+        body.admin-shell header,
+        body.admin-shell #dashboard-metrics,
+        body.admin-shell #dashboard-main,
+        body.admin-shell #beta-program-view { margin-left: 0; }
+      }
+
+      /* ── Beta view margin for admin shell ── */
+      body.admin-shell #beta-program-view { margin-left: 240px; }
+
+      /* ── Ticket unselected placeholder ── */
+      #ticket-unselected-placeholder {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        color: var(--text-muted);
+        font-size: 13px;
+        text-align: center;
+        padding: 60px 24px;
+      }
+      #ticket-unselected-placeholder i {
+        font-size: 36px;
+        color: rgba(139,92,246,0.25);
+        margin-bottom: 4px;
+      }
+
+      /* ── Price item rows ── */
+      .price-item-row {
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 12px;
+        background: rgba(10,16,32,0.5);
+        transition: border-color 0.2s var(--ease);
+      }
+      .price-item-row:hover { border-color: var(--border-bright); }
+
+      /* ── Help inbox thread items ── */
+      #help-thread-list { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.07) transparent; }
+
+      /* ── Incidents & Feedback address-card reuse ── */
+      .address-card {
+        background: rgba(18,26,48,0.5);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 14px;
+        transition: border-color 0.2s var(--ease);
+      }
+      .address-card:hover { border-color: var(--border-bright); }
+
+      /* ── Queue filter select ── */
+      #queue-filter { color: var(--text-main); background: rgba(8,14,28,0.75); }
+
+      /* ── Admin sections inner metric grids ── */
+      #section-analytics .metric-card:nth-child(1) .metric-icon { background: rgba(59,130,246,0.15); color: var(--primary); border-color: rgba(59,130,246,0.2); }
+      #section-analytics .metric-card:nth-child(2) .metric-icon { background: rgba(6,182,212,0.15);  color: var(--accent-cyan); border-color: rgba(6,182,212,0.2); }
+      #section-analytics .metric-card:nth-child(3) .metric-icon { background: rgba(16,185,129,0.15); color: var(--accent-green); border-color: rgba(16,185,129,0.2); }
+      #section-analytics .metric-card:nth-child(4) .metric-icon { background: rgba(249,115,22,0.15); color: var(--accent-orange); border-color: rgba(249,115,22,0.2); }
+      #section-analytics .metric-card:nth-child(5) .metric-icon { background: rgba(139,92,246,0.15); color: var(--accent-purple); border-color: rgba(139,92,246,0.2); }
+
+      /* ── Prices subtotal ── */
+      #prices-subtotal {
+        text-align: right;
+        font-weight: 700;
+        font-size: 14px;
+        margin: 14px 0 4px;
+        color: var(--text-main);
+        font-family: var(--font-title);
+      }
+
+      /* ── Fin inputs ── */
+      #fin-paid, #fin-cost { font-size: 15px; font-weight: 600; font-family: var(--font-title); }
+
+      /* ── Textarea ── */
+      textarea.input-control { resize: none; line-height: 1.6; }
+
+      /* ── Maintenance banner ── */
+      #maintenance-banner {
+        background: linear-gradient(90deg, #ea580c 0%, #dc2626 100%) !important;
+        box-shadow: 0 4px 20px rgba(234,88,12,0.4);
+      }
+    </style>
+    <script src="common.js"></script>
+  </head>
+  <body>
+    <!-- Admin Left Nav Rail (admin only) -->
+    <aside class="admin-nav" id="admin-nav">
+      <div class="admin-nav-logo">
+        <i class="fa-solid fa-crown"></i> SnapSave
+      </div>
+      <button
+        class="admin-nav-item active"
+        data-section="tickets"
+        onclick="showAdminSection('tickets')"
+      >
+        <i class="fa-solid fa-cart-shopping"></i> Orders
+      </button>
+      <button
+        class="admin-nav-item"
+        data-section="analytics"
+        onclick="showAdminSection('analytics')"
+      >
+        <i class="fa-solid fa-chart-line"></i> Analytics
+      </button>
+      <button
+        class="admin-nav-item"
+        data-section="customers"
+        onclick="showAdminSection('customers')"
+      >
+        <i class="fa-solid fa-users"></i> Customers
+      </button>
+      <button
+        class="admin-nav-item"
+        data-section="help"
+        onclick="showAdminSection('help')"
+      >
+        <i class="fa-solid fa-headset"></i> Help Inbox
+        <span class="admin-nav-badge" id="help-badge">0</span>
+      </button>
+      <button
+        class="admin-nav-item"
+        data-section="settings"
+        onclick="showAdminSection('settings')"
+      >
+        <i class="fa-solid fa-gear"></i> Settings
+      </button>
+      <button
+        class="admin-nav-item"
+        data-section="beta"
+        onclick="toggleBetaView()"
+      >
+        <i class="fa-solid fa-flask"></i> Beta Program
+      </button>
+      <!-- Roles: hidden unless ENABLE_ROLE_MANAGEMENT is flipped in code -->
+      <button
+        class="admin-nav-item"
+        id="nav-roles"
+        data-section="roles"
+        onclick="showAdminSection('roles')"
+        style="display: none"
+      >
+        <i class="fa-solid fa-user-gear"></i> Roles
+      </button>
+    </aside>
+
+    <!-- 1. Management Console Login Screen -->
+    <section id="auth-section">
+      <!-- Phone Input Screen -->
+      <div id="phone-login-card" class="login-card glass-panel">
+        <div class="logo-display">
+          <i class="fa-solid fa-screwdriver-wrench"></i> SnapSave
+        </div>
+        <div class="login-subtitle">Management Login</div>
+
+        <div id="auth-alert-container"></div>
+
+        <div class="input-group">
+          <label for="login-phone">Phone Number</label>
+          <div style="display:flex; align-items:center; gap:0; background:rgba(8,14,28,0.75); border:1px solid var(--border-bright); border-radius:var(--radius-md); overflow:hidden; transition:border-color 0.2s, box-shadow 0.2s;" id="phone-input-wrap">
+            <span style="padding:11px 12px 11px 14px; font-size:13px; font-weight:700; color:var(--primary); background:rgba(59,130,246,0.08); border-right:1px solid var(--border-bright); white-space:nowrap; flex-shrink:0;">🇮🇳 +91</span>
+            <input
+              type="tel"
+              id="login-phone"
+              style="flex:1; padding:11px 14px; background:transparent; border:none; color:var(--text-main); font-family:var(--font-body); font-size:13px; outline:none;"
+              placeholder="98765 43210"
+              maxlength="10"
+              onkeypress="if(event.key==='Enter') handleProductionLogin()"
+            />
+          </div>
+        </div>
+
+        <button
+          class="btn"
+          style="width: 100%; background-color: var(--primary)"
+          onclick="handleProductionLogin()"
+        >
+          <i class="fa-solid fa-sign-in-alt"></i> Login
+        </button>
+      </div>
+
+    </section>
+
+    <!-- 2. Header and Main Interface -->
+    <header id="dashboard-header" style="display: none">
+      <div class="header-logo">
+        <i class="fa-solid fa-screwdriver-wrench"></i> SnapSave Management
+      </div>
+      <div class="header-profile">
+        <button
+          id="btn-beta-view"
+          class="btn btn-secondary"
+          style="padding: 6px 12px"
+          onclick="toggleBetaView()"
+        >
+          <i class="fa-solid fa-flask" style="color: var(--accent-purple)"></i>
+          Beta Program
+        </button>
+        <span id="user-role" class="role-badge">Moderator</span>
+        <span id="user-phone" style="font-size: 13px; font-weight: 600"
+          >+912222222222</span
+        >
+        <button
+          class="btn btn-secondary btn-danger"
+          style="padding: 6px 12px"
+          onclick="handleLogout()"
+        >
+          Logout
+        </button>
+      </div>
+    </header>
+
+    <!-- 3. Metrics Cards (Hidden - shown in Analytics section instead) -->
+    <section id="dashboard-metrics" class="metrics-grid" style="display: none !important">
+      <div class="metric-card glass-panel">
+        <div class="metric-icon"><i class="fa-solid fa-cart-shopping"></i></div>
+        <div>
+          <div class="metric-label">Orders Today</div>
+          <div id="metric-orders" class="metric-value">0</div>
+        </div>
+      </div>
+      <div class="metric-card glass-panel">
+        <div class="metric-icon">
+          <i class="fa-solid fa-indian-rupee-sign"></i>
+        </div>
+        <div>
+          <div class="metric-label">Revenue Today</div>
+          <div id="metric-revenue" class="metric-value">₹0.00</div>
+        </div>
+      </div>
+      <div class="metric-card glass-panel">
+        <div class="metric-icon"><i class="fa-solid fa-wallet"></i></div>
+        <div>
+          <div class="metric-label">Profit Today</div>
+          <div id="metric-profit" class="metric-value">₹0.00</div>
+        </div>
+      </div>
+      <div class="metric-card glass-panel">
+        <div class="metric-icon"><i class="fa-solid fa-users"></i></div>
+        <div>
+          <div class="metric-label">Total Customers</div>
+          <div id="metric-customers" class="metric-value">0</div>
+        </div>
+      </div>
+      <div class="metric-card glass-panel">
+        <div class="metric-icon"><i class="fa-solid fa-piggy-bank"></i></div>
+        <div>
+          <div class="metric-label">Savings Delivered</div>
+          <div id="metric-savings" class="metric-value">₹0.00</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Management Console Workspace -->
+    <main
+      id="dashboard-main"
+      style="display: none; flex: 1; flex-direction: column"
+    >
+      <!-- Mobile Tab Switcher -->
+      <div id="mobile-tab-bar" class="mobile-tabs-container">
+        <button class="mobile-tab-btn active" onclick="switchTab('queue')">
+          <i class="fa-solid fa-list"></i> Queue
+        </button>
+        <button class="mobile-tab-btn" onclick="switchTab('chat')">
+          <i class="fa-solid fa-comments"></i> Chat
+        </button>
+        <button class="mobile-tab-btn" onclick="switchTab('ticket')">
+          <i class="fa-solid fa-ticket"></i> Ticket
+        </button>
+        <button
+          class="mobile-tab-btn admin-tab"
+          id="tab-btn-admin"
+          onclick="switchTab('admin')"
+          style="display: none"
+        >
+          <i class="fa-solid fa-screwdriver-wrench"></i> Admin
+        </button>
+      </div>
+      <!-- Orders Tab Bar -->
+      <div class="orders-tab-bar" id="orders-tab-bar">
+        <button class="orders-tab active" data-tab="queue" onclick="switchOrdersTab('queue')">
+          <i class="fa-solid fa-list-check"></i> Queue
+          <span class="tab-count" id="queue-tab-count"></span>
+        </button>
+        <button class="orders-tab" data-tab="ticket" id="ticket-tab-btn" onclick="switchOrdersTab('ticket')">
+          <i class="fa-solid fa-message"></i> Active Ticket
+        </button>
+      </div>
+      <div id="workspace-container" class="view-queue">
+        <!-- Column 1: Admin controls & Moderator assignment (Admin Only) -->
+        <div
+          class="col-panel sidebar-admin-only"
+          id="panel-admin"
+          style="display:none"
+        >
+          <div class="panel-header" style="gap: 10px">
+            <div style="display: flex; align-items: center; gap: 10px">
+              <div class="panel-header-icon">
+                <i class="fa-solid fa-crown"></i>
+              </div>
+              <span>Admin Console</span>
+            </div>
+          </div>
+
+          <div
+            class="panel-scrollable"
+            style="display: flex; flex-direction: column; gap: 20px"
+          >
+            <!-- System Controls -->
+            <div>
+              <div class="panel-section-title">
+                <i class="fa-solid fa-sliders"></i> System Controls
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 8px">
+                <div class="admin-switch-card">
+                  <div class="switch-label-group">
+                    <span class="switch-name"
+                      ><i
+                        class="fa-solid fa-cart-shopping"
+                        style="
+                          color: var(--accent-green);
+                          margin-right: 5px;
+                          font-size: 11px;
+                        "
+                      ></i
+                      >Order Intake</span
+                    >
+                    <span class="switch-desc">Accept new customer orders</span>
+                  </div>
+                  <label class="switch">
+                    <input
+                      type="checkbox"
+                      id="order-global-switch"
+                      onchange="toggleGlobalOrders()"
+                    />
+                    <span class="slider"></span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Moderator Assignments -->
+            <div>
+              <div class="panel-section-title">
+                <i class="fa-solid fa-user-tag"></i> Moderator Assignments
+              </div>
+              <div
+                id="admin-assignments-list"
+                style="display: flex; flex-direction: column; gap: 8px"
+              >
+                <!-- Injected rows of customer assignments -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Column 2: Moderation Queue -->
+        <div
+          class="col-panel mobile-show"
+          id="panel-queue"
+        >
+          <div class="panel-header">
+            <span>Moderation Queue</span>
+            <select
+              id="queue-filter"
+              class="input-control"
+              style="width: 140px; padding: 4px 8px; font-size: 11px"
+              onchange="loadQueue()"
+            >
+              <option value="">All Tickets</option>
+              <option value="pending_review">Pending Review</option>
+              <option value="reviewing">Reviewing</option>
+              <option value="awaiting_customer">Awaiting Customer</option>
+              <option value="awaiting_payment">Awaiting Payment</option>
+              <option value="confirmed">Confirmed</option>
+              <option value="placed">Placed</option>
+              <option value="delivered">Delivered</option>
+            </select>
+          </div>
+          <div id="queue-list" class="panel-scrollable">
+            <!-- Cards injected here -->
+          </div>
+        </div>
+
+        <!-- Column 3: Live Chat Room -->
+        <div class="col-panel" id="panel-chat" style="flex:1; min-width:0;">
+          <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <span id="chat-header-title">Select a Ticket Chat</span>
+            <div id="ai-takeover-container" style="display: none;"><!-- AI toggle hidden until AI is live --></div>
+          </div>
+
+
+          <div class="chat-container">
+            <div id="chat-messages" class="chat-messages">
+              <div class="chat-bubble system">
+                Select an order from the queue to view and participate in conversations.
+              </div>
+            </div>
+            <div class="chat-composer">
+              <input
+                type="text"
+                id="composer-text"
+                class="input-control"
+                placeholder="Reply to customer..."
+                disabled
+              />
+              <button
+                id="btn-send-message"
+                class="btn"
+                style="padding: 12px"
+                onclick="sendMessage()"
+                disabled
+              >
+                <i class="fa-solid fa-paper-plane"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Column 4: claim details & interactive prices entry -->
+        <div
+          class="col-panel right-sidebar"
+          id="panel-ticket"
+        >
+          <div
+            class="panel-header"
+            style="border-bottom: none; padding-bottom: 0"
+          >
+            Ticket Management
+          </div>
+
+          <div
+            id="ticket-unselected-placeholder"
+            style="
+              text-align: center;
+              padding: 60px 20px;
+              color: var(--text-muted);
+              font-size: 13px;
+            "
+          >
+            <i
+              class="fa-solid fa-clipboard"
+              style="font-size: 32px; display: block; margin-bottom: 12px"
+            ></i>
+            No ticket claimed or selected.
+          </div>
+
+          <div
+            id="ticket-detail-panel"
+            style="display: none; flex-direction: column; gap: 16px"
+          >
+            <!-- AI Controls Block -->
+            <div id="ai-controls-block" class="detail-card" style="display: none; border: 1px solid var(--accent-cyan); background: rgba(56, 189, 248, 0.05);">
+              <h4 style="margin-bottom: 10px; font-size: 14px; color: var(--accent-cyan)"><i class="fa-solid fa-robot"></i> AI Concierge Controls</h4>
+              
+              <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+                <div style="flex: 1; font-size: 12px;">
+                  <span style="color: var(--text-muted);">Mode:</span>
+                  <span id="ai-mode-label" style="font-weight: bold; margin-left: 4px;"></span>
+                </div>
+                <div style="flex: 1; font-size: 12px;">
+                  <span style="color: var(--text-muted);">Worker:</span>
+                  <span id="ai-worker-label" style="font-weight: bold; margin-left: 4px;"></span>
+                </div>
+              </div>
+              <div style="font-size: 11px; margin-bottom: 8px; color: var(--text-muted);">
+                Pricing: <span id="ai-pricing-label"></span>
+              </div>
+              <div id="ai-mode-desc" style="font-size: 11px; margin-bottom: 12px; padding: 6px 8px; border-radius: 6px; background: rgba(56,189,248,0.08); color: var(--text-muted);"></div>
+              
+              <div id="ai-admin-controls" style="display: none; margin-bottom: 10px;">
+                <label style="font-size: 11px; color: var(--text-muted);">Set Ticket Mode:</label>
+                <div style="display: flex; gap: 6px; margin-top: 4px;">
+                  <button id="mode-btn-human" class="btn btn-secondary" onclick="setOrderMode('HUMAN')" style="flex:1; padding: 5px; font-size: 11px;" title="Fully human-operated. AI cannot act.">👤 Human</button>
+                  <button id="mode-btn-hybrid" class="btn btn-secondary" onclick="setOrderMode('HYBRID')" style="flex:1; padding: 5px; font-size: 11px;" title="AI assists, human verifies. Best of both.">🤝 Hybrid</button>
+                  <button id="mode-btn-ai" class="btn btn-secondary" onclick="setOrderMode('AI')" style="flex:1; padding: 5px; font-size: 11px;" title="AI handles pricing automatically.">🤖 AI</button>
+                </div>
+              </div>
+              
+              <button
+                id="btn-takeover-ai"
+                class="btn btn-accent"
+                style="width: 100%; background: var(--accent-orange); color: white;"
+                onclick="takeoverAi()"
+              >
+                <i class="fa-solid fa-hand"></i> TAKE OVER FROM AI
+              </button>
+              
+              <button
+                id="btn-return-ai"
+                class="btn btn-secondary"
+                style="width: 100%; margin-top: 8px; display: none;"
+                onclick="delegateToAi()"
+              >
+                <i class="fa-solid fa-robot"></i> DELEGATE BACK TO AI
+              </button>
+            </div>
+
+            <!-- Claim order block -->
+            <div id="claim-block" class="detail-card">
+              <h4 style="margin-bottom: 10px; font-size: 14px">Claim Ticket</h4>
+              <p
+                style="
+                  font-size: 12px;
+                  color: var(--text-muted);
+                  margin-bottom: 12px;
+                "
+              >
+                This order is unclaimed. Claim ownership to enter comparison
+                prices.
+              </p>
+              <button
+                id="btn-claim-order"
+                class="btn btn-accent"
+                style="width: 100%"
+                onclick="claimOrder()"
+              >
+                <i class="fa-solid fa-hand"></i> Claim Order Ticket
+              </button>
+            </div>
+
+            <!-- Price Input Block -->
+            <div id="prices-block" class="detail-card" style="display: none">
+              <h4 style="margin-bottom: 6px; font-size: 14px">
+                Total Price Per Item
+              </h4>
+              <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">
+                Enter the <b>total cost</b> for each line item and the store.
+              </p>
+
+              <div id="prices-list" style="display: flex; flex-direction: column; gap: 12px">
+                <!-- per-product price rows injected here -->
+              </div>
+
+              <div id="prices-subtotal" style="text-align: right; font-weight: 700; font-size: 13px; margin: 12px 0;"></div>
+
+              <button id="btn-preview-quote" class="btn btn-accent" style="width: 100%" onclick="previewQuote()">
+                Preview Quote
+              </button>
+
+              <div id="quote-preview-block" style="display: none; margin-top: 20px; border-top: 1px solid var(--border); padding-top: 16px;">
+                <h4 style="margin-bottom: 12px; font-size: 14px;">Final Quote Breakdown</h4>
+                
+                <div class="input-group">
+                  <label>Delivery Fee (₹)</label>
+                  <input type="number" id="quote-delivery-fee" class="input-control" value="0" onchange="recalculatePreviewTotal()" />
+                  <span id="delivery-fee-warning" style="font-size: 10px; color: var(--accent-red); display: none;">Subtotal below store threshold! Please add fee.</span>
+                </div>
+                
+                <div class="input-group" style="margin-top: 12px;">
+                  <label>Store Discount (₹)</label>
+                  <input type="number" id="quote-store-discount" class="input-control" value="0" onchange="recalculatePreviewTotal()" />
+                </div>
+                
+                <div class="input-group" style="margin-top: 12px;">
+                  <label>SnapSave Discount (₹)</label>
+                  <input type="number" id="quote-snapsave-discount" class="input-control" value="0" onchange="recalculatePreviewTotal()" />
+                </div>
+                
+                <div class="input-group" style="margin-top: 12px;">
+                  <label>Profit Target (₹)</label>
+                  <input type="number" id="quote-profit" class="input-control" value="0" onchange="recalculatePreviewTotal()" />
+                </div>
+
+                <div style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; margin: 16px 0;">
+                  <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px;">
+                    <span style="color: var(--text-muted)">Subtotal:</span>
+                    <span id="preview-subtotal">₹0</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px;">
+                    <span style="color: var(--text-muted)">Platform Fee:</span>
+                    <span id="preview-platform">₹0</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; font-size: 14px; font-weight: bold; border-top: 1px dashed var(--border); padding-top: 8px; margin-top: 6px;">
+                    <span>Final Customer Price:</span>
+                    <span id="preview-final" style="color: var(--primary);">₹0</span>
+                  </div>
+                </div>
+
+                <button id="btn-submit-prices" class="btn" style="width: 100%" onclick="submitPrices()">
+                  Submit & Send to Customer
+                </button>
+              </div>
+            </div>
+
+            <!-- Place Order Block -->
+            <!-- Awaiting Customer Block -->
+            <div id="awaiting-customer-block" class="detail-card" style="display: none">
+              <h4 style="margin-bottom: 6px; font-size: 14px">
+                Awaiting Confirmation
+              </h4>
+              <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 0;">
+                The quote has been sent. Waiting for the customer to confirm the order on their screen.
+              </p>
+            </div>
+
+            <!-- Place Order Block -->
+            <div id="place-block" class="detail-card" style="display: none">
+              <h4 style="margin-bottom: 6px; font-size: 14px">
+                Payment Verification
+              </h4>
+              <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
+                Have you received the payment from the customer?
+              </p>
+
+              <button
+                id="btn-place-order"
+                class="btn btn-accent"
+                style="width: 100%; margin-top: 12px"
+                onclick="placeOrderWithEta()"
+              >
+                <i class="fa-solid fa-check"></i> Yes, Payment Received
+              </button>
+            </div>
+
+            <!-- Mark Delivered Block -->
+            <div id="deliver-block" class="detail-card" style="display: none">
+              <h4 style="margin-bottom: 8px; font-size: 14px">
+                Delivery Completion
+              </h4>
+              <p
+                style="
+                  font-size: 12px;
+                  color: var(--text-muted);
+                  margin-bottom: 12px;
+                "
+              >
+                Confirm delivery arrival at customer address to close the
+                ticket.
+              </p>
+              <button
+                id="btn-deliver-order"
+                class="btn btn-accent"
+                style="width: 100%"
+                onclick="deliverOrder()"
+              >
+                <i class="fa-solid fa-circle-check"></i> Mark as Delivered
+              </button>
+            </div>
+
+            <!-- Cancel Order Block (Admin only) -->
+            <div id="cancel-block" class="detail-card" style="display: none">
+              <button
+                id="btn-cancel-order"
+                class="btn btn-danger"
+                style="width: 100%"
+                onclick="cancelOrder()"
+              >
+                <i class="fa-solid fa-ban"></i> Cancel Order
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Admin Section: Customers (blacklist) -->
+      <div class="admin-section" id="section-customers">
+        <h2 class="section-title">
+          <i class="fa-solid fa-users" style="color: var(--accent-purple)"></i>
+          Customers
+        </h2>
+        <div class="section-sub">
+          Manage customers and restrict accounts for misconduct.
+        </div>
+        <div id="customers-admin-list"></div>
+      </div>
+
+      <!-- Admin Section: Help Inbox -->
+      <div class="admin-section" id="section-help">
+        <h2 class="section-title">
+          <i class="fa-solid fa-headset" style="color: var(--primary)"></i>
+          Help Inbox
+        </h2>
+        <div class="section-sub">
+          Customer support requests — only admins can see and answer these.
+        </div>
+        <div
+          style="display: grid; grid-template-columns: 320px 1fr; gap: 16px"
+        >
+          <div
+            id="help-thread-list"
+            class="glass-panel"
+            style="padding: 12px; max-height: 70vh; overflow-y: auto"
+          ></div>
+          <div
+            id="help-conversation"
+            class="glass-panel"
+            style="padding: 16px; display: flex; flex-direction: column"
+          >
+            <div
+              style="
+                text-align: center;
+                color: var(--text-muted);
+                padding: 60px 20px;
+              "
+            >
+              Select a customer thread to view and reply.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Admin Section: Settings -->
+      <div class="admin-section" id="section-settings">
+        <h2 class="section-title">
+          <i class="fa-solid fa-gear" style="color: var(--accent-cyan)"></i>
+          App Settings
+        </h2>
+        <div class="section-sub">
+          Global controls for the entire platform.
+        </div>
+        <div style="max-width: 560px; display: flex; flex-direction: column; gap: 12px">
+          <div class="admin-switch-card">
+            <div class="switch-label-group">
+              <span class="switch-name">
+                <i class="fa-solid fa-screwdriver-wrench" style="color: var(--accent-orange); margin-right: 6px"></i>
+                Maintenance Mode
+              </span>
+              <span class="switch-desc">Shut the app down for all customers</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="maintenance-switch" onchange="toggleMaintenance()" />
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="admin-switch-card">
+            <div class="switch-label-group">
+              <span class="switch-name">
+                <i class="fa-solid fa-cart-shopping" style="color: var(--accent-green); margin-right: 6px"></i>
+                Order Intake
+              </span>
+              <span class="switch-desc">Accept new customer orders</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="order-global-switch-2" onchange="toggleGlobalOrders2()" />
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="admin-switch-card" style="display:none"><!-- AI toggle hidden until AI is live -->
+            <div class="switch-label-group">
+              <span class="switch-name">
+                <i class="fa-solid fa-robot" style="color: var(--accent-cyan); margin-right: 6px"></i>
+                Global AI Assistant
+              </span>
+              <span class="switch-desc">Auto-reply to customer lists when moderators are away</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="ai-global-switch" onchange="toggleGlobalAi()" />
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div style="margin-top: 30px;">
+          <h3 style="font-size: 15px; margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 8px;">Delivery Thresholds (₹)</h3>
+          <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">Set the minimum order value required for free delivery per store. If an order subtotal is below this threshold, the delivery fee will be applied.</p>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+            <div class="input-group">
+              <label>Zepto</label>
+              <input type="number" id="config-zepto" class="input-control" value="199" />
+            </div>
+            <div class="input-group">
+              <label>Blinkit</label>
+              <input type="number" id="config-blinkit" class="input-control" value="199" />
+            </div>
+            <div class="input-group">
+              <label>Swiggy Instamart</label>
+              <input type="number" id="config-instamart" class="input-control" value="199" />
+            </div>
+            <div class="input-group">
+              <label>BigBasket</label>
+              <input type="number" id="config-bigbasket" class="input-control" value="299" />
+            </div>
+          </div>
+          <button class="btn btn-accent" style="margin-top: 16px; width: 200px;" onclick="saveDeliveryConfig()">
+            <i class="fa-solid fa-floppy-disk"></i> Save Thresholds
+          </button>
+        </div>
+      </div>
+
+
+      <!-- Admin Section: Analytics -->
+      <div class="admin-section" id="section-analytics">
+        <h2 class="section-title">
+          <i class="fa-solid fa-chart-line" style="color: var(--accent-cyan)"></i>
+          Analytics Dashboard
+        </h2>
+        <div class="section-sub">
+          Real-time metrics and performance insights.
+        </div>
+
+        <!-- Metrics Grid -->
+        <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 24px;">
+          <div class="metric-card glass-panel">
+            <div class="metric-icon"><i class="fa-solid fa-cart-shopping"></i></div>
+            <div>
+              <div class="metric-label">Orders Today</div>
+              <div id="metric-orders-today-analytics" class="metric-value">0</div>
+            </div>
+          </div>
+          <div class="metric-card glass-panel">
+            <div class="metric-icon">
+              <i class="fa-solid fa-indian-rupee-sign"></i>
+            </div>
+            <div>
+              <div class="metric-label">Revenue Today</div>
+              <div id="metric-revenue-analytics" class="metric-value">₹0.00</div>
+            </div>
+          </div>
+          <div class="metric-card glass-panel">
+            <div class="metric-icon"><i class="fa-solid fa-wallet"></i></div>
+            <div>
+              <div class="metric-label">Profit Today</div>
+              <div id="metric-profit-analytics" class="metric-value">₹0.00</div>
+            </div>
+          </div>
+          <div class="metric-card glass-panel">
+            <div class="metric-icon"><i class="fa-solid fa-users"></i></div>
+            <div>
+              <div class="metric-label">Total Customers</div>
+              <div id="metric-customers-analytics" class="metric-value">0</div>
+            </div>
+          </div>
+          <div class="metric-card glass-panel">
+            <div class="metric-icon"><i class="fa-solid fa-piggy-bank"></i></div>
+            <div>
+              <div class="metric-label">Savings Delivered</div>
+              <div id="metric-savings-analytics" class="metric-value">₹0.00</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Additional Metrics Grid -->
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+          <div class="metric-card glass-panel">
+            <div class="metric-icon"><i class="fa-solid fa-clock"></i></div>
+            <div>
+              <div class="metric-label">Pending Review</div>
+              <div id="metric-orders-pending-analytics" class="metric-value">0</div>
+            </div>
+          </div>
+          <div class="metric-card glass-panel">
+            <div class="metric-icon"><i class="fa-solid fa-user-clock"></i></div>
+            <div>
+              <div class="metric-label">Awaiting Customer</div>
+              <div id="metric-orders-awaiting-analytics" class="metric-value">0</div>
+            </div>
+          </div>
+          <div class="metric-card glass-panel">
+            <div class="metric-icon"><i class="fa-solid fa-circle-check"></i></div>
+            <div>
+              <div class="metric-label">Confirmed</div>
+              <div id="metric-orders-confirmed-analytics" class="metric-value">0</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Admin Section: Roles (hidden unless ENABLE_ROLE_MANAGEMENT) -->
+      <div class="admin-section" id="section-roles">
+        <h2 class="section-title">
+          <i class="fa-solid fa-user-gear" style="color: var(--accent-orange)"></i>
+          Role Management
+        </h2>
+        <div class="section-sub">
+          Promote users to Moderator or Admin. (Hidden feature — enabled in code.)
+        </div>
+        <div id="roles-admin-list"></div>
+      </div>
+    </main>
+
+    <!-- Beta Testing Dashboard View -->
+    <section
+      id="beta-program-view"
+      class="glass-panel"
+      style="display: none; margin: 20px; padding: 24px; flex-direction: column; gap: 20px; overflow-y: auto;"
+    >
+      <div
+        style="
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          border-bottom: 1px solid var(--border);
+          padding-bottom: 16px;
+        "
+      >
+        <h2
+          style="
+            font-family: var(--font-title);
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--accent-purple);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+          "
+        >
+          <i class="fa-solid fa-flask"></i> Beta Testing Dashboard
+        </h2>
+        <button class="btn btn-secondary" onclick="exitBetaView()">
+          <i class="fa-solid fa-arrow-left"></i> Back to Workspace
+        </button>
+      </div>
+
+      <!-- 8 Metrics Grid -->
+      <div
+        class="metrics-grid"
+        style="
+          padding: 0;
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 16px;
+        "
+      >
+        <div
+          class="metric-card glass-panel"
+          style="background-color: rgba(30, 41, 59, 0.4)"
+        >
+          <div class="metric-icon"><i class="fa-solid fa-users"></i></div>
+          <div>
+            <div class="metric-label">Total Beta Users</div>
+            <div id="beta-metric-users" class="metric-value">0</div>
+          </div>
+        </div>
+        <div
+          class="metric-card glass-panel"
+          style="background-color: rgba(30, 41, 59, 0.4)"
+        >
+          <div class="metric-icon">
+            <i class="fa-solid fa-cart-flatbed-suitcases"></i>
+          </div>
+          <div>
+            <div class="metric-label">Orders Submitted</div>
+            <div id="beta-metric-submitted" class="metric-value">0</div>
+          </div>
+        </div>
+        <div
+          class="metric-card glass-panel"
+          style="background-color: rgba(30, 41, 59, 0.4)"
+        >
+          <div class="metric-icon">
+            <i class="fa-solid fa-clipboard-check"></i>
+          </div>
+          <div>
+            <div class="metric-label">Orders Completed</div>
+            <div id="beta-metric-completed" class="metric-value">0</div>
+          </div>
+        </div>
+        <div
+          class="metric-card glass-panel"
+          style="background-color: rgba(30, 41, 59, 0.4)"
+        >
+          <div class="metric-icon"><i class="fa-solid fa-user-shield"></i></div>
+          <div>
+            <div class="metric-label">Active Moderators</div>
+            <div id="beta-metric-mods" class="metric-value">0</div>
+          </div>
+        </div>
+        <div
+          class="metric-card glass-panel"
+          style="background-color: rgba(30, 41, 59, 0.4)"
+        >
+          <div class="metric-icon"><i class="fa-solid fa-reply"></i></div>
+          <div>
+            <div class="metric-label">Avg Moderator Response</div>
+            <div id="beta-metric-response-time" class="metric-value">0s</div>
+          </div>
+        </div>
+        <div
+          class="metric-card glass-panel"
+          style="background-color: rgba(30, 41, 59, 0.4)"
+        >
+          <div class="metric-icon">
+            <i class="fa-solid fa-circle-check"></i>
+          </div>
+          <div>
+            <div class="metric-label">Avg Confirmation Time</div>
+            <div id="beta-metric-confirm-time" class="metric-value">0s</div>
+          </div>
+        </div>
+        <div
+          class="metric-card glass-panel"
+          style="background-color: rgba(30, 41, 59, 0.4)"
+        >
+          <div class="metric-icon">
+            <i class="fa-solid fa-indian-rupee-sign"></i>
+          </div>
+          <div>
+            <div class="metric-label">Avg Profit Per Order</div>
+            <div id="beta-metric-avg-profit" class="metric-value">₹0.00</div>
+          </div>
+        </div>
+        <div
+          class="metric-card glass-panel"
+          style="background-color: rgba(30, 41, 59, 0.4)"
+        >
+          <div class="metric-icon"><i class="fa-solid fa-piggy-bank"></i></div>
+          <div>
+            <div class="metric-label">Avg Savings Delivered</div>
+            <div id="beta-metric-avg-savings" class="metric-value">₹0.00</div>
+          </div>
+        </div>
+      </div>
+
+      <div
+        style="
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 20px;
+          margin-top: 10px;
+        "
+      >
+        <!-- Column A: Incidents Tracker -->
+        <div
+          class="glass-panel"
+          style="
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+          "
+        >
+          <h3
+            style="
+              font-size: 16px;
+              border-bottom: 1px solid var(--border);
+              padding-bottom: 8px;
+              font-family: var(--font-title);
+            "
+          >
+            <i
+              class="fa-solid fa-triangle-exclamation"
+              style="color: var(--accent-orange)"
+            ></i>
+            Log Incident
+          </h3>
+
+          <div class="input-group">
+            <label for="inc-order-id">Order ID (Optional)</label>
+            <input
+              type="text"
+              id="inc-order-id"
+              class="input-control"
+              placeholder="Order ID (e.g. 74516c71...)"
+            />
+          </div>
+          <div class="input-group">
+            <label for="inc-type">Incident Type</label>
+            <select id="inc-type" class="input-control">
+              <option value="Wrong price entered">Wrong price entered</option>
+              <option value="Customer confusion">Customer confusion</option>
+              <option value="Order cancelled">Order cancelled</option>
+              <option value="Store unavailable">Store unavailable</option>
+              <option value="Payment issue">Payment issue</option>
+              <option value="Delivery issue">Delivery issue</option>
+            </select>
+          </div>
+          <div class="input-group">
+            <label for="inc-notes">Details / Notes</label>
+            <textarea
+              id="inc-notes"
+              class="input-control"
+              rows="3"
+              style="resize: none"
+              placeholder="Describe the incident details..."
+            ></textarea>
+          </div>
+          <button
+            id="btn-log-incident"
+            class="btn btn-accent"
+            style="width: 100%"
+            onclick="submitIncident()"
+          >
+            Log Incident Record
+          </button>
+
+          <h3
+            style="
+              font-size: 16px;
+              margin-top: 10px;
+              border-bottom: 1px solid var(--border);
+              padding-bottom: 8px;
+              font-family: var(--font-title);
+            "
+          >
+            Incident Logs
+          </h3>
+          <div
+            id="incidents-list"
+            style="
+              max-height: 250px;
+              overflow-y: auto;
+              display: flex;
+              flex-direction: column;
+              gap: 8px;
+            "
+          >
+            <!-- Injected Incident logs -->
+          </div>
+        </div>
+
+        <!-- Column B: Customer Feedback Review -->
+        <div
+          class="glass-panel"
+          style="
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+          "
+        >
+          <h3
+            style="
+              font-size: 16px;
+              border-bottom: 1px solid var(--border);
+              padding-bottom: 8px;
+              font-family: var(--font-title);
+            "
+          >
+            <i
+              class="fa-solid fa-comment-dots"
+              style="color: var(--accent-cyan)"
+            ></i>
+            Customer Feedback Logs
+          </h3>
+          <div
+            id="feedback-list"
+            style="
+              max-height: 520px;
+              overflow-y: auto;
+              display: flex;
+              flex-direction: column;
+              gap: 10px;
+            "
+          >
+            <!-- Injected Customer Feedback -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <script>
+    (async function() {
+      const API_BASE =
+        window.location.hostname === "localhost" ||
+        window.location.hostname === "127.0.0.1"
+          ? "http://127.0.0.1:8000"
+          : window.location.origin;
+
+      // Role-management: enables RBAC for admin control over user roles
+      const ENABLE_ROLE_MANAGEMENT = true;
+
+      const STORAGE_KEY = 'snapsave_admin_token';
+
+      let idToken = null;
+      let currentUser = null;
+
+      let activeOrders = [];
+      let selectedOrder = null;
+      let moderatorsList = [];
+      let customersList = [];
+      let currentAdminSection = "tickets";
+      let selectedHelpUserId = null;
+
+      let backgroundPolling = null;
+      // Management login — phone lookup, token, RBAC check
+      window.handleProductionLogin = async function () {
+        const rawPhone = document.getElementById("login-phone").value.trim();
+        const phone = rawPhone.startsWith("+") ? rawPhone : "+91" + rawPhone.replace(/\s/g, "");
+        console.log("[LOGIN] Phone entered:", phone);
+
+        if (!phone) {
+          console.warn("⚠️ [LOGIN] Phone number is empty");
+          showAuthAlert("Please enter a phone number.", "error");
+          return;
+        }
+
+        const loginBtn = document.querySelector('#phone-login-card .btn');
+        if (loginBtn) {
+          loginBtn.disabled = true;
+          loginBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Logging in...';
+        }
+
+        try {
+          console.log("📤 [LOGIN] Sending test-token request for OTP SMS to:", phone);
+          const response = await fetch(
+            `${API_BASE}/api/auth/test-token?phone=${encodeURIComponent(phone)}`,
+          );
+          const data = await response.json();
+
+          console.log("📥 [LOGIN] Response status:", response.status);
+          console.log("📥 [LOGIN] Response data:", data);
+
+          if (!response.ok) {
+            throw new Error(data.detail || "Login failed");
+          }
+
+          if (!data.idToken) {
+            throw new Error("No token received from server.");
+          }
+
+          console.log("[LOGIN] Authentication successful, idToken received");
+          idToken = data.idToken;
+          localStorage.setItem(STORAGE_KEY, idToken);
+          await checkUserSession();
+        } catch (err) {
+          console.error("❌ [LOGIN] Error:", err.message);
+          showAuthAlert("Login failed: " + err.message, "error");
+          if (loginBtn) {
+            loginBtn.disabled = false;
+            loginBtn.innerHTML = '<i class="fa-solid fa-sign-in-alt"></i> Login';
+          }
+        }
+      };
+
+      window.handleLogout = function () {
+        idToken = null;
+        currentUser = null;
+        selectedOrder = null;
+        clearInterval(backgroundPolling);
+        document.body.classList.remove("admin-shell");
+        localStorage.removeItem(STORAGE_KEY);
+        showLoggedOutView();
+      };
+
+      function showLoggedOutView() {
+        document.getElementById("auth-section").style.display = "flex";
+        document.getElementById("dashboard-header").style.display = "none";
+        document.getElementById("dashboard-metrics").style.display = "none";
+        document.getElementById("dashboard-main").style.display = "none";
+      }
+
+      async function checkUserSession() {
+        try {
+          console.log("🔍 [SESSION] Checking user session...");
+          const me = await apiRequest("/api/auth/me");
+
+          console.log("👤 [SESSION] User data received:", me);
+          console.log("👥 [SESSION] User role:", me.role);
+          console.log("📱 [SESSION] User phone:", me.phone_number || me.email);
+
+          if (me.role !== "ADMIN" && me.role !== "MODERATOR") {
+            console.warn("🚫 [SESSION] Access denied - user is not ADMIN or MODERATOR, role is:", me.role);
+            showAuthAlert(
+              "Access Denied: Customers cannot view the management console.",
+              "error",
+            );
+            idToken = null;
+            return;
+          }
+
+          console.log("✅ [SESSION] User has valid role:", me.role);
+          currentUser = me;
+
+          if (me.role === "ADMIN") {
+            console.log("🔑 [DASHBOARD] Loading ADMIN dashboard");
+          } else if (me.role === "MODERATOR") {
+            console.log("🛠️ [DASHBOARD] Loading MODERATOR dashboard");
+          }
+
+          await startDashboard();
+        } catch (err) {
+          console.error("❌ [SESSION] Error checking session:", err.message);
+          showAuthAlert("Session check failed: " + err.message, "error");
+          handleLogout();
+        }
+      }
+
+      async function startDashboard() {
+        setupMetricCards();
+        document.getElementById("auth-section").style.display = "none";
+        document.getElementById("dashboard-header").style.display = "flex";
+        document.getElementById("dashboard-metrics").style.display = "flex";
+        document.getElementById("dashboard-main").style.display = "flex";
+
+        document.getElementById("user-phone").innerText =
+          currentUser.phone_number || currentUser.email;
+        const roleBadge = document.getElementById("user-role");
+        roleBadge.innerText = currentUser.role;
+        roleBadge.className =
+          "role-badge " +
+          (currentUser.role === "ADMIN" ? "role-admin" : "role-moderator");
+
+        // Setup role-specific UI
+        if (currentUser.role === "ADMIN") {
+          document.body.classList.add("admin-shell");
+          if (ENABLE_ROLE_MANAGEMENT) {
+            const nr = document.getElementById("nav-roles");
+            if (nr) nr.style.display = "flex";
+          }
+          showAdminSection("tickets");
+          await loadAdminConfigurations();
+        } else {
+          showAdminSection("tickets");
+        }
+        // Always start on queue tab
+        switchOrdersTab("queue");
+
+        await loadMetrics();
+        await loadQueue();
+
+        // Periodic background polling - only real-time updates (chat, queue, assignments)
+        // Metrics are loaded only on Analytics section view and initial dashboard load
+        const isAdmin = currentUser.role === "ADMIN";
+        clearInterval(backgroundPolling);
+        backgroundPolling = setInterval(async () => {
+          const tasks = [loadQueue()];
+          if (isAdmin)
+            tasks.push(pollChat(), pollAdminAssignments(), updateHelpBadge());
+          await Promise.all(tasks);
+        }, 10000);
+      }
+
+      function setSwitches(ids, checked) {
+        ids.forEach((id) => {
+          const el = document.getElementById(id);
+          if (el) el.checked = checked;
+        });
+      }
+
+      async function loadAdminConfigurations() {
+        try {
+          // Load Orders Global status
+          const orderSettings = await apiRequest("/api/admin/settings/orders");
+          setSwitches(
+            ["order-global-switch", "order-global-switch-2"],
+            orderSettings.orders_enabled,
+          );
+
+          // Load Maintenance status
+          const maint = await apiRequest("/api/admin/settings/maintenance");
+          setSwitches(["maintenance-switch"], maint.maintenance_mode);
+
+          // Load Delivery Config
+          try {
+            const deliveryConfig = await apiRequest("/api/admin/delivery-config");
+            if (deliveryConfig) {
+              if(deliveryConfig.zepto !== undefined) document.getElementById("config-zepto").value = deliveryConfig.zepto;
+              if(deliveryConfig.blinkit !== undefined) document.getElementById("config-blinkit").value = deliveryConfig.blinkit;
+              if(deliveryConfig.swiggy !== undefined) document.getElementById("config-instamart").value = deliveryConfig.swiggy;
+              if(deliveryConfig.bigbasket !== undefined) document.getElementById("config-bigbasket").value = deliveryConfig.bigbasket;
+            }
+          } catch(e) {
+            console.log("Failed to load delivery config:", e);
+          }
+
+          // Load AI Global status
+          try {
+            const aiStatus = await apiRequest("/api/admin/settings/ai-status");
+            setSwitches(["ai-global-switch"], aiStatus.ai_enabled);
+          } catch (e) {}
+
+          // Load assignments dropdown options
+          moderatorsList = await apiRequest("/api/admin/moderators");
+          await loadAdminAssignments();
+        } catch (e) {
+          console.log("Admin configs load failure:", e);
+        }
+      }
+
+
+
+
+      async function loadAdminAssignments() {
+        try {
+          customersList = await apiRequest("/api/admin/customers");
+          pollAdminAssignments();
+        } catch (e) {
+          console.log("Error loading customers:", e);
+        }
+      }
+
+      function pollAdminAssignments() {
+        if (!currentUser || currentUser.role !== "ADMIN") return;
+        const container = document.getElementById("admin-assignments-list");
+        container.innerHTML = "";
+
+        if (customersList.length === 0) {
+          container.innerHTML = `<p style="font-size: 12px; color: var(--text-muted); text-align: center;">No customers registered.</p>`;
+          return;
+        }
+
+        customersList.forEach((c) => {
+          const row = document.createElement("div");
+          row.className = "assignment-row";
+
+          let options = `<option value="">— Unassigned —</option>`;
+          moderatorsList.forEach((m) => {
+            options += `<option value="${m.id}" ${c.assigned_moderator_id === m.id ? "selected" : ""}>${m.role}: ${m.phone_number || m.email}</option>`;
+          });
+
+          const isAssigned = !!c.assigned_moderator_id;
+          row.innerHTML = `
+                    <div class="customer-label">
+                        <i class="fa-solid fa-user"></i>
+                        ${c.phone_number || c.email}
+                        ${isAssigned ? '<span style="margin-left:auto;font-size:9px;color:var(--accent-green);font-weight:700;">ASSIGNED</span>' : '<span style="margin-left:auto;font-size:9px;color:var(--text-muted);font-weight:700;">OPEN</span>'}
+                    </div>
+                    <select class="input-control" style="padding: 6px 10px; font-size: 12px;" onchange="assignCustomer('${c.id}', this.value)">
+                        ${options}
+                    </select>
+                `;
+          container.appendChild(row);
+        });
+      }
+
+      window.assignCustomer = async function (customerId, moderatorId) {
+        if (!moderatorId) return;
+        try {
+          await apiRequest("/api/admin/assign-moderator", "POST", {
+            customer_id: customerId,
+            moderator_id: moderatorId,
+          });
+          await loadAdminConfigurations();
+          await loadQueue();
+        } catch (err) {
+          alert("Assignment failed: " + err.message);
+        }
+      };
+
+      async function applyOrdersToggle(checked) {
+        try {
+          await apiRequest("/api/admin/settings/orders", "PUT", {
+            orders_enabled: checked,
+          });
+          setSwitches(["order-global-switch", "order-global-switch-2"], checked);
+        } catch (err) {
+          alert("Order switch toggle failed: " + err.message);
+          setSwitches(
+            ["order-global-switch", "order-global-switch-2"],
+            !checked,
+          );
+        }
+      }
+      window.toggleGlobalOrders = () =>
+        applyOrdersToggle(document.getElementById("order-global-switch").checked);
+      window.toggleGlobalOrders2 = () =>
+        applyOrdersToggle(
+          document.getElementById("order-global-switch-2").checked,
+        );
+
+      window.saveDeliveryConfig = async function() {
+        try {
+          const thresholds = {
+            zepto: parseFloat(document.getElementById("config-zepto").value) || 199,
+            blinkit: parseFloat(document.getElementById("config-blinkit").value) || 199,
+            swiggy: parseFloat(document.getElementById("config-instamart").value) || 199,
+            bigbasket: parseFloat(document.getElementById("config-bigbasket").value) || 299
+          };
+          await apiRequest("/api/admin/delivery-config", "PUT", { thresholds });
+          alert("Delivery Thresholds saved successfully!");
+        } catch (err) {
+          alert("Failed to save delivery thresholds: " + err.message);
+        }
+      };
+
+      window.toggleMaintenance = async function () {
+        const checked = document.getElementById("maintenance-switch").checked;
+        try {
+          await apiRequest("/api/admin/settings/maintenance", "PUT", {
+            maintenance_mode: checked,
+          });
+        } catch (err) {
+          alert("Maintenance toggle failed: " + err.message);
+          document.getElementById("maintenance-switch").checked = !checked;
+        }
+      };
+
+      window.toggleGlobalAi = async function () {
+        const checked = document.getElementById("ai-global-switch").checked;
+        try {
+          await apiRequest("/api/admin/settings/ai-status", "PUT", {
+            ai_enabled: checked,
+          });
+        } catch (err) {
+          alert("AI switch toggle failed: " + err.message);
+          document.getElementById("ai-global-switch").checked = !checked;
+        }
+      };
+
+      // ── Admin section navigation ──
+      window.showAdminSection = function (name) {
+        currentAdminSection = name;
+        document
+          .querySelectorAll(".admin-nav-item")
+          .forEach((b) =>
+            b.classList.toggle("active", b.dataset.section === name),
+          );
+        // Exit beta view if it was open
+        document.getElementById("beta-program-view").style.display = "none";
+
+        const isTickets = name === "tickets";
+        const isAnalytics = name === "analytics";
+
+        // Show/hide workspace and tabs (only for tickets)
+        document.getElementById("workspace-container").style.display = isTickets
+          ? ""
+          : "none";
+        document.getElementById("mobile-tab-bar").style.display = isTickets
+          ? ""
+          : "none";
+
+        // Show/hide admin sections
+        document
+          .querySelectorAll(".admin-section")
+          .forEach((s) => s.classList.remove("active"));
+        if (!isTickets) {
+          const sec = document.getElementById("section-" + name);
+          if (sec) sec.classList.add("active");
+        }
+
+        // Load data based on section
+        if (name === "customers") loadCustomersAdmin();
+        if (name === "help") loadHelpInbox();
+        if (name === "roles") loadRolesAdmin();
+        if (name === "analytics") loadMetrics();
+      };
+
+      // ── Customers section (blacklist) ──
+      async function loadCustomersAdmin() {
+        const container = document.getElementById("customers-admin-list");
+        try {
+          const customers = await apiRequest("/api/admin/customers");
+          if (!customers.length) {
+            container.innerHTML = `<p style="color:var(--text-muted);">No customers registered yet.</p>`;
+            return;
+          }
+          container.innerHTML = "";
+          customers.forEach((c) => {
+            const row = document.createElement("div");
+            row.className = "data-row";
+            row.innerHTML = `
+              <div class="dr-main">
+                <div class="dr-title">
+                  <i class="fa-solid fa-user" style="color:var(--accent-purple)"></i>
+                  ${c.phone_number || c.email}
+                  ${c.is_blacklisted ? '<span class="badge cancelled" style="margin-left:6px;">Blacklisted</span>' : ""}
+                </div>
+                <div class="dr-sub">${c.is_blacklisted ? "Reason: " + (c.blacklist_reason || "—") : "Active account"}</div>
+              </div>
+              ${
+                c.is_blacklisted
+                  ? `<button class="btn btn-secondary" onclick="unblacklist('${c.id}')"><i class="fa-solid fa-unlock"></i> Reinstate</button>`
+                  : `<button class="btn btn-danger" onclick="blacklist('${c.id}')"><i class="fa-solid fa-ban"></i> Blacklist</button>`
+              }`;
+            container.appendChild(row);
+          });
+        } catch (e) {
+          container.innerHTML = `<p style="color:#ef4444;">Failed to load customers: ${e.message}</p>`;
+        }
+      }
+      window.blacklist = async function (userId) {
+        const reason = prompt("Reason for blacklisting this customer?") || "";
+        try {
+          await apiRequest(`/api/admin/customers/${userId}/blacklist`, "PUT", {
+            reason,
+          });
+          loadCustomersAdmin();
+        } catch (e) {
+          alert("Failed: " + e.message);
+        }
+      };
+      window.unblacklist = async function (userId) {
+        try {
+          await apiRequest(`/api/admin/customers/${userId}/unblacklist`, "PUT");
+          loadCustomersAdmin();
+        } catch (e) {
+          alert("Failed: " + e.message);
+        }
+      };
+
+      // ── Help inbox ──
+      async function updateHelpBadge() {
+        try {
+          const threads = await apiRequest("/api/admin/help");
+          const openCount = threads.filter((t) => t.open).length;
+          const badge = document.getElementById("help-badge");
+          if (badge) {
+            badge.style.display = openCount ? "flex" : "none";
+            badge.innerText = openCount;
+          }
+        } catch (e) {
+          /* non-fatal */
+        }
+      }
+
+      async function loadHelpInbox() {
+        const list = document.getElementById("help-thread-list");
+        try {
+          const threads = await apiRequest("/api/admin/help");
+          const openCount = threads.filter((t) => t.open).length;
+          const badge = document.getElementById("help-badge");
+          if (badge) {
+            badge.style.display = openCount ? "flex" : "none";
+            badge.innerText = openCount;
+          }
+          if (!threads.length) {
+            list.innerHTML = `<p style="color:var(--text-muted); padding:10px;">No support requests.</p>`;
+            return;
+          }
+          list.innerHTML = "";
+          threads.forEach((t) => {
+            const item = document.createElement("div");
+            item.className = "queue-card";
+            if (t.user_id === selectedHelpUserId) item.classList.add("selected");
+            const last = t.messages[t.messages.length - 1];
+            item.innerHTML = `
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:13px; font-weight:600;">${t.customer_phone}</span>
+                ${t.open ? '<span class="badge pending_review">OPEN</span>' : '<span class="badge delivered">DONE</span>'}
+              </div>
+              <div style="font-size:11px; color:var(--text-muted); margin-top:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${last ? last.message : ""}</div>`;
+            item.onclick = () => openHelpThread(t);
+            list.appendChild(item);
+          });
+        } catch (e) {
+          list.innerHTML = `<p style="color:#ef4444; padding:10px;">${e.message}</p>`;
+        }
+      }
+      let currentHelpThread = null;
+      function openHelpThread(t) {
+        selectedHelpUserId = t.user_id;
+        currentHelpThread = t;
+        loadHelpInbox();
+        const conv = document.getElementById("help-conversation");
+        const bubbles = t.messages
+          .map((m) => {
+            const isAdmin = m.sender_role === "ADMIN";
+            return `<div class="chat-bubble ${isAdmin ? "moderator" : "customer"}" style="max-width:80%;">
+              <div class="chat-sender">${isAdmin ? "You (Admin)" : "Customer"}</div>
+              <div style="white-space:pre-wrap;">${m.message}</div>
+              <div class="chat-timestamp">${new Date(m.created_at + "Z").toLocaleString()}</div>
+            </div>`;
+          })
+          .join("");
+        conv.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:10px; margin-bottom:12px;">
+            <strong>${t.customer_phone}</strong>
+            <button class="btn btn-secondary" style="padding:6px 12px;" onclick="resolveHelp('${t.user_id}')">Mark Resolved</button>
+          </div>
+          <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px; margin-bottom:12px; max-height:48vh;">${bubbles}</div>
+          <div style="display:flex; gap:10px;">
+            <input type="text" id="help-reply-input" class="input-control" placeholder="Reply to customer..." style="flex:1;" />
+            <button class="btn" style="padding:10px 16px;" onclick="replyHelp('${t.user_id}')"><i class="fa-solid fa-paper-plane"></i></button>
+          </div>`;
+        const inp = document.getElementById("help-reply-input");
+        inp.addEventListener("keypress", (e) => {
+          if (e.key === "Enter") replyHelp(t.user_id);
+        });
+      }
+      window.replyHelp = async function (userId) {
+        const inp = document.getElementById("help-reply-input");
+        const msg = inp.value.trim();
+        if (!msg) return;
+        try {
+          await apiRequest(`/api/admin/help/${userId}/reply`, "POST", {
+            message: msg,
+          });
+          const threads = await apiRequest("/api/admin/help");
+          const t = threads.find((x) => x.user_id === userId);
+          if (t) openHelpThread(t);
+        } catch (e) {
+          alert("Failed to reply: " + e.message);
+        }
+      };
+      window.resolveHelp = async function (userId) {
+        try {
+          await apiRequest(`/api/admin/help/${userId}/resolve`, "PUT");
+          loadHelpInbox();
+        } catch (e) {
+          alert("Failed: " + e.message);
+        }
+      };
+
+      // ── Roles (hidden) ──
+      async function loadRolesAdmin() {
+        const container = document.getElementById("roles-admin-list");
+        try {
+          const users = await apiRequest("/api/admin/users");
+          container.innerHTML = "";
+          users.forEach((u) => {
+            const row = document.createElement("div");
+            row.className = "data-row";
+            row.innerHTML = `
+              <div class="dr-main">
+                <div class="dr-title">${u.phone_number || u.email}
+                  <span class="role-badge ${u.role === "ADMIN" ? "role-admin" : u.role === "MODERATOR" ? "role-moderator" : ""}" style="margin-left:6px;">${u.role}</span>
+                </div>
+                <div class="dr-sub">${u.email}</div>
+              </div>
+              <select class="input-control" style="width:160px; padding:8px 10px; font-size:12px;" onchange="changeRole('${u.id}', this.value)">
+                <option value="CUSTOMER" ${u.role === "CUSTOMER" ? "selected" : ""}>Customer</option>
+                <option value="MODERATOR" ${u.role === "MODERATOR" ? "selected" : ""}>Moderator</option>
+                <option value="ADMIN" ${u.role === "ADMIN" ? "selected" : ""}>Admin</option>
+              </select>`;
+            container.appendChild(row);
+          });
+        } catch (e) {
+          container.innerHTML = `<p style="color:#ef4444;">${e.message}</p>`;
+        }
+      }
+      window.changeRole = async function (userId, role) {
+        try {
+          await apiRequest("/api/admin/roles", "PUT", {
+            user_id: userId,
+            role: role,
+          });
+          loadRolesAdmin();
+        } catch (e) {
+          alert("Role change failed: " + e.message);
+        }
+      };
+
+      // ── Cancel order (admin) ──
+      window.cancelOrder = async function () {
+        if (!selectedOrder) return;
+        if (!confirm("Cancel this order? This cannot be undone.")) return;
+        setLoading("btn-cancel-order", true);
+        try {
+          const res = await apiRequest(
+            `/api/admin/orders/${selectedOrder.order_id}/cancel`,
+            "PUT",
+          );
+          selectedOrder.status = res.status;
+          await loadQueue();
+          renderTicketDetails();
+          await pollChat();
+        } catch (err) {
+          alert("Cancel failed: " + err.message);
+        } finally {
+          setLoading("btn-cancel-order", false);
+        }
+      };
+
+      window.setOrderMode = async function (mode) {
+        if (!selectedOrder) return;
+        try {
+          const res = await apiRequest(`/api/admin/orders/${selectedOrder.order_id}/mode`, "PUT", { mode });
+          selectedOrder.mode = res.mode;
+          selectedOrder.assigned_worker_type = res.assigned_worker_type;
+          _lastQueueSignature = ""; // Force queue refresh
+          await loadQueue();
+          renderTicketDetails();
+        } catch (err) {
+          alert("Change mode failed: " + err.message);
+        }
+      };
+
+      window.takeoverAi = async function () {
+        if (!selectedOrder) return;
+        setLoading("btn-takeover-ai", true);
+        try {
+          const res = await apiRequest(`/api/moderator/orders/${selectedOrder.order_id}/takeover`, "PUT");
+          selectedOrder.assigned_worker_type = res.assigned_worker_type;
+          selectedOrder.mode = res.mode;
+          _lastQueueSignature = "";
+          await loadQueue();
+          renderTicketDetails();
+        } catch (err) {
+          alert("Takeover failed: " + err.message);
+        } finally {
+          setLoading("btn-takeover-ai", false);
+        }
+      };
+
+      window.delegateToAi = async function () {
+        if (!selectedOrder) return;
+        setLoading("btn-return-ai", true);
+        try {
+          const res = await apiRequest(`/api/admin/orders/${selectedOrder.order_id}/delegate`, "PUT", { assigned_worker_type: "AI" });
+          selectedOrder.assigned_worker_type = res.assigned_worker_type;
+          _lastQueueSignature = "";
+          await loadQueue();
+          renderTicketDetails();
+        } catch (err) {
+          alert("Delegate to AI failed: " + err.message);
+        } finally {
+          setLoading("btn-return-ai", false);
+        }
+      };
+
+      function setupMetricCards() {
+        const metricsContainer = document.getElementById("dashboard-metrics");
+        if (!metricsContainer) return;
+        if (currentUser.role === "ADMIN") {
+          metricsContainer.innerHTML = `
+                    <div class="metric-card glass-panel">
+                        <div class="metric-icon" style="background-color: rgba(59, 130, 246, 0.15); color: var(--primary);"><i class="fa-solid fa-cart-shopping"></i></div>
+                        <div>
+                            <div class="metric-label">Orders Today</div>
+                            <div id="metric-orders-today" class="metric-value">0</div>
+                        </div>
+                    </div>
+                    <div class="metric-card glass-panel">
+                        <div class="metric-icon" style="background-color: rgba(6, 182, 212, 0.15); color: var(--accent-cyan);"><i class="fa-solid fa-clock"></i></div>
+                        <div>
+                            <div class="metric-label">Pending Review</div>
+                            <div id="metric-orders-pending" class="metric-value">0</div>
+                        </div>
+                    </div>
+                    <div class="metric-card glass-panel">
+                        <div class="metric-icon" style="background-color: rgba(249, 115, 22, 0.15); color: var(--accent-orange);"><i class="fa-solid fa-user-clock"></i></div>
+                        <div>
+                            <div class="metric-label">Awaiting Customer</div>
+                            <div id="metric-orders-awaiting" class="metric-value">0</div>
+                        </div>
+                    </div>
+                    <div class="metric-card glass-panel">
+                        <div class="metric-icon" style="background-color: rgba(139, 92, 246, 0.15); color: var(--accent-purple);"><i class="fa-solid fa-circle-check"></i></div>
+                        <div>
+                            <div class="metric-label">Confirmed</div>
+                            <div id="metric-orders-confirmed" class="metric-value">0</div>
+                        </div>
+                    </div>
+                    <div class="metric-card glass-panel">
+                        <div class="metric-icon" style="background-color: rgba(16, 185, 129, 0.15); color: var(--accent-green);"><i class="fa-solid fa-truck"></i></div>
+                        <div>
+                            <div class="metric-label">Delivered</div>
+                            <div id="metric-orders-delivered" class="metric-value">0</div>
+                        </div>
+                    </div>
+                    <div class="metric-card glass-panel">
+                        <div class="metric-icon" style="background-color: rgba(16, 185, 129, 0.15); color: var(--accent-green);"><i class="fa-solid fa-indian-rupee-sign"></i></div>
+                        <div>
+                            <div class="metric-label">Total Revenue</div>
+                            <div id="metric-revenue" class="metric-value">₹0.00</div>
+                        </div>
+                    </div>
+                    <div class="metric-card glass-panel">
+                        <div class="metric-icon" style="background-color: rgba(6, 182, 212, 0.15); color: var(--accent-cyan);"><i class="fa-solid fa-wallet"></i></div>
+                        <div>
+                            <div class="metric-label">Total Profit</div>
+                            <div id="metric-profit" class="metric-value">₹0.00</div>
+                        </div>
+                    </div>
+                    <div class="metric-card glass-panel">
+                        <div class="metric-icon" style="background-color: rgba(249, 115, 22, 0.15); color: var(--accent-orange);"><i class="fa-solid fa-piggy-bank"></i></div>
+                        <div>
+                            <div class="metric-label">Savings Delivered</div>
+                            <div id="metric-savings" class="metric-value">₹0.00</div>
+                        </div>
+                    </div>
+                `;
+        } else {
+          metricsContainer.innerHTML = `
+                    <div class="metric-card glass-panel">
+                        <div class="metric-icon" style="background-color: rgba(59, 130, 246, 0.15); color: var(--primary);"><i class="fa-solid fa-cart-shopping"></i></div>
+                        <div>
+                            <div class="metric-label">Active Tickets</div>
+                            <div id="metric-active-tickets" class="metric-value">0</div>
+                        </div>
+                    </div>
+                    <div class="metric-card glass-panel">
+                        <div class="metric-icon" style="background-color: rgba(16, 185, 129, 0.15); color: var(--accent-green);"><i class="fa-solid fa-clipboard-check"></i></div>
+                        <div>
+                            <div class="metric-label">Claimed Tickets</div>
+                            <div id="metric-claimed-tickets" class="metric-value">0</div>
+                        </div>
+                    </div>
+                    <div class="metric-card glass-panel">
+                        <div class="metric-icon" style="background-color: rgba(249, 115, 22, 0.15); color: var(--accent-orange);"><i class="fa-solid fa-hourglass-half"></i></div>
+                        <div>
+                            <div class="metric-label">Pending Tickets</div>
+                            <div id="metric-pending-tickets" class="metric-value">0</div>
+                        </div>
+                    </div>
+                    <div class="metric-card glass-panel">
+                        <div class="metric-icon" style="background-color: rgba(139, 92, 246, 0.15); color: var(--accent-purple);"><i class="fa-solid fa-stopwatch"></i></div>
+                        <div>
+                            <div class="metric-label">Avg Response Time</div>
+                            <div id="metric-response-time" class="metric-value">0s</div>
+                        </div>
+                    </div>
+                    <div class="metric-card glass-panel">
+                        <div class="metric-icon" style="background-color: rgba(6, 182, 212, 0.15); color: var(--accent-cyan);"><i class="fa-solid fa-chart-line"></i></div>
+                        <div>
+                            <div class="metric-label">Orders Today</div>
+                            <div id="metric-orders-today-mod" class="metric-value">0</div>
+                        </div>
+                    </div>
+                `;
+        }
+      }
+
+      async function loadMetrics() {
+        try {
+          const m = await apiRequest("/api/admin/dashboard/metrics");
+
+          if (currentUser.role === "ADMIN") {
+            // Update original metric elements (if they exist)
+            const elOrdersToday = document.getElementById(
+              "metric-orders-today",
+            );
+            if (elOrdersToday) elOrdersToday.innerText = m.orders_today;
+
+            const elRevenue = document.getElementById("metric-revenue");
+            if (elRevenue)
+              elRevenue.innerText = `₹${parseFloat(m.revenue).toFixed(2)}`;
+
+            const elProfit = document.getElementById("metric-profit");
+            if (elProfit)
+              elProfit.innerText = `₹${parseFloat(m.profit).toFixed(2)}`;
+
+            const elSavings = document.getElementById("metric-savings");
+            if (elSavings)
+              elSavings.innerText = `₹${parseFloat(m.total_savings_delivered).toFixed(2)}`;
+
+            // Update Analytics section metrics
+            const elAnalyticsOrdersToday = document.getElementById(
+              "metric-orders-today-analytics",
+            );
+            if (elAnalyticsOrdersToday) elAnalyticsOrdersToday.innerText = m.orders_today;
+
+            const elAnalyticsRevenue = document.getElementById("metric-revenue-analytics");
+            if (elAnalyticsRevenue)
+              elAnalyticsRevenue.innerText = `₹${parseFloat(m.revenue).toFixed(2)}`;
+
+            const elAnalyticsProfit = document.getElementById("metric-profit-analytics");
+            if (elAnalyticsProfit)
+              elAnalyticsProfit.innerText = `₹${parseFloat(m.profit).toFixed(2)}`;
+
+            const elAnalyticsSavings = document.getElementById("metric-savings-analytics");
+            if (elAnalyticsSavings)
+              elAnalyticsSavings.innerText = `₹${parseFloat(m.total_savings_delivered).toFixed(2)}`;
+
+            const elAnalyticsCustomers = document.getElementById("metric-customers-analytics");
+            if (elAnalyticsCustomers) elAnalyticsCustomers.innerText = m.total_customers;
+
+            const elAnalyticsPending = document.getElementById("metric-orders-pending-analytics");
+            if (elAnalyticsPending) elAnalyticsPending.innerText = m.orders_pending_review;
+
+            const elAnalyticsAwaiting = document.getElementById(
+              "metric-orders-awaiting-analytics",
+            );
+            if (elAnalyticsAwaiting) elAnalyticsAwaiting.innerText = m.orders_awaiting_customer;
+
+            const elAnalyticsConfirmed = document.getElementById(
+              "metric-orders-confirmed-analytics",
+            );
+            if (elAnalyticsConfirmed) elAnalyticsConfirmed.innerText = m.orders_confirmed;
+          } else {
+            const elActive = document.getElementById("metric-active-tickets");
+            if (elActive) elActive.innerText = m.active_tickets;
+
+            const elClaimed = document.getElementById("metric-claimed-tickets");
+            if (elClaimed) elClaimed.innerText = m.claimed_tickets;
+
+            const elPending = document.getElementById("metric-pending-tickets");
+            if (elPending) elPending.innerText = m.pending_tickets;
+
+            const elResponse = document.getElementById("metric-response-time");
+            if (elResponse) {
+              const seconds = Math.round(m.avg_response_time);
+              if (seconds < 60) {
+                elResponse.innerText = `${seconds}s`;
+              } else {
+                const mins = Math.floor(seconds / 60);
+                const secs = seconds % 60;
+                elResponse.innerText = `${mins}m ${secs}s`;
+              }
+            }
+
+            const elOrdersTodayMod = document.getElementById(
+              "metric-orders-today-mod",
+            );
+            if (elOrdersTodayMod) elOrdersTodayMod.innerText = m.orders_today;
+          }
+        } catch (e) {
+          console.log("Error loading dashboard metrics:", e);
+        }
+      }
+
+      let _lastQueueSignature = "";
+      window.loadQueue = async function () {
+        const filter = document.getElementById("queue-filter").value;
+        try {
+          const queue = await apiRequest(
+            `/api/moderator/queue${filter ? "?status_filter=" + filter : ""}`,
+          );
+
+          // Build a signature to skip re-render when nothing changed
+          const sig = queue.map(o => o.order_id + o.status + (o.assigned_worker_type||"") + (o.mode||"")).join("|");
+          const queueChanged = sig !== _lastQueueSignature;
+          _lastQueueSignature = sig;
+
+          activeOrders = queue;
+          
+          // Update selectedOrder if it's in the queue
+          if (selectedOrder) {
+            const updated = activeOrders.find(o => o.order_id === selectedOrder.order_id);
+            if (updated) {
+              const statusChanged = selectedOrder.status !== updated.status;
+              selectedOrder = updated;
+              if (statusChanged) renderTicketDetails();
+            }
+          }
+          
+          if (queueChanged) renderQueue();
+        } catch (e) {
+          console.log("Error loading queue:", e);
+        }
+      };
+
+      function renderQueue() {
+        const container = document.getElementById("queue-list");
+        container.innerHTML = "";
+
+        const countBadge = document.getElementById("queue-tab-count");
+        if (countBadge) {
+          countBadge.innerText = activeOrders.length;
+          countBadge.style.display = activeOrders.length > 0 ? "inline-block" : "none";
+        }
+
+        if (activeOrders.length === 0) {
+          container.innerHTML = `<p style="color: var(--text-muted); font-size: 12px; text-align: center; padding: 24px;">No active requests in queue.</p>`;
+          return;
+        }
+
+        activeOrders.forEach((order) => {
+          const card = document.createElement("div");
+          card.className =
+            "queue-card" +
+            (selectedOrder && selectedOrder.order_id === order.order_id
+              ? " selected"
+              : "");
+          card.dataset.status = order.status;
+
+          // Extract assigned label
+          let assignLabel = "Unassigned";
+          let assignColor = "var(--text-muted)";
+          if (order.assigned_worker_type === "AI") {
+            assignLabel = "🤖 AI Assigned";
+            assignColor = "var(--accent-cyan)";
+          } else if (order.assigned_moderator_id) {
+            if (order.assigned_moderator_id === currentUser.id) {
+              assignLabel = "👤 Assigned to You";
+              assignColor = "var(--accent-green)";
+            } else {
+              assignLabel = "👤 Assigned to Other";
+              assignColor = "var(--accent-orange)";
+            }
+          }
+
+          const timeAgo = order.created_at ? timeSince(order.created_at) : "";
+
+          card.innerHTML = `
+                    <div class="queue-header">
+                        <span style="font-family: monospace; font-size: 11px; font-weight: 600; color: var(--text-muted);">#${order.order_id.slice(0, 8)}</span>
+                        <div>
+                          <span class="badge ${order.status}">${order.status.replace(/_/g, " ")}</span>
+                          <span class="badge" style="background: var(--surface-light); color: var(--text-light); margin-left: 4px;">${order.mode || "HUMAN"}</span>
+                        </div>
+                    </div>
+                    <div style="font-size: 13px; font-weight: 600; margin-bottom: 3px;">${order.customer_name || order.customer_phone}</div>
+                    <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 6px; display: flex; gap: 8px;">
+                        <span><i class="fa-solid fa-location-dot" style="font-size: 9px;"></i> ${order.delivery_city}</span>
+                        ${timeAgo ? `<span><i class="fa-regular fa-clock" style="font-size: 9px;"></i> ${timeAgo}</span>` : ""}
+                    </div>
+                    <div style="font-size: 10px; font-weight: 700; color: ${assignColor};">${assignLabel}</div>
+                `;
+
+          card.onclick = () => selectTicket(order);
+          container.appendChild(card);
+        });
+      }
+
+      async function selectTicket(order) {
+        selectedOrder = order;
+        renderQueue();
+
+        // Set chat header + enable composer
+        document.getElementById("chat-header-title").innerText =
+          `Chat: ${order.customer_phone}`;
+        document.getElementById("composer-text").disabled = false;
+        document.getElementById("btn-send-message").disabled = false;
+        await pollChat();
+
+        renderTicketDetails();
+        switchOrdersTab('ticket');
+      }
+
+      async function pollChat() {
+        if (!selectedOrder) return;
+        // Moderators have no chat access — only admins monitor chat
+        if (currentUser.role !== "ADMIN") return;
+        try {
+          const messages = await apiRequest(
+            `/api/chat/${selectedOrder.customer_id}/messages`,
+          );
+          renderMessages(messages);
+        } catch (e) {
+          console.log("Error loading chat messages:", e);
+        }
+      }
+
+      function renderMessages(msgs) {
+        const chat = document.getElementById("chat-messages");
+        chat.innerHTML = "";
+
+        if (msgs.length === 0) {
+          chat.innerHTML = `<div class="chat-bubble system">No chat activity logs found.</div>`;
+          return;
+        }
+
+        msgs.forEach((m) => {
+          const bubble = document.createElement("div");
+          let senderClass = "system";
+          let senderName = "System";
+
+          if (m.sender_role === "CUSTOMER") {
+            senderClass = "customer";
+            senderName = "Customer";
+          } else if (
+            m.sender_role === "MODERATOR" ||
+            m.sender_role === "ADMIN"
+          ) {
+            senderClass = "moderator";
+            senderName = m.sender_role === "ADMIN" ? "Admin" : "Moderator";
+          } else if (m.sender_role === "AI") {
+            senderClass = "ai";
+            senderName = "AI Assistant";
+          }
+
+          bubble.className = `chat-bubble ${senderClass}`;
+          bubble.innerHTML = `
+                    <div class="chat-sender">${senderName}</div>
+                    <div style="white-space: pre-wrap;">${m.message}</div>
+                    <div class="chat-timestamp">${new Date(m.created_at + "Z").toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>
+                `;
+          chat.appendChild(bubble);
+        });
+
+        chat.scrollTop = chat.scrollHeight;
+      }
+
+      window.sendMessage = async function () {
+        const txt = document.getElementById("composer-text").value.trim();
+        if (!txt || !selectedOrder) return;
+
+        document.getElementById("composer-text").value = "";
+        try {
+          await apiRequest(
+            `/api/chat/${selectedOrder.customer_id}/send`,
+            "POST",
+            { message: txt, order_id: selectedOrder.order_id },
+          );
+          await pollChat();
+        } catch (err) {
+          console.log("Failed to send message:", err.message);
+        }
+      };
+
+      // Handle enter key press
+      document
+        .getElementById("composer-text")
+        .addEventListener("keypress", (e) => {
+          if (e.key === "Enter") sendMessage();
+        });
+
+      function renderTicketDetails() {
+        const placeholder = document.getElementById(
+          "ticket-unselected-placeholder",
+        );
+        const panel = document.getElementById("ticket-detail-panel");
+
+        if (!selectedOrder) {
+          placeholder.style.display = "block";
+          panel.style.display = "none";
+          return;
+        }
+
+        currentQuotePreview = null;
+        const qpBlock = document.getElementById("quote-preview-block");
+        if(qpBlock) qpBlock.style.display = "none";
+        const btnPreview = document.getElementById("btn-preview-quote");
+        if(btnPreview) btnPreview.style.display = "block";
+
+        placeholder.style.display = "none";
+        panel.style.display = "flex";
+
+        const isClaimedByMe =
+          selectedOrder.assigned_moderator_id === currentUser.id;
+        const isAdmin = currentUser.role === "ADMIN";
+
+        // 0. AI Controls Block
+        const aiControlsBlock = document.getElementById("ai-controls-block");
+        if (selectedOrder.mode && selectedOrder.mode !== "HUMAN" || isAdmin) {
+            aiControlsBlock.style.display = "block";
+            const mode = selectedOrder.mode || "HUMAN";
+            const worker = selectedOrder.assigned_worker_type || "HUMAN";
+            
+            document.getElementById("ai-mode-label").innerText = mode;
+            document.getElementById("ai-mode-label").style.color = mode === "AI" ? "var(--accent-cyan)" : (mode === "HYBRID" ? "var(--accent-orange)" : "inherit");
+            document.getElementById("ai-worker-label").innerText = worker === "AI" ? "🤖 AI" : "👤 Human";
+            document.getElementById("ai-pricing-label").innerText = selectedOrder.is_ai_priced ? "✨ Generated by AI" : (selectedOrder.manual_prices ? "✅ Verified by Human" : "⏳ Not Priced");
+            
+            // Mode description
+            const descEl = document.getElementById("ai-mode-desc");
+            const descriptions = {
+                "HUMAN": "👤 Fully human-operated. The moderator handles all pricing and customer communication. AI is disabled for this ticket.",
+                "HYBRID": "🤝 AI researches prices, but a human must review and approve before sending to the customer. Best for accuracy + speed.",
+                "AI": "🤖 AI handles pricing automatically and sends quotes directly to the customer. A human can take over at any time."
+            };
+            descEl.innerText = descriptions[mode] || "";
+            
+            // Highlight active mode button
+            ["human", "hybrid", "ai"].forEach(m => {
+                const btn = document.getElementById("mode-btn-" + m);
+                if (btn) {
+                    if (m.toUpperCase() === mode) {
+                        btn.style.background = "var(--accent-cyan)";
+                        btn.style.color = "white";
+                        btn.style.borderColor = "var(--accent-cyan)";
+                    } else {
+                        btn.style.background = "";
+                        btn.style.color = "";
+                        btn.style.borderColor = "";
+                    }
+                }
+            });
+            
+            document.getElementById("ai-admin-controls").style.display = isAdmin ? "block" : "none";
+            
+            const btnTakeover = document.getElementById("btn-takeover-ai");
+            const btnReturn = document.getElementById("btn-return-ai");
+            
+            if (worker === "AI" && (isClaimedByMe || isAdmin)) {
+                btnTakeover.style.display = "block";
+            } else {
+                btnTakeover.style.display = "none";
+            }
+            
+            if (worker === "HUMAN" && mode !== "HUMAN" && isAdmin) {
+                btnReturn.style.display = "block";
+            } else {
+                btnReturn.style.display = "none";
+            }
+        } else {
+            aiControlsBlock.style.display = "none";
+        }
+
+        // 1. Claim Ticket Block
+        const claimBlock = document.getElementById("claim-block");
+        if (!selectedOrder.assigned_moderator_id) {
+          claimBlock.style.display = "block";
+        } else {
+          claimBlock.style.display = "none";
+        }
+
+        // 2. Per-product Price Entry Block
+        const pricesBlock = document.getElementById("prices-block");
+        const editablePrices = [
+          "pending_review",
+          "reviewing"
+        ].includes(selectedOrder.status);
+        if (editablePrices && (isClaimedByMe || isAdmin)) {
+          pricesBlock.style.display = "block";
+          renderPriceRows();
+        } else {
+          pricesBlock.style.display = "none";
+        }
+
+        // 2.5 Awaiting Customer Block
+        const awaitCustBlock = document.getElementById("awaiting-customer-block");
+        if (selectedOrder.status === "awaiting_customer") {
+          awaitCustBlock.style.display = "block";
+        } else {
+          awaitCustBlock.style.display = "none";
+        }
+
+        // 3. Verify Payment & Place Order Block
+        const placeBlock = document.getElementById("place-block");
+        if (selectedOrder.status === "awaiting_payment") {
+          placeBlock.style.display = "block";
+        } else {
+          placeBlock.style.display = "none";
+        }
+        // 4. Mark Delivered Block (Admin only — moderators only price)
+        const deliverBlock = document.getElementById("deliver-block");
+        if (selectedOrder.status === "placed" && isAdmin) {
+          deliverBlock.style.display = "block";
+        } else {
+          deliverBlock.style.display = "none";
+        }
+
+        // 5. Cancel Block (Admin only — any active order)
+        const cancelBlock = document.getElementById("cancel-block");
+        const cancellable = !["delivered", "completed", "cancelled"].includes(
+          selectedOrder.status,
+        );
+        cancelBlock.style.display = isAdmin && cancellable ? "block" : "none";
+      }
+
+      const KNOWN_STORES = [
+        "zepto",
+        "blinkit",
+        "instamart",
+        "bigbasket",
+        "jiomart",
+      ];
+
+      function renderPriceRows() {
+        const list = document.getElementById("prices-list");
+        list.innerHTML = "";
+        const items = selectedOrder.items || [];
+        if (!items.length) {
+          list.innerHTML = `<p style="font-size:12px;color:var(--text-muted);">This order has no line items.</p>`;
+          return;
+        }
+        const storeOptions = KNOWN_STORES.map(
+          (s) =>
+            `<option value="${s}">${s.charAt(0).toUpperCase() + s.slice(1)}</option>`,
+        ).join("");
+        items.forEach((it, idx) => {
+          const row = document.createElement("div");
+          row.className = "price-item-row";
+          row.style.cssText =
+            "border:1px solid var(--border); border-radius:10px; padding:10px; background:rgba(15,23,42,0.4);";
+          row.innerHTML = `
+            <div style="font-size:13px; font-weight:600; margin-bottom:8px;">${it.quantity}× ${it.name}</div>
+            <div style="display:flex; gap:8px;">
+              <input type="number" class="input-control pi-price" data-item-id="${it.id}" min="0" step="0.01"
+                placeholder="Total ₹" value="${it.unit_price != null ? it.unit_price : ""}" style="flex:1; padding:8px 10px; font-size:12px;" />
+              <select class="input-control pi-store" data-item-id="${it.id}" style="width:120px; padding:8px 10px; font-size:12px;">
+                <option value="">Store…</option>
+                ${storeOptions}
+              </select>
+            </div>`;
+          list.appendChild(row);
+          if (it.store) {
+            const sel = row.querySelector(".pi-store");
+            sel.value = KNOWN_STORES.includes(it.store) ? it.store : "";
+          }
+          row
+            .querySelector(".pi-price")
+            .addEventListener("input", updatePriceSubtotal);
+        });
+        updatePriceSubtotal();
+      }
+
+      function updatePriceSubtotal() {
+        let subtotal = 0;
+        (selectedOrder.items || []).forEach((it) => {
+          const inp = document.querySelector(`.pi-price[data-item-id="${it.id}"]`);
+          const val = inp ? parseFloat(inp.value) : NaN;
+          if (!isNaN(val)) subtotal += val;
+        });
+        document.getElementById("prices-subtotal").innerText =
+          `Subtotal: ₹${subtotal.toFixed(2)}`;
+      }
+
+      window.claimOrder = async function () {
+        if (!selectedOrder) return;
+        setLoading("btn-claim-order", true);
+        try {
+          const res = await apiRequest(
+            `/api/moderator/orders/${selectedOrder.order_id}/claim`,
+            "PUT",
+          );
+
+          // Update selected order assignment state
+          selectedOrder.status = res.status;
+          selectedOrder.assigned_moderator_id = res.assigned_moderator_id;
+
+          await loadQueue();
+          renderTicketDetails();
+          await pollChat();
+        } catch (err) {
+          alert("Claim ticket failed: " + err.message);
+        } finally {
+          setLoading("btn-claim-order", false);
+        }
+      };
+
+      let currentQuotePreview = null;
+
+      window.previewQuote = async function() {
+        if (!selectedOrder) return;
+        const items = [];
+        let missing = false;
+        (selectedOrder.items || []).forEach((it) => {
+          const priceEl = document.querySelector(`.pi-price[data-item-id="${it.id}"]`);
+          const storeEl = document.querySelector(`.pi-store[data-item-id="${it.id}"]`);
+          const price = priceEl ? parseFloat(priceEl.value) : NaN;
+          const store = storeEl ? storeEl.value : "";
+          if (isNaN(price) || !store) { missing = true; return; }
+          items.push({ item_id: it.id, name: it.name, unit_price: price, store: store });
+        });
+
+        if (missing || items.length === 0) {
+          alert("Please enter a total cost and store for every line item.");
+          return;
+        }
+
+        setLoading("btn-preview-quote", true);
+        try {
+          const res = await apiRequest(`/api/moderator/orders/${selectedOrder.order_id}/preview-quote`, "POST", { items: items });
+          currentQuotePreview = res;
+          
+          document.getElementById("quote-preview-block").style.display = "block";
+          document.getElementById("btn-preview-quote").style.display = "none";
+          
+          // Setup fields
+          document.getElementById("quote-delivery-fee").value = res.delivery_fee;
+          document.getElementById("quote-store-discount").value = res.store_discount;
+          document.getElementById("quote-snapsave-discount").value = res.snapsave_discount;
+          document.getElementById("quote-profit").value = res.profit;
+
+          const warnEl = document.getElementById("delivery-fee-warning");
+          if (res.delivery_fee > 0) {
+            warnEl.style.display = "inline";
+          } else {
+            warnEl.style.display = "none";
+          }
+
+          recalculatePreviewTotal();
+        } catch (err) {
+          alert("Preview failed: " + err.message);
+        }
+        setLoading("btn-preview-quote", false);
+      };
+
+      window.recalculatePreviewTotal = function() {
+        if (!currentQuotePreview) return;
+        const deliveryFee = parseFloat(document.getElementById("quote-delivery-fee").value) || 0;
+        const storeDiscount = parseFloat(document.getElementById("quote-store-discount").value) || 0;
+        const snapDiscount = parseFloat(document.getElementById("quote-snapsave-discount").value) || 0;
+        const profit = parseFloat(document.getElementById("quote-profit").value) || 0;
+        
+        currentQuotePreview.delivery_fee = deliveryFee;
+        currentQuotePreview.store_discount = storeDiscount;
+        currentQuotePreview.snapsave_discount = snapDiscount;
+        currentQuotePreview.profit = profit;
+        
+        const finalPrice = currentQuotePreview.subtotal + currentQuotePreview.platform_fee + deliveryFee + profit - storeDiscount - snapDiscount;
+        currentQuotePreview.final_price = finalPrice;
+        
+        document.getElementById("preview-subtotal").innerText = `₹${currentQuotePreview.subtotal.toFixed(2)}`;
+        document.getElementById("preview-platform").innerText = `₹${currentQuotePreview.platform_fee.toFixed(2)}`;
+        document.getElementById("preview-final").innerText = `₹${finalPrice.toFixed(2)}`;
+      };
+
+      window.submitPrices = async function () {
+        if (!selectedOrder || !currentQuotePreview) return;
+
+        setLoading("btn-submit-prices", true);
+        try {
+          const res = await apiRequest(
+            `/api/moderator/orders/${selectedOrder.order_id}/price`,
+            "POST",
+            currentQuotePreview,
+          );
+
+          selectedOrder.status = res.status;
+          selectedOrder.items = res.items || selectedOrder.items;
+          await loadQueue();
+          renderTicketDetails();
+          if (currentUser.role === "ADMIN") await pollChat();
+        } catch (err) {
+          alert("Failed to submit quote: " + err.message);
+        } finally {
+          setLoading("btn-submit-prices", false);
+        }
+      };
+
+      window.placeOrderWithEta = async function () {
+        if (!selectedOrder) return;
+
+        const eta = prompt("Enter the time till delivery in minutes (e.g. 45):", "45");
+        if (eta === null) {
+          // User clicked cancel
+          return;
+        }
+        
+        if (!eta.trim() || isNaN(parseInt(eta, 10))) {
+          alert("Please enter a valid number of minutes.");
+          return;
+        }
+
+        setLoading("btn-place-order", true);
+        try {
+          const res = await apiRequest(
+            `/api/moderator/orders/${selectedOrder.order_id}/place`,
+            "POST",
+            {
+              eta_mins: parseInt(eta, 10)
+            },
+          );
+
+          selectedOrder.status = res.status;
+          await loadQueue();
+          renderTicketDetails();
+          await pollChat();
+        } catch (err) {
+          alert("Placement failure: " + err.message);
+        } finally {
+          setLoading("btn-place-order", false);
+        }
+      };
+
+      window.deliverOrder = async function () {
+        if (!selectedOrder) return;
+        setLoading("btn-deliver-order", true);
+        try {
+          const res = await apiRequest(
+            `/api/moderator/orders/${selectedOrder.order_id}/deliver`,
+            "PUT",
+          );
+
+          selectedOrder.status = res.status;
+          await loadQueue();
+          renderTicketDetails();
+          await pollChat();
+        } catch (err) {
+          alert("Delivery completion failure: " + err.message);
+        } finally {
+          setLoading("btn-deliver-order", false);
+        }
+      };
+
+      // API Fetch Wrapper
+      async function apiRequest(endpoint, method = "GET", body = null) {
+        const headers = { "Content-Type": "application/json" };
+        if (idToken) {
+          headers["Authorization"] = `Bearer ${idToken}`;
+        }
+
+        const options = { method, headers };
+        if (body) {
+          options.body = JSON.stringify(body);
+        }
+
+        const res = await fetch(`${API_BASE}${endpoint}`, options);
+        if (!res.ok) {
+          const errorData = await res
+            .json()
+            .catch(() => ({ detail: "Unknown server error" }));
+          let msg = `HTTP error! status: ${res.status}`;
+          if (typeof errorData.detail === "string") {
+            msg = errorData.detail;
+          } else if (Array.isArray(errorData.detail)) {
+            msg = errorData.detail.map(d => (d.loc ? d.loc.slice(1).join(".") + ": " : "") + (d.msg || JSON.stringify(d))).join(", ");
+          } else if (typeof errorData.detail === "object" && errorData.detail !== null) {
+            msg = JSON.stringify(errorData.detail);
+          } else if (errorData.message) {
+            msg = errorData.message;
+          }
+          throw new Error(msg);
+        }
+        return await res.json();
+      }
+
+      function showAuthAlert(msg, type) {
+        const container = document.getElementById("auth-alert-container");
+        container.innerHTML = msg
+          ? `<div class="alert alert-${type}"><i class="fa-solid ${type === "error" ? "fa-circle-exclamation" : "fa-circle-check"}"></i> ${msg}</div>`
+          : "";
+      }
+
+      function timeSince(dateStr) {
+        const now = new Date();
+        const past = new Date(dateStr);
+        const diffMs = now - past;
+        const diffMins = Math.floor(diffMs / 60000);
+        if (diffMins < 1) return "just now";
+        if (diffMins < 60) return `${diffMins}m ago`;
+        const diffHrs = Math.floor(diffMins / 60);
+        if (diffHrs < 24) return `${diffHrs}h ago`;
+        return `${Math.floor(diffHrs / 24)}d ago`;
+      }
+
+      function setLoading(btnId, isLoading) {
+        const btn = document.getElementById(btnId);
+        if (!btn) return;
+        if (isLoading) {
+          btn.disabled = true;
+          btn.dataset.originalHTML = btn.innerHTML;
+          btn.innerHTML = `<span class="loading-spinner"></span> Loading...`;
+        } else {
+          btn.disabled = false;
+          if (btn.dataset.originalHTML) {
+            btn.innerHTML = btn.dataset.originalHTML;
+          }
+        }
+      }
+
+      let betaMetricsInterval = null;
+
+      window.toggleBetaView = function () {
+        document.getElementById("dashboard-metrics").style.display = "none";
+        document.getElementById("dashboard-main").style.display = "none";
+        document
+          .querySelectorAll(".admin-nav-item")
+          .forEach((b) =>
+            b.classList.toggle("active", b.dataset.section === "beta"),
+          );
+
+        const betaView = document.getElementById("beta-program-view");
+        betaView.style.display = "flex";
+
+        loadBetaDashboard();
+        clearInterval(betaMetricsInterval);
+        betaMetricsInterval = setInterval(loadBetaDashboard, 8000);
+      };
+
+      window.exitBetaView = function () {
+        document.getElementById("beta-program-view").style.display = "none";
+        document.getElementById("dashboard-main").style.display = "flex";
+        document.getElementById("dashboard-metrics").style.display = "flex";
+        clearInterval(betaMetricsInterval);
+        if (currentUser && currentUser.role === "ADMIN") {
+          showAdminSection("tickets");
+        }
+      };
+
+      async function loadBetaDashboard() {
+        try {
+          // 1. Load Metrics
+          const m = await apiRequest("/api/admin/dashboard/beta-metrics");
+          document.getElementById("beta-metric-users").innerText =
+            m.total_beta_users;
+          document.getElementById("beta-metric-submitted").innerText =
+            m.orders_submitted;
+          document.getElementById("beta-metric-completed").innerText =
+            m.orders_completed;
+          document.getElementById("beta-metric-mods").innerText =
+            m.active_moderators;
+
+          // Format Avg Moderator Response Time
+          const respSecs = Math.round(m.avg_first_response_time);
+          document.getElementById("beta-metric-response-time").innerText =
+            formatSeconds(respSecs);
+
+          // Format Avg Confirmation Time
+          const confSecs = Math.round(m.avg_confirm_time);
+          document.getElementById("beta-metric-confirm-time").innerText =
+            formatSeconds(confSecs);
+
+          document.getElementById("beta-metric-avg-profit").innerText =
+            `₹${parseFloat(m.avg_profit_per_order).toFixed(2)}`;
+          document.getElementById("beta-metric-avg-savings").innerText =
+            `₹${parseFloat(m.avg_savings_delivered).toFixed(2)}`;
+
+          // 2. Load Incidents Logs
+          const incidents = await apiRequest("/api/admin/incidents");
+          renderBetaIncidents(incidents);
+
+          // 3. Load Feedback Logs (Admin Only)
+          if (currentUser.role === "ADMIN") {
+            const feedback = await apiRequest("/api/admin/feedback");
+            renderBetaFeedback(feedback);
+          } else {
+            document.getElementById("feedback-list").innerHTML = `
+                        <div class="alert alert-error">
+                            <i class="fa-solid fa-lock"></i> Admin privileges required to view customer feedback logs.
+                        </div>
+                    `;
+          }
+        } catch (e) {
+          console.log("Error loading beta dashboard data:", e);
+        }
+      }
+
+      function formatSeconds(totalSec) {
+        if (totalSec < 60) return `${totalSec}s`;
+        const mins = Math.floor(totalSec / 60);
+        const secs = totalSec % 60;
+        return `${mins}m ${secs}s`;
+      }
+
+      function renderBetaIncidents(incidents) {
+        const container = document.getElementById("incidents-list");
+        container.innerHTML = "";
+        if (incidents.length === 0) {
+          container.innerHTML = `<p style="font-size: 11px; color: var(--text-muted); text-align: center; padding: 10px;">No incidents logged yet.</p>`;
+          return;
+        }
+        incidents.forEach((inc) => {
+          const item = document.createElement("div");
+          item.className = "address-card";
+          item.style.padding = "10px";
+          item.style.marginBottom = "6px";
+          item.style.backgroundColor = "rgba(239, 68, 68, 0.05)";
+          item.style.borderColor = "rgba(239, 68, 68, 0.2)";
+
+          item.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px;">
+                        <span style="font-weight: bold; color: var(--accent-orange);">${inc.incident_type}</span>
+                        <span style="color: var(--text-muted);">${new Date(inc.created_at + "Z").toLocaleTimeString()}</span>
+                    </div>
+                    <div style="font-size: 12px; white-space: pre-wrap; margin-bottom: 4px;">${inc.notes || "No details."}</div>
+                    <div style="font-size: 10px; color: var(--text-muted);">
+                        <span>Mod: ${inc.moderator_phone}</span>
+                        ${inc.order_id ? ` | <span style="font-family: monospace;">Order: #${inc.order_id.slice(0, 8)}</span>` : ""}
+                    </div>
+                `;
+          container.appendChild(item);
+        });
+      }
+
+      function renderBetaFeedback(feedback) {
+        const container = document.getElementById("feedback-list");
+        container.innerHTML = "";
+        if (feedback.length === 0) {
+          container.innerHTML = `<p style="font-size: 11px; color: var(--text-muted); text-align: center; padding: 10px;">No feedback received yet.</p>`;
+          return;
+        }
+        feedback.forEach((f) => {
+          const item = document.createElement("div");
+          item.className = "address-card";
+          item.style.padding = "12px";
+          item.style.marginBottom = "8px";
+          item.style.backgroundColor = "rgba(16, 185, 129, 0.03)";
+
+          let stars = "";
+          for (let i = 1; i <= 5; i++) {
+            stars += `<i class="fa-star ${i <= f.rating ? "fa-solid" : "fa-regular"}" style="color: #fbbf24; font-size: 11px; margin-right: 2px;"></i>`;
+          }
+
+          item.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <div>${stars}</div>
+                        <span style="font-size: 10px; color: var(--text-muted);">${new Date(f.created_at + "Z").toLocaleDateString()}</span>
+                    </div>
+                    <div style="font-size: 12px; margin-bottom: 6px; display: flex; flex-direction: column; gap: 4px;">
+                        <div><strong style="color: var(--accent-green);">Went Well:</strong> ${f.what_went_well || "N/A"}</div>
+                        <div><strong style="color: var(--accent-orange);">Confusing:</strong> ${f.what_was_confusing || "N/A"}</div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 10px; border-top: 1px solid var(--border); padding-top: 6px; color: var(--text-muted);">
+                        <span>Use again: <strong style="color: ${f.would_use_again ? "var(--accent-green)" : "red"};">${f.would_use_again ? "YES" : "NO"}</strong></span>
+                        <span>Cust: ${f.customer_phone}</span>
+                    </div>
+                `;
+          container.appendChild(item);
+        });
+      }
+
+      window.submitIncident = async function () {
+        const orderId = document.getElementById("inc-order-id").value.trim();
+        const type = document.getElementById("inc-type").value;
+        const notes = document.getElementById("inc-notes").value.trim();
+
+        if (!notes) {
+          alert("Please add notes describing the incident.");
+          return;
+        }
+
+        setLoading("btn-log-incident", true);
+        try {
+          await apiRequest("/api/moderator/incidents", "POST", {
+            order_id: orderId || null,
+            incident_type: type,
+            notes: notes,
+          });
+          document.getElementById("inc-order-id").value = "";
+          document.getElementById("inc-notes").value = "";
+          await loadBetaDashboard();
+        } catch (err) {
+          alert("Incident logging failed: " + err.message);
+        } finally {
+          setLoading("btn-log-incident", false);
+        }
+      };
+
+      window.switchOrdersTab = function(tabName) {
+        const ws = document.getElementById("workspace-container");
+        const tabs = document.querySelectorAll(".orders-tab");
+        
+        tabs.forEach(t => t.classList.remove("active"));
+        if (tabName === 'queue') {
+          ws.className = "view-queue";
+          document.querySelector('.orders-tab[data-tab="queue"]').classList.add("active");
+        } else {
+          ws.className = "view-ticket";
+          document.querySelector('.orders-tab[data-tab="ticket"]').classList.add("active");
+        }
+      };
+
+      window.switchTab = function (tabName) {
+        const buttons = document.querySelectorAll(".mobile-tab-btn");
+        buttons.forEach((btn) => btn.classList.remove("active"));
+
+        if (tabName === "queue") buttons[0].classList.add("active");
+        if (tabName === "chat") buttons[1].classList.add("active");
+        if (tabName === "ticket") buttons[2].classList.add("active");
+        if (tabName === "admin") buttons[3].classList.add("active");
+
+        const adminPanel = document.getElementById("panel-admin");
+        const queuePanel = document.getElementById("panel-queue");
+        const chatPanel = document.getElementById("panel-chat");
+        const ticketPanel = document.getElementById("panel-ticket");
+
+        if (adminPanel) adminPanel.classList.remove("mobile-show");
+        if (queuePanel) queuePanel.classList.remove("mobile-show");
+        if (chatPanel) chatPanel.classList.remove("mobile-show");
+        if (ticketPanel) ticketPanel.classList.remove("mobile-show");
+
+        if (tabName === "admin" && adminPanel) {
+          adminPanel.classList.add("mobile-show");
+        } else if (tabName === "chat" && chatPanel) {
+          chatPanel.classList.add("mobile-show");
+        } else if (tabName === "ticket" && ticketPanel) {
+          ticketPanel.classList.add("mobile-show");
+        } else if (tabName === "queue" && queuePanel) {
+          queuePanel.classList.add("mobile-show");
+        }
+      };
+
+      // ── Session Restore on page load ──
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        idToken = saved;
+        try {
+          await checkUserSession();
+        } catch (e) {
+          // Token expired or invalid — clear it and show login
+          localStorage.removeItem(STORAGE_KEY);
+          idToken = null;
+          showLoggedOutView();
+        }
+      }
+    })();
+    </script>
+  </body>
+</html>

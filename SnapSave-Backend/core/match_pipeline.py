@@ -45,6 +45,7 @@ def run_match_pipeline(user_query, scraped_products=None):
         "match_method": match["method"],
         "quantity": parsed["quantity"],
         "unit": parsed["unit"],
+        "volume": parsed["volume"],
         "price_hint": parsed["price_hint"],
         "intent": intent,
         "product_options": ranked_products

@@ -1,10 +1,4 @@
-REWARD_THRESHOLDS = {
-    "zepto": [
-        {"threshold": 599, "reward": 50},
-        {"threshold": 1199, "reward": 100},
-        {"threshold": 1799, "reward": 150}
-    ]
-}
+REWARD_THRESHOLDS = {}
 
 SUGGESTED_FILLER_ITEMS = [
     {"name": "biscuits", "price": 40},

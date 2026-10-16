@@ -1,0 +1,18 @@
+{
+  "history_switch": {
+    "requested": "past",
+    "actual": "active"
+  },
+  "new_order": {
+    "actual": "active"
+  },
+  "placed_tracker_delivered": true,
+  "unescaped_message_html": true,
+  "syntax": {
+    "index.html": "valid",
+    "admin.html": "valid",
+    "common.js": "valid",
+    "admin_script.js": "valid",
+    "_admin_check.js": "valid"
+  }
+}

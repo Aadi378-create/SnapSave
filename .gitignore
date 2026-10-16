@@ -32,6 +32,7 @@ cookies.json
 # Firebase generated/cache
 .firebase/
 .firebase/hosting..cache/
+SnapSave-FRONTEND/dist/
 
 # OS / editors
 .DS_Store

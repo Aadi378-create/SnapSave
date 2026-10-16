@@ -8,7 +8,7 @@ from pricing.reward_engine import apply_rewards
 
 
 
-def test_item(item):
+def demonstrate_item(item):
 
     print("\nUSER QUERY:", item)
 

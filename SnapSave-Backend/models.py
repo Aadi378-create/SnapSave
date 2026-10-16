@@ -1,6 +1,7 @@
+from time_utils import utcnow
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Integer, ForeignKey, Boolean, DateTime, Numeric
+from sqlalchemy import Column, String, Integer, ForeignKey, Boolean, DateTime, Numeric, Text, UniqueConstraint
 from sqlalchemy.orm import relationship
 from database import Base
 
@@ -15,8 +16,8 @@ class User(Base):
     last_name = Column(String(100), nullable=True)
     membership_tier = Column(String(50), default="standard")
     completed_orders_count = Column(Integer, default=0)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
 
     # Human-Concierge additions
     role = Column(String(50), default="CUSTOMER")  # "CUSTOMER", "MODERATOR", "ADMIN"
@@ -41,10 +42,11 @@ class Address(Base):
     city = Column(String(100), nullable=False)
     state = Column(String(100), nullable=False)
     postal_code = Column(String(20), nullable=False)
+    coordinates_verified = Column(Boolean, default=False, nullable=False)
     latitude = Column(Numeric(9, 6), nullable=False)
     longitude = Column(Numeric(9, 6), nullable=False)
     is_default = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utcnow)
 
     # Relationships
     user = relationship("User", back_populates="addresses")
@@ -59,7 +61,7 @@ class Order(Base):
     address_id = Column(String(36), ForeignKey("addresses.id", ondelete="SET NULL"), nullable=True, index=True)
     store = Column(String(100), nullable=False)
     status = Column(String(50), nullable=False, default="pending_review", index=True)  # "pending_review", "reviewing", etc.
-    
+
     # Address Snapshot fields (frozen copy)
     delivery_street = Column(String(500), nullable=False)
     delivery_city = Column(String(100), nullable=False)
@@ -73,12 +75,31 @@ class Order(Base):
     snapsave_discount = Column(Numeric(10, 2), default=0.00)
     final_price = Column(Numeric(10, 2), nullable=False)
     savings = Column(Numeric(10, 2), default=0.00)
-    
+
     # Human-Concierge additions
-    manual_prices = Column(String(1000), nullable=True)  # JSON string representing manual prices
+    manual_prices = Column(Text, nullable=True)  # JSON string representing manual prices
     customer_paid = Column(Numeric(10, 2), default=0.00)
     store_cost = Column(Numeric(10, 2), default=0.00)
     profit = Column(Numeric(10, 2), default=0.00)
+
+    assigned_moderator_id = Column(String(36), ForeignKey("users.id"), nullable=True, index=True)
+    revision = Column(Integer, nullable=False, default=0)
+    request_key = Column(String(128), nullable=True)
+    request_hash = Column(String(64), nullable=True)
+    service_fee = Column(Numeric(10, 2), default=0)
+    payment_status = Column(String(30), default="unpaid", nullable=False)
+    payment_reference = Column(String(128), nullable=True, unique=True)
+    payment_verified_by = Column(String(36), nullable=True)
+    payment_verified_at = Column(DateTime, nullable=True)
+    refund_reference = Column(String(128), nullable=True)
+    refunded_at = Column(DateTime, nullable=True)
+    first_response_at = Column(DateTime, nullable=True)
+    placed_at = Column(DateTime, nullable=True)
+    delivered_at = Column(DateTime, nullable=True)
+    eta_at = Column(DateTime, nullable=True)
+    quote_expires_at = Column(DateTime, nullable=True)
+    ai_error = Column(Text, nullable=True)
+    __table_args__ = (UniqueConstraint("user_id", "request_key", name="uq_order_request"),)
 
     # AI Concierge Additions
     mode = Column(String(50), nullable=False, default="HUMAN")
@@ -89,11 +110,11 @@ class Order(Base):
     taken_over_by = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     is_ai_priced = Column(Boolean, nullable=False, default=False)
 
-    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    created_at = Column(DateTime, default=utcnow, index=True)
     claimed_at = Column(DateTime, nullable=True)
     confirmed_at = Column(DateTime, nullable=True)
     completed_at = Column(DateTime, nullable=True)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
 
     # Relationships
     user = relationship("User", foreign_keys=[user_id], back_populates="orders")
@@ -110,9 +131,10 @@ class OrderItem(Base):
     name = Column(String(255), nullable=False)
     quantity = Column(Integer, nullable=False, default=1)
     # Filled in by the moderator: the lowest price found and the store it was found at
-    unit_price = Column(Numeric(10, 2), nullable=True)
+    unit_price = Column(Numeric(12, 4), nullable=True)
+    line_total = Column(Numeric(10, 2), nullable=True)
     store = Column(String(100), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utcnow)
 
     # Relationships
     order = relationship("Order", back_populates="items")
@@ -122,7 +144,7 @@ class SystemSetting(Base):
     __tablename__ = "system_settings"
 
     key = Column(String(100), primary_key=True)
-    value = Column(String(255), nullable=False)
+    value = Column(Text, nullable=False)
 
 
 class Message(Base):
@@ -131,10 +153,11 @@ class Message(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     order_id = Column(String(36), nullable=True, index=True)
     user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    kind = Column(String(30), nullable=False, default="text")
     sender_id = Column(String(36), nullable=False)  # User ID or "system_ai"
     sender_role = Column(String(50), nullable=False)  # "CUSTOMER", "MODERATOR", "ADMIN", "AI"
-    message = Column(String(1000), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    message = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=utcnow)
 
 
 class AppSetting(Base):
@@ -152,9 +175,9 @@ class HelpMessage(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     sender_role = Column(String(50), nullable=False)  # "CUSTOMER" or "ADMIN"
-    message = Column(String(1000), nullable=False)
+    message = Column(Text, nullable=False)
     is_resolved = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utcnow)
 
     # Relationships
     user = relationship("User")
@@ -167,10 +190,12 @@ class Feedback(Base):
     order_id = Column(String(36), ForeignKey("orders.id", ondelete="CASCADE"), nullable=False, index=True)
     user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     rating = Column(Integer, nullable=False)
-    what_went_well = Column(String(1000), nullable=True)
-    what_was_confusing = Column(String(1000), nullable=True)
+    what_went_well = Column(Text, nullable=True)
+    what_was_confusing = Column(Text, nullable=True)
     would_use_again = Column(Boolean, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utcnow)
+
+    __table_args__ = (UniqueConstraint("order_id", name="uq_feedback_order"),)
 
     # Relationships
     order = relationship("Order")
@@ -184,8 +209,8 @@ class Incident(Base):
     order_id = Column(String(36), ForeignKey("orders.id", ondelete="SET NULL"), nullable=True, index=True)
     moderator_id = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     incident_type = Column(String(100), nullable=False)  # "Wrong price entered", "Customer confusion", etc.
-    notes = Column(String(1000), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=utcnow)
 
     # Relationships
     order = relationship("Order")

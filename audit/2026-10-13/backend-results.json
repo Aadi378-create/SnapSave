@@ -1,0 +1,208 @@
+{
+  "public_token_admin": {
+    "role": "ADMIN",
+    "debug": "false"
+  },
+  "unauthenticated_promotion": {
+    "status": 200,
+    "role": "ADMIN"
+  },
+  "address_coordinates": {
+    "city": "Delhi",
+    "latitude": 18.5204,
+    "longitude": 73.8567
+  },
+  "quote_and_line_total": {
+    "http": 200,
+    "stored_line_price": 100.0,
+    "serialized_line_total": 200.0,
+    "quote_order_id": null
+  },
+  "invalid_quote_accepted": {
+    "http": 200,
+    "final_price": -999.0
+  },
+  "unassigned_placement": {
+    "http": 200,
+    "status": "placed",
+    "customer_paid": 0.0,
+    "store_cost": 0.0
+  },
+  "foreign_order_completion": {
+    "http": 200,
+    "status": "completed",
+    "owner_completed_count": 2
+  },
+  "terminal_order_reclaimed": {
+    "http": 200,
+    "status": "reviewing"
+  },
+  "premature_duplicate_feedback": {
+    "first": 201,
+    "second": 201,
+    "order_status": "reviewing"
+  },
+  "human_ticket_ai_reply": {
+    "mode": "HUMAN",
+    "last_sender": "AI",
+    "last_order_id": null
+  },
+  "ai_reopens_cancelled": {
+    "status": "awaiting_customer",
+    "subtotal": 100.0,
+    "item_price": null,
+    "manual_prices_type": "dict"
+  },
+  "unassigned_takeover": {
+    "http": 200
+  },
+  "hybrid_from_human": {
+    "message": "Mode updated",
+    "order_id": "0d6240aa-2f37-404a-8fd2-3235f48b70ea",
+    "mode": "HYBRID",
+    "assigned_worker_type": "HUMAN"
+  },
+  "invalid_mode": {
+    "http": 200,
+    "mode": "INVALID"
+  },
+  "mixed_store_delivery": {
+    "subtotal": 300.0,
+    "delivery_fee": 0.0
+  },
+  "public_mock_optimizer": {
+    "http": 200,
+    "best": {
+      "store": "jiomart",
+      "cart_total": 35.0,
+      "delivery_fee": 35,
+      "platform_fee": 0,
+      "store_discount": 0,
+      "snapsave_discount": 0,
+      "zepto_cash": 0,
+      "hsbc_discount": 0,
+      "final_price": 70.0,
+      "voucher_discount": 0
+    }
+  },
+  "fixed_uid_phone_collision": {
+    "same_user": true,
+    "phone_changed": true
+  },
+  "parser": {
+    "2 packets maggi": {
+      "query": "2 packets maggi",
+      "quantity": 2,
+      "volume": null,
+      "unit": null,
+      "price_hint": null
+    },
+    "1 litre milk": {
+      "query": "1 litre milk",
+      "quantity": 1,
+      "volume": null,
+      "unit": null,
+      "price_hint": null
+    },
+    "1.5kg rice": {
+      "query": "1.5kg rice",
+      "quantity": null,
+      "volume": 5,
+      "unit": "kg",
+      "price_hint": null
+    },
+    "2 x 500ml milk": {
+      "query": "2 x 500ml milk",
+      "quantity": 2,
+      "volume": 500,
+      "unit": "ml",
+      "price_hint": null
+    }
+  },
+  "and_separator": {
+    "items": 1
+  },
+  "partial_basket_wins": {
+    "best_store": {
+      "store": "zepto",
+      "cart_total": 100,
+      "delivery_fee": 35,
+      "platform_fee": 0,
+      "store_discount": 0,
+      "snapsave_discount": 0,
+      "zepto_cash": 5.0,
+      "hsbc_discount": 0,
+      "final_price": 130.0
+    },
+    "all_store_results": [
+      {
+        "store": "zepto",
+        "cart_total": 100,
+        "delivery_fee": 35,
+        "platform_fee": 0,
+        "store_discount": 0,
+        "snapsave_discount": 0,
+        "zepto_cash": 5.0,
+        "hsbc_discount": 0,
+        "final_price": 130.0
+      },
+      {
+        "store": "blinkit",
+        "cart_total": 210,
+        "delivery_fee": 0,
+        "platform_fee": 0,
+        "store_discount": 0,
+        "snapsave_discount": 0,
+        "zepto_cash": 0,
+        "hsbc_discount": 0,
+        "final_price": 210
+      }
+    ]
+  },
+  "weak_match_accepted": {
+    "selected_product": "Dishwashing Detergent",
+    "price": 25,
+    "store": "zepto",
+    "confidence": 0.95,
+    "match_score": 0
+  },
+  "discount_reconciliation": {
+    "store": "zepto",
+    "cart_total": 1000,
+    "delivery_fee": 0,
+    "platform_fee": 0,
+    "store_discount": 50,
+    "snapsave_discount": 20,
+    "zepto_cash": 50.0,
+    "hsbc_discount": 100,
+    "final_price": 950
+  },
+  "human_override_race": {
+    "mode": "HUMAN",
+    "status": "pending_review",
+    "is_ai_priced": true,
+    "human_price_preserved": false,
+    "errors": []
+  },
+  "kill_switch_race": {
+    "mode": "AI",
+    "status": "awaiting_customer",
+    "is_ai_priced": true,
+    "human_price_preserved": false,
+    "errors": []
+  },
+  "sqlite": {
+    "foreign_keys": 0,
+    "journal_mode": "delete"
+  },
+  "history_query_cost": {
+    "orders": 105,
+    "selects": 108,
+    "response_bytes": 83748
+  },
+  "queue_query_cost": {
+    "orders": 105,
+    "selects": 107,
+    "response_bytes": 65415
+  }
+}

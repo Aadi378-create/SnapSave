@@ -842,7 +842,7 @@
         </div>
 
         <!-- Quick Demo Login -->
-        <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border);">
+        <div id="demo-login" style="display:none; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border);">
           <button class="btn btn-secondary" style="width: 100%; font-size: 12.5px;" onclick="quickLogin()">
             <i class="fa-solid fa-wand-magic-sparkles" style="color: var(--accent-cyan);"></i> Quick Demo Login
           </button>
@@ -891,7 +891,7 @@
           <button class="btn btn-primary" style="width: 100%; justify-content: flex-start; padding: 10px 16px; font-weight: 600;" onclick="startNewOrder()">
             <i class="fa-solid fa-plus"></i> New Order
           </button>
-          
+
           <div class="sidebar-section-title" style="margin-top: 12px;">
             <span><i class="fa-solid fa-clock-rotate-left" style="color: var(--accent-orange);"></i> Order History</span>
           </div>
@@ -909,7 +909,7 @@
             <div id="addresses-list" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;">
               <!-- Populated via JS -->
             </div>
-            
+
             <button class="btn btn-secondary" style="width: 100%; font-size: 12.5px;" onclick="showGroceryModal()">
               <i class="fa-solid fa-list-check"></i> Form-based List
             </button>
@@ -955,7 +955,7 @@
               <textarea
                 id="chat-textarea"
                 class="chat-textarea"
-                placeholder="Type your grocery list (e.g. 2L Milk, 1kg Tomatoes, 6 Eggs)..."
+                placeholder="List groceries here; use Support for questions (e.g. 2L Milk, 1kg Tomatoes, 6 Eggs)..."
                 rows="1"
               ></textarea>
               <button id="btn-send-chat" class="btn btn-icon" onclick="handleSendChat()" title="Send List">
@@ -1109,6 +1109,8 @@
       </div>
     </div>
 
+    <script src="config.js"></script>
+    <script src="common.js"></script>
     <!-- Firebase & Frontend Logic -->
     <script type="module">
       import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -1120,11 +1122,7 @@
         onAuthStateChanged,
       } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-      const API_BASE =
-        window.location.hostname === "localhost" ||
-        window.location.hostname === "127.0.0.1"
-          ? "http://127.0.0.1:8000"
-          : window.location.origin;
+      const API_BASE = window.SNAPSAVE_API_BASE;
 
       const firebaseConfig = {
         apiKey: "AIzaSyC2usgMofYuKhLrmERkuYgFY0WmNkfMXIY",
@@ -1145,6 +1143,14 @@
       let savedAddresses = [];
       let activeOrder = null;
       let selectedHistoryOrderId = null;
+      let newOrderDraft = false;
+      let orderCache = [];
+      let historyOffset = 0;
+      let orderRequest = 0;
+      let helpPolling = null;
+      let sendKey = null;
+      let sendPayload = null;
+      const chatCache = new Map();
       let chatPollingInterval = null;
       let selectedRating = 5;
       let pendingFeedbackOrderId = null;
@@ -1170,18 +1176,23 @@
               await checkUserSession();
             } catch (e) {
               localStorage.removeItem(CUST_STORAGE_KEY);
+        activeOrder=null; orderCache=[]; chatCache.clear(); selectedHistoryOrderId=null; newOrderDraft=false;
+        _lastMsgSignature=""; _lastOrderSignature="";
+        if(helpPolling) helpPolling();
               idToken = null;
             }
           }
         }
       });
 
+      fetch(`${API_BASE}/api/status`).then(r=>r.json()).then(s=>{document.getElementById("demo-login").style.display=s.dev_auth_enabled ? "block" : "none";}).catch(()=>{});
+
       // ── Quick Demo Login ──
       window.quickLogin = async function () {
         try {
           const rawPhone = document.getElementById("login-phone").value.trim() || "9876543210";
           const phone = rawPhone.startsWith("+") ? rawPhone : "+91" + rawPhone.replace(/\s/g, "");
-          const res = await fetch(`${API_BASE}/api/auth/test-token?phone=${encodeURIComponent(phone)}&uid=test_uid_customer_concierge`);
+          const res = await fetch(`${API_BASE}/api/auth/test-token?phone=${encodeURIComponent(phone)}`);
           if (!res.ok) throw new Error("Could not obtain test token from server");
           const data = await res.json();
           idToken = data.idToken;
@@ -1240,8 +1251,11 @@
         try { await signOut(auth); } catch (e) {}
         idToken = null;
         currentUser = null;
-        clearInterval(chatPollingInterval);
+        if (chatPollingInterval) chatPollingInterval();
         localStorage.removeItem(CUST_STORAGE_KEY);
+        activeOrder=null; orderCache=[]; chatCache.clear(); selectedHistoryOrderId=null; newOrderDraft=false;
+        _lastMsgSignature=""; _lastOrderSignature="";
+        if(helpPolling) helpPolling();
         document.getElementById("auth-section").style.display = "flex";
         document.getElementById("dashboard-app").style.display = "none";
       };
@@ -1280,17 +1294,13 @@
       };
 
       async function startDashboard(user) {
-        document.getElementById("auth-section").style.display = "none";
-        document.getElementById("dashboard-app").style.display = "flex";
-        document.getElementById("user-name").innerText = `${user.first_name} ${user.last_name}`;
-        document.getElementById("user-avatar").innerText = `${user.first_name[0]}${user.last_name[0]}`.toUpperCase();
-
-        await Promise.all([loadAddresses(), loadOrders(), pollMessages(), checkMaintenance()]);
-
-        clearInterval(chatPollingInterval);
-        chatPollingInterval = setInterval(async () => {
-          await Promise.all([pollMessages(), loadOrders(), checkMaintenance()]);
-        }, 8000);
+        document.getElementById("auth-section").style.display="none";
+        document.getElementById("dashboard-app").style.display="flex";
+        document.getElementById("user-name").innerText=`${user.first_name} ${user.last_name}`;
+        document.getElementById("user-avatar").innerText=`${user.first_name[0]}${user.last_name[0]}`.toUpperCase();
+        await loadAddresses(); await loadOrders(true); await pollMessages(); await checkMaintenance();
+        if(chatPollingInterval) chatPollingInterval();
+        chatPollingInterval=singleFlightPolling(async()=>{await loadOrders(); await pollMessages(); await checkMaintenance();},8000);
       }
 
       // ── Address Management ──
@@ -1326,11 +1336,11 @@
           card.innerHTML = `
             <div class="address-card-header">
               <span class="address-card-title">
-                <i class="fa-solid fa-house" style="color: var(--primary);"></i> ${addr.title}
+                <i class="fa-solid fa-house" style="color: var(--primary);"></i> ${escapeHTML(addr.title)}
               </span>
               ${addr.is_default ? '<span style="font-size:9px;font-weight:700;color:var(--accent-green);background:rgba(16,185,129,0.15);padding:2px 6px;border-radius:10px;">DEFAULT</span>' : ""}
             </div>
-            <div class="address-card-body">${addr.street_address}, ${addr.city}</div>
+            <div class="address-card-body">${escapeHTML(addr.street_address)}, ${escapeHTML(addr.city)}</div>
             <div class="address-actions">
               ${!addr.is_default ? `<button class="address-btn-tiny" onclick="setDefaultAddress('${addr.id}')">Set Default</button>` : ""}
               <button class="address-btn-tiny delete" onclick="deleteAddress('${addr.id}')"><i class="fa-solid fa-trash"></i> Delete</button>
@@ -1362,7 +1372,7 @@
         try {
           await apiRequest("/api/addresses", "POST", {
             title, street_address: street, city, state, postal_code: postal,
-            latitude: 18.5204, longitude: 73.8567,
+
             is_default: savedAddresses.length === 0
           });
           hideAddAddressModal();
@@ -1401,43 +1411,30 @@
       };
 
       window.handleSendChat = async function () {
-        const textarea = document.getElementById("chat-textarea");
-        const message = textarea.value.trim();
-        if (!message) return;
-
-        // Check if user has an address
-        if (!savedAddresses.length) {
-          alert("Please add a delivery address first so we know where to send your groceries.");
-          showAddAddressModal();
-          return;
-        }
-
-        const defaultAddr = savedAddresses.find(a => a.is_default) || savedAddresses[0];
-
-        // Send to backend
-        setLoading("btn-send-chat", true);
-        textarea.value = "";
+        const textarea=document.getElementById("chat-textarea");
+        const text=textarea.value.trim();
+        const btn=document.getElementById("btn-send-chat");
+        if(!text || btn.disabled) return;
+        if(selectedHistoryOrderId && activeOrder && ["delivered","completed","cancelled"].includes(activeOrder.status)) return alert("This order is archived. Start a new order to send a grocery list.");
+        if(!savedAddresses.length) { showAddAddressModal(); return; }
+        setLoading("btn-send-chat",true);
         try {
-          // If message looks like groceries, place order directly
-          const isGroceryLike = message.length > 5 && !message.toLowerCase().startsWith("where is") && !message.toLowerCase().startsWith("hello") && !message.toLowerCase().startsWith("hi");
-          if (isGroceryLike && (!activeOrder || ["delivered", "completed", "cancelled"].includes(activeOrder.status))) {
-            await apiRequest("/api/orders", "POST", {
-              address_id: defaultAddr.id,
-              items_text: message
-            });
-            await loadOrders();
+          if(!activeOrder) {
+            const address=savedAddresses.find(a=>a.is_default)||savedAddresses[0];
+            // A fresh order composer accepts a list. General questions go through Support.
+            if(sendPayload!==text){sendKey=null;sendPayload=text;}
+            sendKey=sendKey||crypto.randomUUID();
+            const created=await apiRequest("/api/orders","POST",{address_id:address.id,items_text:text},sendKey);
+            selectedHistoryOrderId=null; newOrderDraft=false; activeOrder=created;
+            sendKey=null;
+            await loadOrders(true);
           } else {
-            await apiRequest(`/api/chat/${currentUser.id}/send`, "POST", { 
-              message, 
-              order_id: activeOrder ? activeOrder.id : null 
-            });
+            await apiRequest(`/api/chat/${encodeURIComponent(currentUser.id)}/send`,"POST",{message:text,order_id:activeOrder.id});
           }
+          if(textarea.value.trim()===text) textarea.value="";
           await pollMessages();
-        } catch (err) {
-          alert("Could not send: " + err.message);
-        } finally {
-          setLoading("btn-send-chat", false);
-        }
+        } catch(e) { alert("Could not send: "+e.message); }
+        finally {setLoading("btn-send-chat",false);}
       };
 
       document.getElementById("chat-textarea").addEventListener("keydown", (e) => {
@@ -1452,23 +1449,28 @@
       // ── Chat Stream Polling & Rendering ──
       let _lastMsgSignature = "";
       async function pollMessages() {
-        if (!currentUser) return;
-        try {
-          const msgs = await apiRequest(`/api/chat/${currentUser.id}/messages`);
-          // Skip re-render if nothing changed
-          const sig = msgs.map(m => m.id + m.message.length).join("|");
-          if (sig === _lastMsgSignature) return;
-          _lastMsgSignature = sig;
-          renderChatMessages(msgs);
-        } catch (e) {
-          console.error("Error polling messages:", e);
-        }
+        if(!currentUser) return;
+        const view=activeOrder?.id||null;
+        const context=view||"general";
+        const cached=chatCache.get(context)||[];
+        const params=new URLSearchParams();
+        if(view) params.set("order_id",view);
+        if(cached.length) params.set("after_id",cached[cached.length-1].id);
+        const incoming=await apiRequest(`/api/chat/${encodeURIComponent(currentUser.id)}/messages?${params}`);
+        if((activeOrder?.id||null)!==view || !currentUser) return;
+        const merged=[...cached,...incoming].filter((m,i,a)=>a.findIndex(x=>x.id===m.id)===i).slice(-500);
+        chatCache.set(context,merged);
+        const signature=JSON.stringify([context,activeOrder?.revision,merged]);
+        if(signature===_lastMsgSignature) return;
+        _lastMsgSignature=signature;
+        renderChatMessages(merged);
       }
 
       function renderChatMessages(allMsgs) {
         const container = document.getElementById("chat-stream");
         const welcome = document.getElementById("chat-welcome");
-        
+        const nearBottom=container.scrollHeight-container.scrollTop-container.clientHeight<100;
+
         let msgs = [];
         if (activeOrder) {
           msgs = allMsgs.filter(m => m.order_id === activeOrder.id);
@@ -1506,11 +1508,11 @@
             senderLabel = "System";
           }
 
-          const timeStr = m.created_at ? new Date(m.created_at + "Z").toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
+          const timeStr = m.created_at ? utcDate(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
 
           // Check if message is a price quote with confirmation action
           let confirmActionHtml = "";
-          if (m.message.includes("Tap Confirm Order to proceed") && activeOrder && activeOrder.status === "awaiting_customer") {
+          if (m.kind === "quote" && activeOrder && activeOrder.status === "awaiting_customer") {
             confirmActionHtml = `
               <div style="margin-top: 12px;">
                 <button class="btn btn-accent" style="width: 100%;" onclick="confirmActiveOrder('${activeOrder.id}')">
@@ -1524,41 +1526,45 @@
             <div class="message-avatar ${role}">${avatarIcon}</div>
             <div class="message-bubble">
               <div class="message-sender">${senderLabel}</div>
-              <div style="white-space: pre-wrap;">${m.message}</div>
+              <div style="white-space: pre-wrap;">${escapeHTML(m.message)}</div>
               ${confirmActionHtml}
               ${timeStr ? `<div class="message-time">${timeStr}</div>` : ""}
             </div>
           `;
           container.appendChild(wrapper);
+          if(m.kind === "payment" && activeOrder?.status === "awaiting_payment") attachPaymentCard(wrapper,activeOrder);
         });
 
-        container.scrollTop = container.scrollHeight;
+        if(nearBottom) container.scrollTop = container.scrollHeight;
       }
 
       // ── Active Order Tracker ──
       let _lastOrderSignature = "";
-      async function loadOrders() {
-        try {
-          const orders = await apiRequest("/api/orders");
-
-          // Skip re-render if nothing changed
-          const sig = orders.map(o => o.id + o.status + o.final_price).join("|");
-          if (sig === _lastOrderSignature) return;
-          _lastOrderSignature = sig;
-
-          const active = orders.find(o => !["delivered", "cancelled", "completed"].includes(o.status));
-          
-          if (selectedHistoryOrderId) {
-            activeOrder = orders.find(o => o.id === selectedHistoryOrderId) || null;
-          } else {
-            activeOrder = active || null;
-          }
-          
-          renderActiveTracker(activeOrder); // Tracker always shows the currently viewed order
-          renderRecentHistory(orders);
-        } catch (e) {
-          console.error("Error loading orders:", e);
+      async function loadOrders(refreshHistory=false) {
+        const request=++orderRequest;
+        const active=await apiRequest("/api/orders?active_only=true&limit=100");
+        let history=orderCache;
+        if(refreshHistory || !orderCache.length) history=await apiRequest("/api/orders?limit=50");
+        if(request!==orderRequest || !currentUser) return;
+        const map=new Map([...orderCache,...history,...active].map(o=>[o.id,o]));
+        if(activeOrder && !active.some(o=>o.id===activeOrder.id)) {
+          const latest=await apiRequest(`/api/orders/${activeOrder.id}`);
+          if(request!==orderRequest) return;
+          map.set(latest.id,latest);
         }
+        orderCache=[...map.values()].sort((a,b)=>b.created_at.localeCompare(a.created_at));
+        if(selectedHistoryOrderId) activeOrder=map.get(selectedHistoryOrderId)||await apiRequest(`/api/orders/${selectedHistoryOrderId}`);
+        else if(newOrderDraft) activeOrder=null;
+        else activeOrder=active[0]||orderCache.find(o=>o.status==="delivered")||null;
+        if(request!==orderRequest || !currentUser)return;
+        const signature=JSON.stringify([selectedHistoryOrderId,newOrderDraft,activeOrder,orderCache]);
+        if(signature!==_lastOrderSignature) {
+          _lastOrderSignature=signature;
+          renderActiveTracker(activeOrder); renderRecentHistory(orderCache);
+        }
+        const archived=activeOrder && ["delivered","completed","cancelled"].includes(activeOrder.status);
+        document.getElementById("chat-textarea").disabled=!!archived;
+        document.getElementById("btn-send-chat").disabled=!!archived;
       }
 
       function renderActiveTracker(order) {
@@ -1574,7 +1580,7 @@
           return;
         }
 
-        const stages = ["pending_review", "reviewing", "awaiting_customer", "awaiting_payment", "confirmed", "placed", "delivered"];
+        const stages = ["pending_review", "reviewing", "awaiting_customer", "awaiting_payment", "placed", "delivered", "completed"];
         const curIdx = stages.indexOf(order.status);
 
         container.innerHTML = `
@@ -1588,21 +1594,25 @@
               <div class="step-item ${curIdx >= 0 ? (curIdx === 0 ? "active" : "completed") : ""}">1. List Submitted</div>
               <div class="step-item ${curIdx >= 1 ? (curIdx === 1 ? "active" : "completed") : ""}">2. Concierge Scanning Stores</div>
               <div class="step-item ${curIdx >= 2 ? (curIdx === 2 ? "active" : "completed") : ""}">3. Review Price Quote</div>
-              <div class="step-item ${curIdx >= 4 ? (curIdx === 4 ? "active" : "completed") : (curIdx >= 3 ? "active" : "")}">4. Order Placed &amp; Packing</div>
+              <div class="step-item ${curIdx >= 4 ? (curIdx === 4 ? "active" : "completed") : ""}">4. Order Placed &amp; Packing</div>
               <div class="step-item ${curIdx >= 5 ? "completed" : ""}">5. Delivered to Door</div>
             </div>
 
             ${order.status === "awaiting_customer" ? `
               <div class="quote-card">
                 <div class="quote-row"><span>Subtotal</span><span>₹${parseFloat(order.subtotal).toFixed(2)}</span></div>
-                <div class="quote-row savings"><span>You Save</span><span>-₹${parseFloat(order.savings).toFixed(2)}</span></div>
+                <div class="quote-row"><span>Delivery</span><span>₹${Number(order.delivery_fee).toFixed(2)}</span></div>
+                <div class="quote-row"><span>Platform fee</span><span>₹${Number(order.platform_fee).toFixed(2)}</span></div>
+                <div class="quote-row"><span>Service fee</span><span>₹${Number(order.service_fee).toFixed(2)}</span></div>
+                <div class="quote-row savings"><span>Discounts</span><span>-₹${parseFloat(order.savings).toFixed(2)}</span></div>
                 <div class="quote-row total"><span>Final Price</span><span>₹${parseFloat(order.final_price).toFixed(2)}</span></div>
                 <button class="btn btn-accent" style="width: 100%; margin-top: 10px;" onclick="confirmActiveOrder('${order.id}')">
                   <i class="fa-solid fa-check"></i> Confirm Order
                 </button>
               </div>
             ` : ""}
-            
+
+            ${order.eta_at && order.status === "placed" ? `<p>Estimated arrival: ${utcDate(order.eta_at).toLocaleTimeString()}</p>` : ""}
             ${order.status === "delivered" ? `
               <div style="margin-top: 16px;">
                 <button class="btn btn-primary" style="width: 100%;" onclick="openFeedbackModal('${order.id}')">
@@ -1615,15 +1625,17 @@
       }
 
       window.startNewOrder = async function() {
-        selectedHistoryOrderId = null;
-        await loadOrders();
-        await pollMessages();
+        selectedHistoryOrderId=null; newOrderDraft=true; activeOrder=null; sendKey=null;
+        _lastOrderSignature=""; _lastMsgSignature="";
+        document.getElementById("chat-textarea").disabled=false;
+        document.getElementById("btn-send-chat").disabled=false;
+        renderActiveTracker(null); renderRecentHistory(orderCache); renderChatMessages([]);
       };
 
       window.viewHistoryOrder = async function(orderId) {
-        selectedHistoryOrderId = orderId;
-        await loadOrders();
-        await pollMessages();
+        selectedHistoryOrderId=orderId; newOrderDraft=false;
+        _lastOrderSignature=""; _lastMsgSignature="";
+        await loadOrders(); await pollMessages();
       };
 
       function renderRecentHistory(orders) {
@@ -1648,11 +1660,12 @@
           `;
           container.appendChild(row);
         });
+        const more=document.createElement("button");more.textContent="Load older orders";more.className="btn btn-secondary";more.onclick=()=>loadMoreHistory();container.appendChild(more);
       }
 
       window.confirmActiveOrder = async function (id) {
         try {
-          await apiRequest(`/api/customer/orders/${id}/confirm`, "PUT");
+          await apiRequest(`/api/customer/orders/${id}/confirm`, "PUT", {revision:activeOrder.revision});
           await loadOrders();
           await pollMessages();
         } catch (err) {
@@ -1674,7 +1687,7 @@
         const row = document.createElement("div");
         row.style.cssText = "display: flex; gap: 8px; align-items: center;";
         row.innerHTML = `
-          <input type="text" class="input-control g-name" placeholder="Item (e.g. Amul Milk 1L)" value="${name}" style="flex: 1;" />
+          <input type="text" class="input-control g-name" placeholder="Item (e.g. Amul Milk 1L)" value="${escapeHTML(name)}" style="flex: 1;" />
           <input type="number" class="input-control g-qty" min="1" value="${qty}" style="width: 70px; text-align: center;" />
           <button class="btn btn-secondary btn-icon" style="flex-shrink:0;" onclick="this.parentElement.remove()"><i class="fa-solid fa-trash" style="color:#ef4444;"></i></button>
         `;
@@ -1696,7 +1709,11 @@
 
         setLoading("btn-submit-grocery", true);
         try {
-          await apiRequest("/api/orders", "POST", { address_id: addressId, items });
+          const fingerprint=JSON.stringify({addressId,items});
+          if(sendPayload!==fingerprint){sendKey=null;sendPayload=fingerprint;}
+          sendKey=sendKey||crypto.randomUUID();
+          const created=await apiRequest("/api/orders", "POST", { address_id: addressId, items },sendKey);
+          activeOrder=created; selectedHistoryOrderId=null; newOrderDraft=false; sendKey=null;
           hideGroceryModal();
           await loadOrders();
           await pollMessages();
@@ -1711,8 +1728,10 @@
       window.openHelp = async function () {
         document.getElementById("help-modal").classList.add("active");
         await loadHelpMessages();
+        if(helpPolling)helpPolling();
+        helpPolling=singleFlightPolling(loadHelpMessages,8000);
       };
-      window.closeHelp = () => document.getElementById("help-modal").classList.remove("active");
+      window.closeHelp = () => {document.getElementById("help-modal").classList.remove("active"); if(helpPolling)helpPolling();};
 
       async function loadHelpMessages() {
         try {
@@ -1727,7 +1746,7 @@
             const isMe = m.sender_role === "CUSTOMER";
             const b = document.createElement("div");
             b.style.cssText = `padding: 10px 14px; border-radius: 12px; font-size: 13px; max-width: 80%; ${isMe ? "background:#2563eb;color:white;align-self:flex-end;" : "background:rgba(255,255,255,0.08);color:var(--text-main);align-self:flex-start;"}`;
-            b.innerHTML = `<div style="font-size:10px;opacity:0.7;margin-bottom:2px;">${isMe ? "You" : "SnapSave Admin"}</div><div>${m.message}</div>`;
+            b.innerHTML = `<div style="font-size:10px;opacity:0.7;margin-bottom:2px;">${isMe ? "You" : "SnapSave Admin"}</div><div>${escapeHTML(m.message)}</div>`;
             thread.appendChild(b);
           });
           thread.scrollTop = thread.scrollHeight;
@@ -1740,9 +1759,9 @@
         const inp = document.getElementById("help-input");
         const txt = inp.value.trim();
         if (!txt) return;
-        inp.value = "";
         try {
           await apiRequest("/api/help", "POST", { message: txt });
+          if(inp.value.trim()===txt)inp.value="";
           await loadHelpMessages();
         } catch (e) {
           alert("Error: " + e.message);
@@ -1795,6 +1814,7 @@
 
       window.openFeedbackModal = function(orderId) {
         pendingFeedbackOrderId = orderId;
+        document.getElementById("feedback-notes").value="";
         selectedRating = 5;
         document.getElementById("star-rating-container").innerHTML = `
           <span onclick="setRating(1)">★</span>
@@ -1824,19 +1844,42 @@
             });
           }
           window.closeFeedbackModal();
+          await loadOrders(true);
         } catch (e) {
-          console.error("Feedback submit error:", e);
-          window.closeFeedbackModal();
+          alert("Feedback could not be saved: "+e.message);
         }
       };
 
+      async function attachPaymentCard(wrapper, order) {
+        const card=document.createElement("div");
+        const amount=document.createElement("p"); amount.textContent=`Pay ₹${Number(order.final_price).toFixed(2)} for order ${order.id.slice(0,8)}`;
+        card.appendChild(amount);
+        if(order.payment_uri?.startsWith("upi://pay?")) {
+          const link=document.createElement("a");link.href=order.payment_uri;link.textContent="Open UPI payment";card.appendChild(link);
+        }
+        wrapper.appendChild(card);
+        try {
+          if(auth.currentUser)idToken=await auth.currentUser.getIdToken();
+          const response=await fetch(`${API_BASE}/api/orders/${order.id}/payment-qr`,{headers:{Authorization:`Bearer ${idToken}`},signal:AbortSignal.timeout(20000)});
+          if(!response.ok)throw new Error("QR unavailable");
+          const url=URL.createObjectURL(await response.blob());
+          const img=document.createElement("img");img.alt="Payment QR for this order";img.style.maxWidth="250px";img.src=url;img.onload=()=>URL.revokeObjectURL(url);card.appendChild(img);
+        } catch(e) {const text=document.createElement("p");text.textContent="Use the UPI link or contact your concierge for payment details.";card.appendChild(text);}
+      }
+      window.loadMoreHistory = async function() {
+        historyOffset+=50;
+        const rows=await apiRequest(`/api/orders?limit=50&offset=${historyOffset}`);
+        orderCache=[...new Map([...orderCache,...rows].map(o=>[o.id,o])).values()];renderRecentHistory(orderCache);
+      };
       // API Request Wrapper
-      async function apiRequest(endpoint, method = "GET", body = null) {
+      async function apiRequest(endpoint, method = "GET", body = null, requestKey=null) {
         const headers = { "Content-Type": "application/json" };
+        if(auth.currentUser) idToken=await auth.currentUser.getIdToken();
         if (idToken) headers["Authorization"] = `Bearer ${idToken}`;
+        if(requestKey) headers["Idempotency-Key"]=requestKey;
         const opt = { method, headers };
         if (body) opt.body = JSON.stringify(body);
-        const res = await fetch(`${API_BASE}${endpoint}`, opt);
+        const res = await fetch(`${API_BASE}${endpoint}`, {...opt,signal:AbortSignal.timeout(20000)});
         if (!res.ok) {
           const err = await res.json().catch(() => ({ detail: "Server error" }));
           let msg = `HTTP ${res.status}`;

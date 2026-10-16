@@ -1,20 +1,8 @@
 # SnapSave Reward Engine
 
 
-STORE_REWARDS = {
-    "zepto": [
-        {"threshold": 599, "discount": 50},
-        {"threshold": 1199, "discount": 100},
-        {"threshold": 1799, "discount": 150}
-    ]
-}
-
-
-SNAPSAVE_REWARDS = [
-    {"threshold": 1000, "discount": 20},
-    {"threshold": 1500, "discount": 40},
-    {"threshold": 2000, "discount": 70}
-]
+STORE_REWARDS = {}
+SNAPSAVE_REWARDS = []
 
 
 def get_store_discount(store, cart_total):
@@ -112,5 +100,5 @@ def get_next_reward(store, cart_total):
 
 def generate_reward_message(reward_data):
     if not reward_data:
-        return "You're getting the best savings on this order!"
-    return f"Add ₹{reward_data['add_more']:.0f} more to unlock ₹{reward_data['reward']} discount!"
+        return "No verified reward is available for this quote."
+    return f"Add ₹{reward_data['add_more']:.0f} more to unlock ₹{reward_data['reward']} discount!"

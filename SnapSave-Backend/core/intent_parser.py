@@ -17,7 +17,7 @@ def detect_intent(query):
         intent["max_price"] = int(price_match.group(2))
 
     # detect volume
-    volume_match = re.search(r"(\d+)\s*(ml|l|kg|g)", q)
+    volume_match = re.search(r"(\d+(?:\.\d+)?)\s*(ml|litres?|liters?|ltr|l|kg|g)\b", q)
     if volume_match:
         intent["volume"] = volume_match.group(0)
 

@@ -1,93 +1,88 @@
+"""Verified research only. Every final write checks the current ticket generation."""
+from time_utils import utcnow
 import json
-from datetime import datetime
-from sqlalchemy.orm import Session
+from datetime import datetime, timedelta
+from decimal import Decimal
+from sqlalchemy import exists, select
 import models
+from core.order_policy import message,change_order
+from pricing.quotes import money, final_amount
+from settings import research_enabled, research_provider
 
 class AI_CONCIERGE_PROVIDER:
     @staticmethod
-    def process_ticket(order_id: str, db: Session):
-        """
-        Simulates an AI researching and finding prices.
-        """
-        order = db.query(models.Order).filter(models.Order.id == order_id).first()
+    def research(items, location):
+        provider = research_provider()
+        return provider(items, location) if provider else None
+
+    @staticmethod
+    def process_ticket(order_id, db):
+        order=db.get(models.Order,order_id)
+        enabled=db.get(models.SystemSetting,"ai_enabled")
         if not order:
             return
-            
-        # Check if AI is allowed globally
-        setting = db.query(models.SystemSetting).filter(models.SystemSetting.key == "ai_enabled").first()
-        is_enabled = setting.value.lower() == "true" if setting else True
-        if not is_enabled:
+        if order.status not in {"pending_review","reviewing"} or order.mode not in {"AI","HYBRID"} or order.assigned_worker_type!="AI" or (order.manual_prices and not order.is_ai_priced):
             return
-
-        # Pre-flight check: Is AI mode allowed for this order?
-        if order.mode == "HUMAN" or order.assigned_worker_type != "AI":
+        if not research_enabled() or not enabled or enabled.value!="true":
+            change_order(db,order,mode="HUMAN",assigned_worker_type="HUMAN",ai_stopped_at=utcnow(),ai_error="Live research is unavailable.")
+            message(db,order,"Live research is unavailable. A human concierge will review this ticket.")
+            db.commit()
             return
-            
-        # Pre-flight check: Do not override human prices
-        if order.manual_prices and not order.is_ai_priced:
+        version=order.revision
+        global_enabled=exists(select(models.SystemSetting.key).where(models.SystemSetting.key=="ai_enabled",models.SystemSetting.value=="true"))
+        count=db.query(models.Order).filter(models.Order.id==order_id,models.Order.revision==version,global_enabled).update({models.Order.ai_started_at:utcnow(),models.Order.revision:version+1},synchronize_session=False)
+        if count!=1:
+            db.rollback()
             return
-
-        # Start AI action
-        order.ai_started_at = datetime.utcnow()
         db.commit()
-
-        # Simulate generating prices for items
-        mock_prices = {
-            "store": "zepto",
-            "items": [],
-            "subtotal": 0,
-            "delivery_fee": 20.0,
-            "platform_fee": 15.0,
-            "store_discount": 0.0,
-            "snapsave_discount": 0.0,
-            "profit": 35.0,
-            "final_price": 0
-        }
-        
-        for idx, item in enumerate(order.items):
-            # Mock price: 50.0 per unit
-            mock_price = 50.0 * item.quantity
-            mock_prices["items"].append({
-                "item_id": item.id,
-                "name": item.name,
-                "unit_price": 50.0,
-                "store": "zepto"
-            })
-            mock_prices["subtotal"] += mock_price
-
-        mock_prices["final_price"] = mock_prices["subtotal"] + mock_prices["delivery_fee"] + mock_prices["platform_fee"] - mock_prices["store_discount"] - mock_prices["snapsave_discount"]
-        
-        order.manual_prices = json.dumps(mock_prices)
-        order.is_ai_priced = True
-        
-        # Stop AI action
-        order.ai_stopped_at = datetime.utcnow()
-        
-        # In HYBRID mode, just prepare the quote. In AI mode, also submit it to the customer.
-        if order.mode == "AI":
-            order.status = "awaiting_customer"
-            order.store = "zepto"
-            order.subtotal = mock_prices["subtotal"]
-            order.delivery_fee = mock_prices["delivery_fee"]
-            order.platform_fee = mock_prices["platform_fee"]
-            order.store_discount = mock_prices["store_discount"]
-            order.snapsave_discount = mock_prices["snapsave_discount"]
-            order.final_price = mock_prices["final_price"]
-            order.profit = mock_prices["profit"]
-            order.savings = 0.0
-            order.updated_at = datetime.utcnow()
-            
-            # Send quote message
-            # Fetch the customer
-            customer = db.query(models.User).filter(models.User.id == order.user_id).first()
-            if customer:
-                message = models.Message(
-                    order_id=order.id,
-                    user_id=customer.id,
-                    sender_id="system_ai",
-                    sender_role="AI",
-                    message="I have found the best prices for your order. Tap Confirm Order to proceed."
-                )
-                db.add(message)
-                
+        version+=1
+        db.expire_all()
+        order=db.get(models.Order,order_id)
+        items=[{"item_id":i.id,"name":i.name,"quantity":i.quantity} for i in order.items]
+        location=order.delivery_postal_code
+        db.rollback() # Do not retain a transaction/connection while researching.
+        try:
+            quote=AI_CONCIERGE_PROVIDER.research(items,location)
+            if not quote or quote.get("verified") is not True or quote.get("postal_code")!=location:
+                raise ValueError("Live inventory and pricing could not be verified. A human must price this ticket.")
+            rows=quote["items"]
+            expected={i["item_id"]:i for i in items}
+            if len(rows)!=len(expected) or {i["item_id"] for i in rows}!=set(expected):
+                raise ValueError("Research did not cover the complete requested basket")
+            from pricing.quotes import store_id
+            for i in rows:
+                i["store"]=store_id(i["store"])
+                i["quantity"]=expected[i["item_id"]]["quantity"]
+                i["name"]=expected[i["item_id"]]["name"]
+                i["line_total"]=float(money(i["line_total"]))
+            subtotal=sum((money(i["line_total"]) for i in rows),Decimal(0))
+            fees={k:money(quote.get(k,0)) for k in ("delivery_fee","platform_fee","service_fee","store_discount","snapsave_discount")}
+            final=final_amount(subtotal,*[fees[k] for k in ("delivery_fee","platform_fee","service_fee","store_discount","snapsave_discount")])
+            values={"manual_prices":json.dumps({"items":rows,"source":quote.get("source"),"verified":True}),"is_ai_priced":True,"ai_stopped_at":utcnow(),"ai_error":None,"revision":version+1,"updated_at":utcnow()}
+            if order.mode=="AI":
+                values.update(status="awaiting_customer",subtotal=subtotal,final_price=final,store=rows[0]["store"],quote_expires_at=utcnow()+timedelta(minutes=15),savings=fees["store_discount"]+fees["snapsave_discount"],**fees)
+        except Exception as exc:
+            values={"ai_error":str(exc)[:1000],"ai_stopped_at":utcnow(),"revision":version+1,"assigned_worker_type":"HUMAN","mode":"HUMAN"}
+            rows=None
+        # This predicate is evaluated in the same UPDATE that writes the result.
+        predicates=[models.Order.id==order_id,models.Order.revision==version,models.Order.assigned_worker_type=="AI",models.Order.mode.in_(["AI","HYBRID"]),models.Order.status.in_(["pending_review","reviewing"]),global_enabled]
+        count=db.query(models.Order).filter(*predicates).update(values,synchronize_session=False)
+        if count!=1:
+            db.rollback()
+            return
+        db.expire_all()
+        current=db.get(models.Order,order_id)
+        if rows:
+            by_id={i.id:i for i in current.items}
+            for i in rows:
+                by_id[i["item_id"]].line_total=money(i["line_total"])
+                by_id[i["item_id"]].unit_price=money(i["line_total"])/i["quantity"]
+                by_id[i["item_id"]].store=i["store"]
+            if current.mode=="AI":
+                from api.server import quote_text
+                message(db,current,quote_text(current,rows),role="AI",sender="system_ai",kind="quote")
+            else:
+                message(db,current,"AI research draft is ready for human verification.")
+        else:
+            message(db,current,"Live research was unavailable. This ticket is now assigned to human review.")
         db.commit()

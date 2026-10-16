@@ -968,6 +968,7 @@
         box-shadow: 0 4px 20px rgba(234,88,12,0.4);
       }
     </style>
+    <script src="config.js"></script>
     <script src="common.js"></script>
   </head>
   <body>
@@ -1254,7 +1255,7 @@
               style="width: 140px; padding: 4px 8px; font-size: 11px"
               onchange="loadQueue()"
             >
-              <option value="">All Tickets</option>
+              <option value="">All Active Tickets</option>
               <option value="pending_review">Pending Review</option>
               <option value="reviewing">Reviewing</option>
               <option value="awaiting_customer">Awaiting Customer</option>
@@ -1262,6 +1263,8 @@
               <option value="confirmed">Confirmed</option>
               <option value="placed">Placed</option>
               <option value="delivered">Delivered</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
             </select>
           </div>
           <div id="queue-list" class="panel-scrollable">
@@ -1339,7 +1342,7 @@
             <!-- AI Controls Block -->
             <div id="ai-controls-block" class="detail-card" style="display: none; border: 1px solid var(--accent-cyan); background: rgba(56, 189, 248, 0.05);">
               <h4 style="margin-bottom: 10px; font-size: 14px; color: var(--accent-cyan)"><i class="fa-solid fa-robot"></i> AI Concierge Controls</h4>
-              
+
               <div style="display: flex; gap: 12px; margin-bottom: 12px;">
                 <div style="flex: 1; font-size: 12px;">
                   <span style="color: var(--text-muted);">Mode:</span>
@@ -1354,7 +1357,7 @@
                 Pricing: <span id="ai-pricing-label"></span>
               </div>
               <div id="ai-mode-desc" style="font-size: 11px; margin-bottom: 12px; padding: 6px 8px; border-radius: 6px; background: rgba(56,189,248,0.08); color: var(--text-muted);"></div>
-              
+
               <div id="ai-admin-controls" style="display: none; margin-bottom: 10px;">
                 <label style="font-size: 11px; color: var(--text-muted);">Set Ticket Mode:</label>
                 <div style="display: flex; gap: 6px; margin-top: 4px;">
@@ -1363,7 +1366,7 @@
                   <button id="mode-btn-ai" class="btn btn-secondary" onclick="setOrderMode('AI')" style="flex:1; padding: 5px; font-size: 11px;" title="AI handles pricing automatically.">🤖 AI</button>
                 </div>
               </div>
-              
+
               <button
                 id="btn-takeover-ai"
                 class="btn btn-accent"
@@ -1372,7 +1375,7 @@
               >
                 <i class="fa-solid fa-hand"></i> TAKE OVER FROM AI
               </button>
-              
+
               <button
                 id="btn-return-ai"
                 class="btn btn-secondary"
@@ -1427,23 +1430,23 @@
 
               <div id="quote-preview-block" style="display: none; margin-top: 20px; border-top: 1px solid var(--border); padding-top: 16px;">
                 <h4 style="margin-bottom: 12px; font-size: 14px;">Final Quote Breakdown</h4>
-                
+
                 <div class="input-group">
                   <label>Delivery Fee (₹)</label>
                   <input type="number" id="quote-delivery-fee" class="input-control" value="0" onchange="recalculatePreviewTotal()" />
                   <span id="delivery-fee-warning" style="font-size: 10px; color: var(--accent-red); display: none;">Subtotal below store threshold! Please add fee.</span>
                 </div>
-                
+
                 <div class="input-group" style="margin-top: 12px;">
                   <label>Store Discount (₹)</label>
                   <input type="number" id="quote-store-discount" class="input-control" value="0" onchange="recalculatePreviewTotal()" />
                 </div>
-                
+
                 <div class="input-group" style="margin-top: 12px;">
                   <label>SnapSave Discount (₹)</label>
                   <input type="number" id="quote-snapsave-discount" class="input-control" value="0" onchange="recalculatePreviewTotal()" />
                 </div>
-                
+
                 <div class="input-group" style="margin-top: 12px;">
                   <label>Profit Target (₹)</label>
                   <input type="number" id="quote-profit" class="input-control" value="0" onchange="recalculatePreviewTotal()" />
@@ -2028,12 +2031,15 @@
 
     <script>
     (async function() {
-      const API_BASE =
-        window.location.hostname === "localhost" ||
-        window.location.hostname === "127.0.0.1"
-          ? "http://127.0.0.1:8000"
-          : window.location.origin;
+      const API_BASE = window.SNAPSAVE_API_BASE;
 
+      const loginCard=document.getElementById("phone-login-card");
+      const otpPanel=document.createElement("div");otpPanel.id="staff-otp-panel";otpPanel.style.display="none";
+      otpPanel.innerHTML='<input id="staff-otp" class="input-control" maxlength="6" placeholder="6-digit OTP"><button class="btn" onclick="verifyStaffOTP()">Verify OTP</button>';
+      const recaptcha=document.createElement("div");recaptcha.id="staff-recaptcha";
+      loginCard.appendChild(recaptcha);loginCard.appendChild(otpPanel);
+      const queuePager=document.createElement("div");queuePager.innerHTML='<button class="btn btn-secondary" onclick="pageQueue(-1)">Previous tickets</button><button class="btn btn-secondary" onclick="pageQueue(1)">Next tickets</button>';
+      document.getElementById("queue-list").parentElement.appendChild(queuePager);
       // Role-management: enables RBAC for admin control over user roles
       const ENABLE_ROLE_MANAGEMENT = true;
 
@@ -2050,63 +2056,42 @@
       let selectedHelpUserId = null;
 
       let backgroundPolling = null;
+      let staffChatCache=[];
+      let staffChatSignature="";
+      let staffChatOrder=null;
+      let queueBusy=false;
+      let queuePending=false;
+      let queuePage=0;
+      let lastQueueFilter="";
       // Management login — phone lookup, token, RBAC check
       window.handleProductionLogin = async function () {
-        const rawPhone = document.getElementById("login-phone").value.trim();
-        const phone = rawPhone.startsWith("+") ? rawPhone : "+91" + rawPhone.replace(/\s/g, "");
-        console.log("[LOGIN] Phone entered:", phone);
-
-        if (!phone) {
-          console.warn("⚠️ [LOGIN] Phone number is empty");
-          showAuthAlert("Please enter a phone number.", "error");
-          return;
-        }
-
-        const loginBtn = document.querySelector('#phone-login-card .btn');
-        if (loginBtn) {
-          loginBtn.disabled = true;
-          loginBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Logging in...';
-        }
-
+        const raw=document.getElementById("login-phone").value.trim();
+        const phone=raw.startsWith("+")?raw:"+91"+raw;
+        if(!/^\+[1-9]\d{7,14}$/.test(phone)) return showAuthAlert("Enter a valid phone number","error");
+        const button=document.querySelector("#phone-login-card .btn");button.disabled=true;
         try {
-          console.log("📤 [LOGIN] Sending test-token request for OTP SMS to:", phone);
-          const response = await fetch(
-            `${API_BASE}/api/auth/test-token?phone=${encodeURIComponent(phone)}`,
-          );
-          const data = await response.json();
-
-          console.log("📥 [LOGIN] Response status:", response.status);
-          console.log("📥 [LOGIN] Response data:", data);
-
-          if (!response.ok) {
-            throw new Error(data.detail || "Login failed");
-          }
-
-          if (!data.idToken) {
-            throw new Error("No token received from server.");
-          }
-
-          console.log("[LOGIN] Authentication successful, idToken received");
-          idToken = data.idToken;
-          localStorage.setItem(STORAGE_KEY, idToken);
-          await checkUserSession();
-        } catch (err) {
-          console.error("❌ [LOGIN] Error:", err.message);
-          showAuthAlert("Login failed: " + err.message, "error");
-          if (loginBtn) {
-            loginBtn.disabled = false;
-            loginBtn.innerHTML = '<i class="fa-solid fa-sign-in-alt"></i> Login';
-          }
-        }
+          await window.SnapSaveAuth.send(phone);
+          document.getElementById("staff-otp-panel").style.display="block";
+          showAuthAlert("OTP sent. Enter the code to continue.","success");
+        } catch(e) {showAuthAlert("Could not send OTP: "+e.message,"error");}
+        finally {button.disabled=false;}
+      };
+      window.verifyStaffOTP = async function() {
+        try {idToken=await window.SnapSaveAuth.verify(document.getElementById("staff-otp").value.trim()); await checkUserSession();}
+        catch(e) {showAuthAlert("Verification failed: "+e.message,"error");}
       };
 
       window.handleLogout = function () {
         idToken = null;
         currentUser = null;
         selectedOrder = null;
-        clearInterval(backgroundPolling);
+        if(backgroundPolling)backgroundPolling();
         document.body.classList.remove("admin-shell");
         localStorage.removeItem(STORAGE_KEY);
+        if(betaMetricsInterval)betaMetricsInterval();
+        staffChatCache=[]; staffChatSignature=""; staffChatOrder=null; activeOrders=[];
+        document.getElementById("beta-program-view").style.display="none";
+        window.SnapSaveAuth.logout();
         showLoggedOutView();
       };
 
@@ -2119,15 +2104,10 @@
 
       async function checkUserSession() {
         try {
-          console.log("🔍 [SESSION] Checking user session...");
           const me = await apiRequest("/api/auth/me");
 
-          console.log("👤 [SESSION] User data received:", me);
-          console.log("👥 [SESSION] User role:", me.role);
-          console.log("📱 [SESSION] User phone:", me.phone_number || me.email);
 
           if (me.role !== "ADMIN" && me.role !== "MODERATOR") {
-            console.warn("🚫 [SESSION] Access denied - user is not ADMIN or MODERATOR, role is:", me.role);
             showAuthAlert(
               "Access Denied: Customers cannot view the management console.",
               "error",
@@ -2136,13 +2116,10 @@
             return;
           }
 
-          console.log("✅ [SESSION] User has valid role:", me.role);
           currentUser = me;
 
           if (me.role === "ADMIN") {
-            console.log("🔑 [DASHBOARD] Loading ADMIN dashboard");
           } else if (me.role === "MODERATOR") {
-            console.log("🛠️ [DASHBOARD] Loading MODERATOR dashboard");
           }
 
           await startDashboard();
@@ -2189,13 +2166,11 @@
         // Periodic background polling - only real-time updates (chat, queue, assignments)
         // Metrics are loaded only on Analytics section view and initial dashboard load
         const isAdmin = currentUser.role === "ADMIN";
-        clearInterval(backgroundPolling);
-        backgroundPolling = setInterval(async () => {
-          const tasks = [loadQueue()];
-          if (isAdmin)
-            tasks.push(pollChat(), pollAdminAssignments(), updateHelpBadge());
-          await Promise.all(tasks);
-        }, 10000);
+        if(backgroundPolling)backgroundPolling();
+        backgroundPolling=singleFlightPolling(async()=>{
+          await loadQueue();await pollChat();
+          if(isAdmin){await updateHelpBadge();if(currentAdminSection==="help"){await loadHelpInbox();if(currentHelpThread)await openHelpThread(currentHelpThread);}}
+        },10000);
       }
 
       function setSwitches(ids, checked) {
@@ -2224,24 +2199,24 @@
             if (deliveryConfig) {
               if(deliveryConfig.zepto !== undefined) document.getElementById("config-zepto").value = deliveryConfig.zepto;
               if(deliveryConfig.blinkit !== undefined) document.getElementById("config-blinkit").value = deliveryConfig.blinkit;
-              if(deliveryConfig.swiggy !== undefined) document.getElementById("config-instamart").value = deliveryConfig.swiggy;
+              if(deliveryConfig.instamart !== undefined) document.getElementById("config-instamart").value = deliveryConfig.instamart;
               if(deliveryConfig.bigbasket !== undefined) document.getElementById("config-bigbasket").value = deliveryConfig.bigbasket;
             }
           } catch(e) {
-            console.log("Failed to load delivery config:", e);
           }
 
           // Load AI Global status
           try {
             const aiStatus = await apiRequest("/api/admin/settings/ai-status");
             setSwitches(["ai-global-switch"], aiStatus.ai_enabled);
+            document.getElementById("ai-global-switch").disabled=!aiStatus.research_available;
+            ["ai","hybrid"].forEach(m=>{const b=document.getElementById("mode-btn-"+m);if(b)b.disabled=!aiStatus.research_available;});
           } catch (e) {}
 
           // Load assignments dropdown options
           moderatorsList = await apiRequest("/api/admin/moderators");
           await loadAdminAssignments();
         } catch (e) {
-          console.log("Admin configs load failure:", e);
         }
       }
 
@@ -2253,7 +2228,6 @@
           customersList = await apiRequest("/api/admin/customers");
           pollAdminAssignments();
         } catch (e) {
-          console.log("Error loading customers:", e);
         }
       }
 
@@ -2273,17 +2247,17 @@
 
           let options = `<option value="">— Unassigned —</option>`;
           moderatorsList.forEach((m) => {
-            options += `<option value="${m.id}" ${c.assigned_moderator_id === m.id ? "selected" : ""}>${m.role}: ${m.phone_number || m.email}</option>`;
+            options += `<option value="${escapeHTML(m.id)}" ${c.assigned_moderator_id === m.id ? "selected" : ""}>${m.role}: ${escapeHTML(m.phone_number || m.email)}</option>`;
           });
 
           const isAssigned = !!c.assigned_moderator_id;
           row.innerHTML = `
                     <div class="customer-label">
                         <i class="fa-solid fa-user"></i>
-                        ${c.phone_number || c.email}
+                        ${escapeHTML(c.phone_number || c.email)}
                         ${isAssigned ? '<span style="margin-left:auto;font-size:9px;color:var(--accent-green);font-weight:700;">ASSIGNED</span>' : '<span style="margin-left:auto;font-size:9px;color:var(--text-muted);font-weight:700;">OPEN</span>'}
                     </div>
-                    <select class="input-control" style="padding: 6px 10px; font-size: 12px;" onchange="assignCustomer('${c.id}', this.value)">
+                    <select class="input-control" style="padding: 6px 10px; font-size: 12px;" onchange="assignCustomer(decodeURIComponent('${encodeURIComponent(c.id).replaceAll("'","%27")}'), this.value)">
                         ${options}
                     </select>
                 `;
@@ -2331,7 +2305,7 @@
           const thresholds = {
             zepto: parseFloat(document.getElementById("config-zepto").value) || 199,
             blinkit: parseFloat(document.getElementById("config-blinkit").value) || 199,
-            swiggy: parseFloat(document.getElementById("config-instamart").value) || 199,
+            instamart: parseFloat(document.getElementById("config-instamart").value) || 199,
             bigbasket: parseFloat(document.getElementById("config-bigbasket").value) || 299
           };
           await apiRequest("/api/admin/delivery-config", "PUT", { thresholds });
@@ -2420,26 +2394,26 @@
               <div class="dr-main">
                 <div class="dr-title">
                   <i class="fa-solid fa-user" style="color:var(--accent-purple)"></i>
-                  ${c.phone_number || c.email}
+                  ${escapeHTML(c.phone_number || c.email)}
                   ${c.is_blacklisted ? '<span class="badge cancelled" style="margin-left:6px;">Blacklisted</span>' : ""}
                 </div>
-                <div class="dr-sub">${c.is_blacklisted ? "Reason: " + (c.blacklist_reason || "—") : "Active account"}</div>
+                <div class="dr-sub">${escapeHTML(c.is_blacklisted ? "Reason: " + (c.blacklist_reason || "—") : "Active account")}</div>
               </div>
               ${
                 c.is_blacklisted
-                  ? `<button class="btn btn-secondary" onclick="unblacklist('${c.id}')"><i class="fa-solid fa-unlock"></i> Reinstate</button>`
-                  : `<button class="btn btn-danger" onclick="blacklist('${c.id}')"><i class="fa-solid fa-ban"></i> Blacklist</button>`
+                  ? `<button class="btn btn-secondary" onclick="unblacklist(decodeURIComponent('${encodeURIComponent(c.id).replaceAll("'","%27")}'))"><i class="fa-solid fa-unlock"></i> Reinstate</button>`
+                  : `<button class="btn btn-danger" onclick="blacklist(decodeURIComponent('${encodeURIComponent(c.id).replaceAll("'","%27")}'))"><i class="fa-solid fa-ban"></i> Blacklist</button>`
               }`;
             container.appendChild(row);
           });
         } catch (e) {
-          container.innerHTML = `<p style="color:#ef4444;">Failed to load customers: ${e.message}</p>`;
+          container.innerHTML = `<p style="color:#ef4444;">Failed to load customers: ${escapeHTML(e.message)}</p>`;
         }
       }
       window.blacklist = async function (userId) {
         const reason = prompt("Reason for blacklisting this customer?") || "";
         try {
-          await apiRequest(`/api/admin/customers/${userId}/blacklist`, "PUT", {
+          await apiRequest(`/api/admin/customers/${escapeHTML(userId)}/blacklist`, "PUT", {
             reason,
           });
           loadCustomersAdmin();
@@ -2449,7 +2423,7 @@
       };
       window.unblacklist = async function (userId) {
         try {
-          await apiRequest(`/api/admin/customers/${userId}/unblacklist`, "PUT");
+          await apiRequest(`/api/admin/customers/${escapeHTML(userId)}/unblacklist`, "PUT");
           loadCustomersAdmin();
         } catch (e) {
           alert("Failed: " + e.message);
@@ -2493,44 +2467,49 @@
             const last = t.messages[t.messages.length - 1];
             item.innerHTML = `
               <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-size:13px; font-weight:600;">${t.customer_phone}</span>
+                <span style="font-size:13px; font-weight:600;">${escapeHTML(t.customer_phone)}</span>
                 ${t.open ? '<span class="badge pending_review">OPEN</span>' : '<span class="badge delivered">DONE</span>'}
               </div>
-              <div style="font-size:11px; color:var(--text-muted); margin-top:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${last ? last.message : ""}</div>`;
+              <div style="font-size:11px; color:var(--text-muted); margin-top:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHTML(last ? last.message : "")}</div>`;
             item.onclick = () => openHelpThread(t);
             list.appendChild(item);
           });
         } catch (e) {
-          list.innerHTML = `<p style="color:#ef4444; padding:10px;">${e.message}</p>`;
+          list.innerHTML = `<p style="color:#ef4444; padding:10px;">${escapeHTML(e.message)}</p>`;
         }
       }
       let currentHelpThread = null;
-      function openHelpThread(t) {
+      async function openHelpThread(t) {
+        const draft=selectedHelpUserId===t.user_id ? document.getElementById("help-reply-input")?.value||"" : "";
         selectedHelpUserId = t.user_id;
         currentHelpThread = t;
-        loadHelpInbox();
+        const messages=await apiRequest(`/api/admin/help/${encodeURIComponent(t.user_id)}/messages`);
+        if(selectedHelpUserId!==t.user_id)return;
+        t={...t,messages};
+        currentHelpThread=t;
         const conv = document.getElementById("help-conversation");
         const bubbles = t.messages
           .map((m) => {
             const isAdmin = m.sender_role === "ADMIN";
             return `<div class="chat-bubble ${isAdmin ? "moderator" : "customer"}" style="max-width:80%;">
               <div class="chat-sender">${isAdmin ? "You (Admin)" : "Customer"}</div>
-              <div style="white-space:pre-wrap;">${m.message}</div>
-              <div class="chat-timestamp">${new Date(m.created_at + "Z").toLocaleString()}</div>
+              <div style="white-space:pre-wrap;">${escapeHTML(m.message)}</div>
+              <div class="chat-timestamp">${utcDate(m.created_at).toLocaleString()}</div>
             </div>`;
           })
           .join("");
         conv.innerHTML = `
           <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:10px; margin-bottom:12px;">
-            <strong>${t.customer_phone}</strong>
-            <button class="btn btn-secondary" style="padding:6px 12px;" onclick="resolveHelp('${t.user_id}')">Mark Resolved</button>
+            <strong>${escapeHTML(t.customer_phone)}</strong>
+            <button class="btn btn-secondary" style="padding:6px 12px;" onclick="resolveHelp(decodeURIComponent('${encodeURIComponent(t.user_id).replaceAll("'","%27")}'))">Mark Resolved</button>
           </div>
           <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px; margin-bottom:12px; max-height:48vh;">${bubbles}</div>
           <div style="display:flex; gap:10px;">
             <input type="text" id="help-reply-input" class="input-control" placeholder="Reply to customer..." style="flex:1;" />
-            <button class="btn" style="padding:10px 16px;" onclick="replyHelp('${t.user_id}')"><i class="fa-solid fa-paper-plane"></i></button>
+            <button class="btn" style="padding:10px 16px;" onclick="replyHelp(decodeURIComponent('${encodeURIComponent(t.user_id).replaceAll("'","%27")}'))"><i class="fa-solid fa-paper-plane"></i></button>
           </div>`;
         const inp = document.getElementById("help-reply-input");
+        inp.value=draft;
         inp.addEventListener("keypress", (e) => {
           if (e.key === "Enter") replyHelp(t.user_id);
         });
@@ -2540,7 +2519,7 @@
         const msg = inp.value.trim();
         if (!msg) return;
         try {
-          await apiRequest(`/api/admin/help/${userId}/reply`, "POST", {
+          await apiRequest(`/api/admin/help/${escapeHTML(userId)}/reply`, "POST", {
             message: msg,
           });
           const threads = await apiRequest("/api/admin/help");
@@ -2552,7 +2531,7 @@
       };
       window.resolveHelp = async function (userId) {
         try {
-          await apiRequest(`/api/admin/help/${userId}/resolve`, "PUT");
+          await apiRequest(`/api/admin/help/${escapeHTML(userId)}/resolve`, "PUT");
           loadHelpInbox();
         } catch (e) {
           alert("Failed: " + e.message);
@@ -2570,12 +2549,12 @@
             row.className = "data-row";
             row.innerHTML = `
               <div class="dr-main">
-                <div class="dr-title">${u.phone_number || u.email}
+                <div class="dr-title">${escapeHTML(u.phone_number || u.email)}
                   <span class="role-badge ${u.role === "ADMIN" ? "role-admin" : u.role === "MODERATOR" ? "role-moderator" : ""}" style="margin-left:6px;">${u.role}</span>
                 </div>
-                <div class="dr-sub">${u.email}</div>
+                <div class="dr-sub">${escapeHTML(u.email)}</div>
               </div>
-              <select class="input-control" style="width:160px; padding:8px 10px; font-size:12px;" onchange="changeRole('${u.id}', this.value)">
+              <select class="input-control" style="width:160px; padding:8px 10px; font-size:12px;" onchange="changeRole(decodeURIComponent('${encodeURIComponent(u.id).replaceAll("'","%27")}'), this.value)">
                 <option value="CUSTOMER" ${u.role === "CUSTOMER" ? "selected" : ""}>Customer</option>
                 <option value="MODERATOR" ${u.role === "MODERATOR" ? "selected" : ""}>Moderator</option>
                 <option value="ADMIN" ${u.role === "ADMIN" ? "selected" : ""}>Admin</option>
@@ -2583,7 +2562,7 @@
             container.appendChild(row);
           });
         } catch (e) {
-          container.innerHTML = `<p style="color:#ef4444;">${e.message}</p>`;
+          container.innerHTML = `<p style="color:#ef4444;">${escapeHTML(e.message)}</p>`;
         }
       }
       window.changeRole = async function (userId, role) {
@@ -2599,16 +2578,40 @@
       };
 
       // ── Cancel order (admin) ──
+      window.reconcilePayment=async function() {
+        const order=selectedOrder;
+        if(!order)return;
+        const choice=prompt("After checking this order's bank records, enter RECEIVED if a payment arrived, or NONE if no payment arrived. Cancel closes without changes.");
+        if(choice===null)return;
+        if(!["RECEIVED","NONE"].includes(choice.trim().toUpperCase()))return alert("Enter RECEIVED or NONE after checking the bank statement.");
+        const received=choice.trim().toUpperCase()==="RECEIVED";
+        let body={received};
+        if(received){
+          const reference=prompt("Verified bank transaction reference:");
+          const amount=prompt("Actual amount received (including any partial or excess payment):");
+          if(!reference || amount===null || !amount.trim())return;
+          body={received,reference,amount:Number(amount)};
+        }
+        try {const result=await apiRequest(`/api/admin/orders/${order.order_id}/reconcile-payment`,"POST",body);applyTicketResult(order.order_id,result);await loadQueue();renderTicketDetails();}
+        catch(e){alert("Payment reconciliation failed: "+e.message);}
+      };
+      window.recordRefund=async function() {
+        const order=selectedOrder;const reference=prompt("Enter the bank reference after completing the refund:");
+        if(!reference)return;
+        try {await apiRequest(`/api/admin/orders/${order.order_id}/refund`,"POST",{reference,amount:order.customer_paid});await loadQueue();renderTicketDetails();}
+        catch(e){alert("Refund record failed: "+e.message);}
+      };
       window.cancelOrder = async function () {
         if (!selectedOrder) return;
+        const operationOrder=selectedOrder;
         if (!confirm("Cancel this order? This cannot be undone.")) return;
         setLoading("btn-cancel-order", true);
         try {
           const res = await apiRequest(
-            `/api/admin/orders/${selectedOrder.order_id}/cancel`,
+            `/api/admin/orders/${operationOrder.order_id}/cancel`,
             "PUT",
           );
-          selectedOrder.status = res.status;
+          applyTicketResult(operationOrder.order_id,res);
           await loadQueue();
           renderTicketDetails();
           await pollChat();
@@ -2621,11 +2624,11 @@
 
       window.setOrderMode = async function (mode) {
         if (!selectedOrder) return;
+        const operationOrder=selectedOrder;
         try {
-          const res = await apiRequest(`/api/admin/orders/${selectedOrder.order_id}/mode`, "PUT", { mode });
-          selectedOrder.mode = res.mode;
-          selectedOrder.assigned_worker_type = res.assigned_worker_type;
+          const res = await apiRequest(`/api/admin/orders/${operationOrder.order_id}/mode`, "PUT", { mode });
           _lastQueueSignature = ""; // Force queue refresh
+          applyTicketResult(operationOrder.order_id,res);
           await loadQueue();
           renderTicketDetails();
         } catch (err) {
@@ -2635,12 +2638,12 @@
 
       window.takeoverAi = async function () {
         if (!selectedOrder) return;
+        const operationOrder=selectedOrder;
         setLoading("btn-takeover-ai", true);
         try {
-          const res = await apiRequest(`/api/moderator/orders/${selectedOrder.order_id}/takeover`, "PUT");
-          selectedOrder.assigned_worker_type = res.assigned_worker_type;
-          selectedOrder.mode = res.mode;
+          const res = await apiRequest(`/api/moderator/orders/${operationOrder.order_id}/takeover`, "PUT");
           _lastQueueSignature = "";
+          applyTicketResult(operationOrder.order_id,res);
           await loadQueue();
           renderTicketDetails();
         } catch (err) {
@@ -2652,11 +2655,12 @@
 
       window.delegateToAi = async function () {
         if (!selectedOrder) return;
+        const operationOrder=selectedOrder;
         setLoading("btn-return-ai", true);
         try {
-          const res = await apiRequest(`/api/admin/orders/${selectedOrder.order_id}/delegate`, "PUT", { assigned_worker_type: "AI" });
-          selectedOrder.assigned_worker_type = res.assigned_worker_type;
+          const res = await apiRequest(`/api/admin/orders/${operationOrder.order_id}/delegate`, "PUT", { assigned_worker_type: "AI" });
           _lastQueueSignature = "";
+          applyTicketResult(operationOrder.order_id,res);
           await loadQueue();
           renderTicketDetails();
         } catch (err) {
@@ -2853,41 +2857,48 @@
             if (elOrdersTodayMod) elOrdersTodayMod.innerText = m.orders_today;
           }
         } catch (e) {
-          console.log("Error loading dashboard metrics:", e);
         }
       }
 
       let _lastQueueSignature = "";
       window.loadQueue = async function () {
+        if(queueBusy) {queuePending=true;return;} queueBusy=true;
         const filter = document.getElementById("queue-filter").value;
+        if(filter!==lastQueueFilter){queuePage=0;lastQueueFilter=filter;}
+        const page=queuePage;
         try {
           const queue = await apiRequest(
-            `/api/moderator/queue${filter ? "?status_filter=" + filter : ""}`,
+            `/api/moderator/queue?limit=50&offset=${page*50}${filter ? "&status_filter="+encodeURIComponent(filter):""}`,
           );
+          if(!currentUser || page!==queuePage || filter!==document.getElementById("queue-filter").value){queuePending=!!currentUser;return;}
 
           // Build a signature to skip re-render when nothing changed
-          const sig = queue.map(o => o.order_id + o.status + (o.assigned_worker_type||"") + (o.mode||"")).join("|");
+          const sig = JSON.stringify(queue);
           const queueChanged = sig !== _lastQueueSignature;
           _lastQueueSignature = sig;
 
           activeOrders = queue;
-          
+
           // Update selectedOrder if it's in the queue
           if (selectedOrder) {
             const updated = activeOrders.find(o => o.order_id === selectedOrder.order_id);
             if (updated) {
-              const statusChanged = selectedOrder.status !== updated.status;
+              const statusChanged = selectedOrder.revision !== updated.revision;
               selectedOrder = updated;
               if (statusChanged) renderTicketDetails();
             }
           }
-          
+
           if (queueChanged) renderQueue();
+          if(selectedOrder && !activeOrders.some(o=>o.order_id===selectedOrder.order_id)) {
+            const latest=await apiRequest(`/api/orders/${selectedOrder.order_id}`);
+            if(selectedOrder.order_id===latest.id && selectedOrder.revision!==latest.revision){selectedOrder={...latest,order_id:latest.id,customer_id:latest.user_id,customer_phone:selectedOrder.customer_phone};renderTicketDetails();}
+          }
         } catch (e) {
-          console.log("Error loading queue:", e);
-        }
+        } finally {queueBusy=false;if(queuePending){queuePending=false;if(currentUser)await loadQueue();}}
       };
 
+      window.pageQueue=async function(step){queuePage=Math.max(0,queuePage+step);await loadQueue();};
       function renderQueue() {
         const container = document.getElementById("queue-list");
         container.innerHTML = "";
@@ -2938,9 +2949,9 @@
                           <span class="badge" style="background: var(--surface-light); color: var(--text-light); margin-left: 4px;">${order.mode || "HUMAN"}</span>
                         </div>
                     </div>
-                    <div style="font-size: 13px; font-weight: 600; margin-bottom: 3px;">${order.customer_name || order.customer_phone}</div>
+                    <div style="font-size: 13px; font-weight: 600; margin-bottom: 3px;">${escapeHTML(order.customer_name || order.customer_phone)}</div>
                     <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 6px; display: flex; gap: 8px;">
-                        <span><i class="fa-solid fa-location-dot" style="font-size: 9px;"></i> ${order.delivery_city}</span>
+                        <span><i class="fa-solid fa-location-dot" style="font-size: 9px;"></i> ${escapeHTML(order.delivery_city)}</span>
                         ${timeAgo ? `<span><i class="fa-regular fa-clock" style="font-size: 9px;"></i> ${timeAgo}</span>` : ""}
                     </div>
                     <div style="font-size: 10px; font-weight: 700; color: ${assignColor};">${assignLabel}</div>
@@ -2953,11 +2964,13 @@
 
       async function selectTicket(order) {
         selectedOrder = order;
+        staffChatCache=[];staffChatSignature="";staffChatOrder=order.order_id;
+        document.getElementById("chat-messages").textContent="";
         renderQueue();
 
         // Set chat header + enable composer
         document.getElementById("chat-header-title").innerText =
-          `Chat: ${order.customer_phone}`;
+          `Chat: ${escapeHTML(order.customer_phone)}`;
         document.getElementById("composer-text").disabled = false;
         document.getElementById("btn-send-message").disabled = false;
         await pollChat();
@@ -2967,21 +2980,24 @@
       }
 
       async function pollChat() {
-        if (!selectedOrder) return;
-        // Moderators have no chat access — only admins monitor chat
-        if (currentUser.role !== "ADMIN") return;
-        try {
-          const messages = await apiRequest(
-            `/api/chat/${selectedOrder.customer_id}/messages`,
-          );
-          renderMessages(messages);
-        } catch (e) {
-          console.log("Error loading chat messages:", e);
-        }
+        if(!selectedOrder || !currentUser) return;
+        if(currentUser.role!=="ADMIN" && selectedOrder.assigned_moderator_id!==currentUser.id) return;
+        const order=selectedOrder.order_id;
+        const customer=selectedOrder.customer_id;
+        if(staffChatOrder!==order) {staffChatOrder=order;staffChatCache=[];staffChatSignature="";}
+        const params=new URLSearchParams({order_id:order});
+        if(staffChatCache.length) params.set("after_id",staffChatCache.at(-1).id);
+        const messages=await apiRequest(`/api/chat/${encodeURIComponent(customer)}/messages?${params}`);
+        if(!selectedOrder || selectedOrder.order_id!==order)return;
+        staffChatCache=[...staffChatCache,...messages].filter((m,i,a)=>a.findIndex(x=>x.id===m.id)===i).slice(-500);
+        const sig=JSON.stringify([order,staffChatCache]);
+        if(sig===staffChatSignature)return;
+        staffChatSignature=sig;renderMessages(staffChatCache);
       }
 
       function renderMessages(msgs) {
         const chat = document.getElementById("chat-messages");
+        const nearBottom=chat.scrollHeight-chat.scrollTop-chat.clientHeight<100;
         chat.innerHTML = "";
 
         if (msgs.length === 0) {
@@ -3011,30 +3027,26 @@
           bubble.className = `chat-bubble ${senderClass}`;
           bubble.innerHTML = `
                     <div class="chat-sender">${senderName}</div>
-                    <div style="white-space: pre-wrap;">${m.message}</div>
-                    <div class="chat-timestamp">${new Date(m.created_at + "Z").toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>
+                    <div style="white-space: pre-wrap;">${escapeHTML(m.message)}</div>
+                    <div class="chat-timestamp">${utcDate(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>
                 `;
           chat.appendChild(bubble);
         });
 
-        chat.scrollTop = chat.scrollHeight;
+        if(nearBottom)chat.scrollTop = chat.scrollHeight;
       }
 
       window.sendMessage = async function () {
-        const txt = document.getElementById("composer-text").value.trim();
-        if (!txt || !selectedOrder) return;
-
-        document.getElementById("composer-text").value = "";
+        const input=document.getElementById("composer-text");const text=input.value.trim();
+        const button=document.getElementById("btn-send-message");
+        if(!text || !selectedOrder || button.disabled)return;
+        const order=selectedOrder;setLoading("btn-send-message",true);
         try {
-          await apiRequest(
-            `/api/chat/${selectedOrder.customer_id}/send`,
-            "POST",
-            { message: txt, order_id: selectedOrder.order_id },
-          );
+          await apiRequest(`/api/chat/${encodeURIComponent(order.customer_id)}/send`,"POST",{message:text,order_id:order.order_id});
+          if(selectedOrder?.order_id===order.order_id && input.value.trim()===text)input.value="";
           await pollChat();
-        } catch (err) {
-          console.log("Failed to send message:", err.message);
-        }
+        } catch(e){alert("Message could not be sent: "+e.message);}
+        finally {setLoading("btn-send-message",false);}
       };
 
       // Handle enter key press
@@ -3068,6 +3080,9 @@
         const isClaimedByMe =
           selectedOrder.assigned_moderator_id === currentUser.id;
         const isAdmin = currentUser.role === "ADMIN";
+        const canChat=(isAdmin || isClaimedByMe) && !["delivered","completed","cancelled"].includes(selectedOrder.status);
+        document.getElementById("composer-text").disabled=!canChat;
+        document.getElementById("btn-send-message").disabled=!canChat;
 
         // 0. AI Controls Block
         const aiControlsBlock = document.getElementById("ai-controls-block");
@@ -3075,12 +3090,12 @@
             aiControlsBlock.style.display = "block";
             const mode = selectedOrder.mode || "HUMAN";
             const worker = selectedOrder.assigned_worker_type || "HUMAN";
-            
+
             document.getElementById("ai-mode-label").innerText = mode;
             document.getElementById("ai-mode-label").style.color = mode === "AI" ? "var(--accent-cyan)" : (mode === "HYBRID" ? "var(--accent-orange)" : "inherit");
             document.getElementById("ai-worker-label").innerText = worker === "AI" ? "🤖 AI" : "👤 Human";
             document.getElementById("ai-pricing-label").innerText = selectedOrder.is_ai_priced ? "✨ Generated by AI" : (selectedOrder.manual_prices ? "✅ Verified by Human" : "⏳ Not Priced");
-            
+
             // Mode description
             const descEl = document.getElementById("ai-mode-desc");
             const descriptions = {
@@ -3088,8 +3103,8 @@
                 "HYBRID": "🤝 AI researches prices, but a human must review and approve before sending to the customer. Best for accuracy + speed.",
                 "AI": "🤖 AI handles pricing automatically and sends quotes directly to the customer. A human can take over at any time."
             };
-            descEl.innerText = descriptions[mode] || "";
-            
+            descEl.innerText = selectedOrder.ai_error || descriptions[mode] || "";
+
             // Highlight active mode button
             ["human", "hybrid", "ai"].forEach(m => {
                 const btn = document.getElementById("mode-btn-" + m);
@@ -3105,18 +3120,18 @@
                     }
                 }
             });
-            
+
             document.getElementById("ai-admin-controls").style.display = isAdmin ? "block" : "none";
-            
+
             const btnTakeover = document.getElementById("btn-takeover-ai");
             const btnReturn = document.getElementById("btn-return-ai");
-            
+
             if (worker === "AI" && (isClaimedByMe || isAdmin)) {
                 btnTakeover.style.display = "block";
             } else {
                 btnTakeover.style.display = "none";
             }
-            
+
             if (worker === "HUMAN" && mode !== "HUMAN" && isAdmin) {
                 btnReturn.style.display = "block";
             } else {
@@ -3128,7 +3143,7 @@
 
         // 1. Claim Ticket Block
         const claimBlock = document.getElementById("claim-block");
-        if (!selectedOrder.assigned_moderator_id) {
+        if (!selectedOrder.assigned_moderator_id && ["pending_review","reviewing"].includes(selectedOrder.status)) {
           claimBlock.style.display = "block";
         } else {
           claimBlock.style.display = "none";
@@ -3138,7 +3153,7 @@
         const pricesBlock = document.getElementById("prices-block");
         const editablePrices = [
           "pending_review",
-          "reviewing"
+          "reviewing", "awaiting_customer"
         ].includes(selectedOrder.status);
         if (editablePrices && (isClaimedByMe || isAdmin)) {
           pricesBlock.style.display = "block";
@@ -3157,14 +3172,14 @@
 
         // 3. Verify Payment & Place Order Block
         const placeBlock = document.getElementById("place-block");
-        if (selectedOrder.status === "awaiting_payment") {
+        if (selectedOrder.status === "awaiting_payment" && (isAdmin || isClaimedByMe)) {
           placeBlock.style.display = "block";
         } else {
           placeBlock.style.display = "none";
         }
         // 4. Mark Delivered Block (Admin only — moderators only price)
         const deliverBlock = document.getElementById("deliver-block");
-        if (selectedOrder.status === "placed" && isAdmin) {
+        if (selectedOrder.status === "placed" && (isAdmin || isClaimedByMe)) {
           deliverBlock.style.display = "block";
         } else {
           deliverBlock.style.display = "none";
@@ -3176,6 +3191,12 @@
           selectedOrder.status,
         );
         cancelBlock.style.display = isAdmin && cancellable ? "block" : "none";
+        let refund=document.getElementById("refund-verification-button");
+        if(!refund){refund=document.createElement("button");refund.id="refund-verification-button";refund.className="btn btn-secondary";refund.textContent="Record verified refund";refund.onclick=recordRefund;panel.appendChild(refund);}
+        refund.style.display=isAdmin && selectedOrder.payment_status==="refund_required" ? "block" : "none";
+        let reconcile=document.getElementById("cancelled-payment-button");
+        if(!reconcile){reconcile=document.createElement("button");reconcile.id="cancelled-payment-button";reconcile.className="btn btn-secondary";reconcile.textContent="Reconcile order payment";reconcile.onclick=reconcilePayment;panel.appendChild(reconcile);}
+        reconcile.style.display=isAdmin && ["cancelled","placed","delivered","completed"].includes(selectedOrder.status) && (selectedOrder.payment_status==="reconciliation_required" || (selectedOrder.payment_status==="unpaid" && selectedOrder.confirmed_at)) ? "block" : "none";
       }
 
       const KNOWN_STORES = [
@@ -3204,10 +3225,10 @@
           row.style.cssText =
             "border:1px solid var(--border); border-radius:10px; padding:10px; background:rgba(15,23,42,0.4);";
           row.innerHTML = `
-            <div style="font-size:13px; font-weight:600; margin-bottom:8px;">${it.quantity}× ${it.name}</div>
+            <div style="font-size:13px; font-weight:600; margin-bottom:8px;">${it.quantity}× ${escapeHTML(it.name)}</div>
             <div style="display:flex; gap:8px;">
               <input type="number" class="input-control pi-price" data-item-id="${it.id}" min="0" step="0.01"
-                placeholder="Total ₹" value="${it.unit_price != null ? it.unit_price : ""}" style="flex:1; padding:8px 10px; font-size:12px;" />
+                placeholder="Total ₹" value="${it.line_total != null ? it.line_total : ""}" style="flex:1; padding:8px 10px; font-size:12px;" />
               <select class="input-control pi-store" data-item-id="${it.id}" style="width:120px; padding:8px 10px; font-size:12px;">
                 <option value="">Store…</option>
                 ${storeOptions}
@@ -3236,19 +3257,24 @@
           `Subtotal: ₹${subtotal.toFixed(2)}`;
       }
 
+      function applyTicketResult(orderId,result) {
+        if(selectedOrder?.order_id!==orderId)return;
+        selectedOrder={...selectedOrder,...result,order_id:result.order_id||result.id,customer_id:result.user_id||selectedOrder.customer_id};
+      }
+
       window.claimOrder = async function () {
         if (!selectedOrder) return;
+        const operationOrder=selectedOrder;
         setLoading("btn-claim-order", true);
         try {
           const res = await apiRequest(
-            `/api/moderator/orders/${selectedOrder.order_id}/claim`,
+            `/api/moderator/orders/${operationOrder.order_id}/claim`,
             "PUT",
           );
 
           // Update selected order assignment state
-          selectedOrder.status = res.status;
-          selectedOrder.assigned_moderator_id = res.assigned_moderator_id;
 
+          applyTicketResult(operationOrder.order_id,res);
           await loadQueue();
           renderTicketDetails();
           await pollChat();
@@ -3271,7 +3297,7 @@
           const price = priceEl ? parseFloat(priceEl.value) : NaN;
           const store = storeEl ? storeEl.value : "";
           if (isNaN(price) || !store) { missing = true; return; }
-          items.push({ item_id: it.id, name: it.name, unit_price: price, store: store });
+          items.push({ item_id: it.id, name: it.name, line_total: price, store: store });
         });
 
         if (missing || items.length === 0) {
@@ -3279,14 +3305,17 @@
           return;
         }
 
+        const previewOrderId=selectedOrder.order_id;
+        const previewRevision=selectedOrder.revision;
         setLoading("btn-preview-quote", true);
         try {
           const res = await apiRequest(`/api/moderator/orders/${selectedOrder.order_id}/preview-quote`, "POST", { items: items });
+          if(!selectedOrder || selectedOrder.order_id!==previewOrderId || selectedOrder.revision!==previewRevision)return;
           currentQuotePreview = res;
-          
+
           document.getElementById("quote-preview-block").style.display = "block";
           document.getElementById("btn-preview-quote").style.display = "none";
-          
+
           // Setup fields
           document.getElementById("quote-delivery-fee").value = res.delivery_fee;
           document.getElementById("quote-store-discount").value = res.store_discount;
@@ -3303,8 +3332,7 @@
           recalculatePreviewTotal();
         } catch (err) {
           alert("Preview failed: " + err.message);
-        }
-        setLoading("btn-preview-quote", false);
+        } finally {setLoading("btn-preview-quote",false);}
       };
 
       window.recalculatePreviewTotal = function() {
@@ -3313,15 +3341,15 @@
         const storeDiscount = parseFloat(document.getElementById("quote-store-discount").value) || 0;
         const snapDiscount = parseFloat(document.getElementById("quote-snapsave-discount").value) || 0;
         const profit = parseFloat(document.getElementById("quote-profit").value) || 0;
-        
+
         currentQuotePreview.delivery_fee = deliveryFee;
         currentQuotePreview.store_discount = storeDiscount;
         currentQuotePreview.snapsave_discount = snapDiscount;
-        currentQuotePreview.profit = profit;
-        
+        currentQuotePreview.service_fee = profit;
+
         const finalPrice = currentQuotePreview.subtotal + currentQuotePreview.platform_fee + deliveryFee + profit - storeDiscount - snapDiscount;
         currentQuotePreview.final_price = finalPrice;
-        
+
         document.getElementById("preview-subtotal").innerText = `₹${currentQuotePreview.subtotal.toFixed(2)}`;
         document.getElementById("preview-platform").innerText = `₹${currentQuotePreview.platform_fee.toFixed(2)}`;
         document.getElementById("preview-final").innerText = `₹${finalPrice.toFixed(2)}`;
@@ -3329,20 +3357,20 @@
 
       window.submitPrices = async function () {
         if (!selectedOrder || !currentQuotePreview) return;
+        const operationOrder=selectedOrder;
 
         setLoading("btn-submit-prices", true);
         try {
           const res = await apiRequest(
-            `/api/moderator/orders/${selectedOrder.order_id}/price`,
+            `/api/moderator/orders/${operationOrder.order_id}/price`,
             "POST",
             currentQuotePreview,
           );
 
-          selectedOrder.status = res.status;
-          selectedOrder.items = res.items || selectedOrder.items;
+          applyTicketResult(operationOrder.order_id,res);
           await loadQueue();
           renderTicketDetails();
-          if (currentUser.role === "ADMIN") await pollChat();
+          await pollChat();
         } catch (err) {
           alert("Failed to submit quote: " + err.message);
         } finally {
@@ -3352,29 +3380,37 @@
 
       window.placeOrderWithEta = async function () {
         if (!selectedOrder) return;
+        const operationOrder=selectedOrder;
 
         const eta = prompt("Enter the time till delivery in minutes (e.g. 45):", "45");
         if (eta === null) {
           // User clicked cancel
           return;
         }
-        
-        if (!eta.trim() || isNaN(parseInt(eta, 10))) {
+
+        if (!/^\d+$/.test(eta.trim()) || Number(eta)<1 || Number(eta)>1440) {
           alert("Please enter a valid number of minutes.");
           return;
         }
 
+        const reference=prompt("Enter the bank transaction reference after verifying receipt:");
+        const paid=prompt("Verified amount received:",selectedOrder.final_price);
+        const cost=prompt("Actual store cost, including all store fees:");
+        if(!reference || paid===null || cost===null)return;
         setLoading("btn-place-order", true);
         try {
           const res = await apiRequest(
-            `/api/moderator/orders/${selectedOrder.order_id}/place`,
+            `/api/moderator/orders/${operationOrder.order_id}/place`,
             "POST",
             {
-              eta_mins: parseInt(eta, 10)
+              eta_mins: parseInt(eta, 10),
+              payment_reference: reference,
+              customer_paid: Number(paid),
+              store_cost: Number(cost)
             },
           );
 
-          selectedOrder.status = res.status;
+          applyTicketResult(operationOrder.order_id,res);
           await loadQueue();
           renderTicketDetails();
           await pollChat();
@@ -3387,14 +3423,15 @@
 
       window.deliverOrder = async function () {
         if (!selectedOrder) return;
+        const operationOrder=selectedOrder;
         setLoading("btn-deliver-order", true);
         try {
           const res = await apiRequest(
-            `/api/moderator/orders/${selectedOrder.order_id}/deliver`,
+            `/api/moderator/orders/${operationOrder.order_id}/deliver`,
             "PUT",
           );
 
-          selectedOrder.status = res.status;
+          applyTicketResult(operationOrder.order_id,res);
           await loadQueue();
           renderTicketDetails();
           await pollChat();
@@ -3408,16 +3445,15 @@
       // API Fetch Wrapper
       async function apiRequest(endpoint, method = "GET", body = null) {
         const headers = { "Content-Type": "application/json" };
-        if (idToken) {
-          headers["Authorization"] = `Bearer ${idToken}`;
-        }
+        idToken=await window.SnapSaveAuth.token();
+        if (idToken) headers["Authorization"] = `Bearer ${idToken}`;
 
         const options = { method, headers };
         if (body) {
           options.body = JSON.stringify(body);
         }
 
-        const res = await fetch(`${API_BASE}${endpoint}`, options);
+        const res = await fetch(`${API_BASE}${endpoint}`, {...options,signal:AbortSignal.timeout(20000)});
         if (!res.ok) {
           const errorData = await res
             .json()
@@ -3440,13 +3476,13 @@
       function showAuthAlert(msg, type) {
         const container = document.getElementById("auth-alert-container");
         container.innerHTML = msg
-          ? `<div class="alert alert-${type}"><i class="fa-solid ${type === "error" ? "fa-circle-exclamation" : "fa-circle-check"}"></i> ${msg}</div>`
+          ? `<div class="alert alert-${type}"><i class="fa-solid ${type === "error" ? "fa-circle-exclamation" : "fa-circle-check"}"></i> ${escapeHTML(msg)}</div>`
           : "";
       }
 
       function timeSince(dateStr) {
         const now = new Date();
-        const past = new Date(dateStr);
+        const past = utcDate(dateStr);
         const diffMs = now - past;
         const diffMins = Math.floor(diffMs / 60000);
         if (diffMins < 1) return "just now";
@@ -3460,8 +3496,8 @@
         const btn = document.getElementById(btnId);
         if (!btn) return;
         if (isLoading) {
+          if(!btn.disabled)btn.dataset.originalHTML = btn.innerHTML;
           btn.disabled = true;
-          btn.dataset.originalHTML = btn.innerHTML;
           btn.innerHTML = `<span class="loading-spinner"></span> Loading...`;
         } else {
           btn.disabled = false;
@@ -3486,15 +3522,15 @@
         betaView.style.display = "flex";
 
         loadBetaDashboard();
-        clearInterval(betaMetricsInterval);
-        betaMetricsInterval = setInterval(loadBetaDashboard, 8000);
+        if(betaMetricsInterval)betaMetricsInterval();
+        betaMetricsInterval = singleFlightPolling(loadBetaDashboard, 8000);
       };
 
       window.exitBetaView = function () {
         document.getElementById("beta-program-view").style.display = "none";
         document.getElementById("dashboard-main").style.display = "flex";
         document.getElementById("dashboard-metrics").style.display = "flex";
-        clearInterval(betaMetricsInterval);
+        if(betaMetricsInterval)betaMetricsInterval();
         if (currentUser && currentUser.role === "ADMIN") {
           showAdminSection("tickets");
         }
@@ -3544,7 +3580,6 @@
                     `;
           }
         } catch (e) {
-          console.log("Error loading beta dashboard data:", e);
         }
       }
 
@@ -3572,12 +3607,12 @@
 
           item.innerHTML = `
                     <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px;">
-                        <span style="font-weight: bold; color: var(--accent-orange);">${inc.incident_type}</span>
-                        <span style="color: var(--text-muted);">${new Date(inc.created_at + "Z").toLocaleTimeString()}</span>
+                        <span style="font-weight: bold; color: var(--accent-orange);">${escapeHTML(inc.incident_type)}</span>
+                        <span style="color: var(--text-muted);">${utcDate(inc.created_at).toLocaleTimeString()}</span>
                     </div>
-                    <div style="font-size: 12px; white-space: pre-wrap; margin-bottom: 4px;">${inc.notes || "No details."}</div>
+                    <div style="font-size: 12px; white-space: pre-wrap; margin-bottom: 4px;">${escapeHTML(inc.notes || "No details.")}</div>
                     <div style="font-size: 10px; color: var(--text-muted);">
-                        <span>Mod: ${inc.moderator_phone}</span>
+                        <span>Mod: ${escapeHTML(inc.moderator_phone)}</span>
                         ${inc.order_id ? ` | <span style="font-family: monospace;">Order: #${inc.order_id.slice(0, 8)}</span>` : ""}
                     </div>
                 `;
@@ -3607,15 +3642,15 @@
           item.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                         <div>${stars}</div>
-                        <span style="font-size: 10px; color: var(--text-muted);">${new Date(f.created_at + "Z").toLocaleDateString()}</span>
+                        <span style="font-size: 10px; color: var(--text-muted);">${utcDate(f.created_at).toLocaleDateString()}</span>
                     </div>
                     <div style="font-size: 12px; margin-bottom: 6px; display: flex; flex-direction: column; gap: 4px;">
-                        <div><strong style="color: var(--accent-green);">Went Well:</strong> ${f.what_went_well || "N/A"}</div>
-                        <div><strong style="color: var(--accent-orange);">Confusing:</strong> ${f.what_was_confusing || "N/A"}</div>
+                        <div><strong style="color: var(--accent-green);">Went Well:</strong> ${escapeHTML(f.what_went_well || "N/A")}</div>
+                        <div><strong style="color: var(--accent-orange);">Confusing:</strong> ${escapeHTML(f.what_was_confusing || "N/A")}</div>
                     </div>
                     <div style="display: flex; justify-content: space-between; font-size: 10px; border-top: 1px solid var(--border); padding-top: 6px; color: var(--text-muted);">
                         <span>Use again: <strong style="color: ${f.would_use_again ? "var(--accent-green)" : "red"};">${f.would_use_again ? "YES" : "NO"}</strong></span>
-                        <span>Cust: ${f.customer_phone}</span>
+                        <span>Cust: ${escapeHTML(f.customer_phone)}</span>
                     </div>
                 `;
           container.appendChild(item);
@@ -3652,7 +3687,7 @@
       window.switchOrdersTab = function(tabName) {
         const ws = document.getElementById("workspace-container");
         const tabs = document.querySelectorAll(".orders-tab");
-        
+
         tabs.forEach(t => t.classList.remove("active"));
         if (tabName === 'queue') {
           ws.className = "view-queue";
@@ -3694,7 +3729,9 @@
       };
 
       // ── Session Restore on page load ──
-      const saved = localStorage.getItem(STORAGE_KEY);
+      localStorage.removeItem(STORAGE_KEY);
+      let saved=null;
+      try {saved=await window.SnapSaveAuth.token();} catch(e){showAuthAlert("Authentication is unavailable. Please retry.","error");}
       if (saved) {
         idToken = saved;
         try {

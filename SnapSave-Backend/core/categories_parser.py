@@ -1,8 +1,11 @@
+from pathlib import Path
+import re
+
 def load_categories():
 
     categories = []
 
-    with open("data/categories.txt", "r", encoding="utf-8") as f:
+    with open(Path(__file__).resolve().parents[1]/"data/categories.txt", "r", encoding="utf-8") as f:
         for line in f:
             c = line.strip().lower()
             if c:
@@ -19,7 +22,7 @@ def detect_category(query):
     q = query.lower()
 
     for category in CATEGORIES:
-        if category in q:
+        if re.search(r"\b"+re.escape(category)+r"\b",q):
             return category
 
     return None

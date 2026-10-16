@@ -24,4 +24,4 @@ def filter_products(query, products):
     if filtered:
         return filtered[:4]
 
-    return products[:4]
+    return []

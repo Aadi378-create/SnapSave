@@ -10,7 +10,7 @@ def suggest_addon(cart_total, reward_data, cheap_items=None):
             "continue_option": True
         }
 
-    gap = reward_data.get("gap", 0)
+    gap = reward_data.get("gap", reward_data.get("add_more",0))
 
     if gap <= 0:
         return {
@@ -33,7 +33,7 @@ def suggest_addon(cart_total, reward_data, cheap_items=None):
         price = item["price"]
 
         # item should help close the gap reasonably
-        if price <= gap * 1.5:
+        if gap <= price <= gap * 1.5 and reward_data.get("reward",0)>price:
             candidates.append({
                 "item": item["name"],
                 "price": price
@@ -52,7 +52,7 @@ def suggest_addon(cart_total, reward_data, cheap_items=None):
             "item": best["item"],
             "price": best["price"],
             "gap": gap,
-            "message": f"Add {best['item']} (₹{best['price']}) to unlock the next reward."
+            "message": f"Add {best['item']} (â‚¹{best['price']}) to unlock the next reward."
         },
         "continue_option": True
     }

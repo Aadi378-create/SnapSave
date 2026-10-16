@@ -6,11 +6,11 @@ def get_user_location(ip=None):
     try:
 
         if ip:
-            url = f"http://ip-api.com/json/{ip}"
+            url = f"https://ip-api.com/json/{ip}"
         else:
-            url = "http://ip-api.com/json"
+            url = "https://ip-api.com/json"
 
-        r = requests.get(url)
+        r = requests.get(url,timeout=5)
 
         data = r.json()
 

@@ -1,5 +1,7 @@
 from typing import List, Dict, Any, Optional
 from core.match_pipeline import run_match_pipeline
+from pricing.quotes import money
+from fastapi import HTTPException
 
 def resolve_best_candidate(query: str, store: str, candidates: list) -> Optional[dict]:
     """
@@ -8,22 +10,26 @@ def resolve_best_candidate(query: str, store: str, candidates: list) -> Optional
     """
     if not candidates or not isinstance(candidates, list):
         return None
-    
+
     # Run candidates through match pipeline
     result = run_match_pipeline(query, scraped_products=candidates)
     options = result.get("product_options")
-    
+
     if not options:
         return None
-    
+
     best = options[0]
-    
+    try:
+        price=float(money(best.get("price")))
+    except HTTPException:
+        return None
+
     # Return structured candidate object
     return {
         "selected_product": best.get("name", ""),
-        "price": best.get("price", 0),
+        "price": price,
         "store": store,
-        "confidence": result.get("confidence", 0.90),
+        "confidence": best.get("match_score", 0) / max(len(set(query.lower().split())), 1),
         "match_score": best.get("match_score", 0)
     }
 

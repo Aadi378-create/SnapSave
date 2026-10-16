@@ -18,7 +18,7 @@ def build_savings_summary(best_store, all_results):
     snapsave_discount = best_store.get("snapsave_discount", 0)
     store_discount = best_store.get("store_discount", 0)
 
-    total_saving = store_saving + snapsave_discount + store_discount
+    total_saving = store_saving
 
     return {
         "total_saving": total_saving,
@@ -41,7 +41,7 @@ def calculate_savings(cart_with_vouchers):
     if not cart_with_vouchers or "best_store" not in cart_with_vouchers:
         return 0
     summary = build_savings_summary(
-        cart_with_vouchers["best_store"], 
+        cart_with_vouchers["best_store"],
         cart_with_vouchers["all_store_results"]
     )
     return summary["total_saving"] if summary else 0

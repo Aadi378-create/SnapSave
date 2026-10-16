@@ -1,165 +1,96 @@
+import threading
 import pytest
-from fastapi.testclient import TestClient
-import uuid
-
-# Assume the main app and db is accessible via api.server
-from api.server import app
-from database import SessionLocal
 import models
-
-client = TestClient(app)
-
-@pytest.fixture(scope="module")
-def db():
-    db = SessionLocal()
-    yield db
-    db.close()
+from database import SessionLocal
+from api.ai_concierge import AI_CONCIERGE_PROVIDER as AI
 
 @pytest.fixture
-def test_admin(db):
-    admin = db.query(models.User).filter(models.User.email == "test_ai_admin@snapsave.com").first()
-    if not admin:
-        admin = models.User(
-            id=str(uuid.uuid4()),
-            email="test_ai_admin@snapsave.com",
-            phone_number="+910000000010",
-            password_hash="fakehash",
-            role="ADMIN"
-        )
-        db.add(admin)
-        db.commit()
-    return admin
-
-@pytest.fixture
-def test_moderator(db):
-    mod = db.query(models.User).filter(models.User.email == "test_ai_mod@snapsave.com").first()
-    if not mod:
-        mod = models.User(
-            id=str(uuid.uuid4()),
-            email="test_ai_mod@snapsave.com",
-            phone_number="+910000000011",
-            password_hash="fakehash",
-            role="MODERATOR"
-        )
-        db.add(mod)
-        db.commit()
-    return mod
-
-@pytest.fixture
-def test_customer(db):
-    cust = db.query(models.User).filter(models.User.email == "test_ai_cust@snapsave.com").first()
-    if not cust:
-        cust = models.User(
-            id=str(uuid.uuid4()),
-            email="test_ai_cust@snapsave.com",
-            phone_number="+910000000012",
-            password_hash="fakehash",
-            role="CUSTOMER"
-        )
-        db.add(cust)
-        db.commit()
-    return cust
-
-def get_token(user_id, phone):
-    # Generates a test token using the debug token endpoint or manually
-    response = client.get(f"/api/auth/test-token?uid={user_id}&phone={phone}")
-    return response.json()["idToken"]
-
-def test_human_ticket_ai_cannot_act(db, test_admin, test_customer):
-    order = models.Order(
-        id=str(uuid.uuid4()),
-        user_id=test_customer.id,
-        store="any",
-        delivery_street="123",
-        delivery_city="City",
-        delivery_postal_code="12345",
-        subtotal=0, delivery_fee=0, platform_fee=0, final_price=0,
-        mode="HUMAN",
-        assigned_worker_type="HUMAN"
-    )
-    db.add(order)
+def ai_order(db,order,monkeypatch):
+    monkeypatch.setenv("ENABLE_LIVE_RESEARCH","true")
+    enabled=db.get(models.SystemSetting,"ai_enabled")
+    enabled.value="true"
+    row=db.get(models.Order,order["id"])
+    row.mode="AI";row.assigned_worker_type="AI"
     db.commit()
+    def research(items,postal):
+        return {"verified":True,"postal_code":postal,"source":"fixture verified catalog","items":[{**i,"line_total":100,"store":"zepto"} for i in items],"delivery_fee":0,"platform_fee":5}
+    monkeypatch.setattr(AI,"research",staticmethod(research))
+    monkeypatch.setattr("settings.research_provider",lambda: research)
+    return row
 
-    from api.ai_concierge import AI_CONCIERGE_PROVIDER
-    AI_CONCIERGE_PROVIDER.process_ticket(order.id, db)
-    db.refresh(order)
-    
-    assert order.is_ai_priced == False
-    assert order.manual_prices is None
-    
-def test_admin_assigns_ai_can_act(db, test_admin, test_customer):
-    order = models.Order(
-        id=str(uuid.uuid4()),
-        user_id=test_customer.id,
-        store="any",
-        delivery_street="123",
-        delivery_city="City",
-        delivery_postal_code="12345",
-        subtotal=0, delivery_fee=0, platform_fee=0, final_price=0,
-        mode="AI",
-        assigned_worker_type="AI"
-    )
-    db.add(order)
-    db.commit()
+def test_human_ticket_ai_cannot_act(db,ai_order):
+    ai_order.mode="HUMAN"; db.commit()
+    AI.process_ticket(ai_order.id,db);db.refresh(ai_order)
+    assert not ai_order.is_ai_priced and ai_order.manual_prices is None
 
-    from api.ai_concierge import AI_CONCIERGE_PROVIDER
-    AI_CONCIERGE_PROVIDER.process_ticket(order.id, db)
-    db.refresh(order)
-    
-    assert order.is_ai_priced == True
-    assert order.manual_prices is not None
-    assert order.status == "awaiting_customer"
+def test_verified_research_persists_items(db,ai_order):
+    AI.process_ticket(ai_order.id,db);db.refresh(ai_order)
+    assert ai_order.status=="awaiting_customer"
+    assert float(ai_order.subtotal)==200
+    assert all(i.line_total is not None for i in ai_order.items)
 
-def test_moderator_takeover_halts_ai(db, test_admin, test_moderator, test_customer):
-    order = models.Order(
-        id=str(uuid.uuid4()),
-        user_id=test_customer.id,
-        store="any",
-        delivery_street="123",
-        delivery_city="City",
-        delivery_postal_code="12345",
-        subtotal=0, delivery_fee=0, platform_fee=0, final_price=0,
-        mode="AI",
-        assigned_worker_type="AI"
-    )
-    db.add(order)
-    db.commit()
+def test_human_edited_price_not_overwritten(db,ai_order):
+    ai_order.manual_prices='{"items": [], "human":true}';ai_order.is_ai_priced=False;db.commit()
+    AI.process_ticket(ai_order.id,db);db.refresh(ai_order)
+    assert '"human":true' in ai_order.manual_prices
 
-    token = get_token(test_moderator.id, test_moderator.phone_number)
-    response = client.put(f"/api/moderator/orders/{order.id}/takeover", headers={"Authorization": f"Bearer {token}"})
-    assert response.status_code == 200
-    
-    db.refresh(order)
-    assert order.assigned_worker_type == "HUMAN"
-    assert order.taken_over_by == test_moderator.id
-    
-    # AI should not act now
-    from api.ai_concierge import AI_CONCIERGE_PROVIDER
-    AI_CONCIERGE_PROVIDER.process_ticket(order.id, db)
-    db.refresh(order)
-    assert order.is_ai_priced == False
+@pytest.mark.parametrize("action",["takeover","kill"])
+def test_running_worker_loses_write_permission(client,actors,db,ai_order,monkeypatch,action):
+    started=threading.Event();release=threading.Event();errors=[]
+    original=AI.research
+    def paused(items,postal):
+        started.set()
+        assert release.wait(5)
+        return original(items,postal)
+    monkeypatch.setattr(AI,"research",staticmethod(paused))
+    identity=ai_order.id
+    def worker():
+        try:
+            with SessionLocal() as session: AI.process_ticket(identity,session)
+        except Exception as e:errors.append(e)
+    t=threading.Thread(target=worker);t.start()
+    try:
+        assert started.wait(5)
+        if action=="takeover":
+            assert client.put(f"/api/moderator/orders/{identity}/takeover",headers=actors["admin"]["headers"]).status_code==200
+            with SessionLocal() as session:
+                row=session.get(models.Order,identity);row.manual_prices='{"human":true}';row.is_ai_priced=False;session.commit()
+        else:
+            assert client.put("/api/admin/settings/ai-status",headers=actors["admin"]["headers"],json={"ai_enabled":False}).status_code==200
+            # Turning it on again still invalidates the previous generation.
+            assert client.put("/api/admin/settings/ai-status",headers=actors["admin"]["headers"],json={"ai_enabled":True}).status_code==200
+    finally:release.set();t.join(5)
+    db.expire_all();row=db.get(models.Order,identity)
+    assert not t.is_alive() and not errors
+    assert not row.is_ai_priced and row.status=="pending_review"
+    if action=="takeover":assert row.manual_prices=='{"human":true}'
 
-def test_human_edited_price_not_overwritten(db, test_admin, test_customer):
-    order = models.Order(
-        id=str(uuid.uuid4()),
-        user_id=test_customer.id,
-        store="any",
-        delivery_street="123",
-        delivery_city="City",
-        delivery_postal_code="12345",
-        subtotal=0, delivery_fee=0, platform_fee=0, final_price=0,
-        mode="AI",
-        assigned_worker_type="AI",
-        manual_prices='[{"name": "human price", "unit_price": 100.0}]',
-        is_ai_priced=False # Human edited!
-    )
-    db.add(order)
-    db.commit()
+@pytest.mark.parametrize("status",["cancelled","delivered","completed","awaiting_payment","placed"])
+def test_ai_never_reopens_later_states(db,ai_order,status):
+    ai_order.status=status;db.commit()
+    AI.process_ticket(ai_order.id,db);db.refresh(ai_order)
+    assert ai_order.status==status and not ai_order.is_ai_priced
 
-    from api.ai_concierge import AI_CONCIERGE_PROVIDER
-    AI_CONCIERGE_PROVIDER.process_ticket(order.id, db)
-    db.refresh(order)
-    
-    # AI should not overwrite human price
-    assert order.is_ai_priced == False
-    assert "human price" in order.manual_prices
+def test_unavailable_research_falls_back_to_human(db,ai_order,monkeypatch):
+    monkeypatch.setattr(AI,"research",staticmethod(lambda items,postal:None))
+    AI.process_ticket(ai_order.id,db);db.refresh(ai_order)
+    assert ai_order.mode=="HUMAN" and ai_order.ai_error and not ai_order.is_ai_priced
+
+def test_research_requires_global_enable(client,actors,order,monkeypatch):
+    monkeypatch.setenv("ENABLE_LIVE_RESEARCH","true")
+    monkeypatch.setattr("settings.research_provider",lambda: lambda *_:None)
+    response=client.put(f"/api/admin/orders/{order['id']}/mode",headers=actors["admin"]["headers"],json={"mode":"AI"})
+    assert response.status_code==409
+
+def test_saturated_worker_capacity_returns_ticket_to_human(db,ai_order):
+    from api import server
+    with server._ai_jobs_lock:
+        server._ai_jobs.update(f"occupied-{n}" for n in range(20))
+    try:
+        server.submit_ai(ai_order.id)
+        db.refresh(ai_order)
+        assert ai_order.mode=="HUMAN" and ai_order.assigned_worker_type=="HUMAN"
+        assert "capacity" in ai_order.ai_error
+    finally:
+        with server._ai_jobs_lock:
+            server._ai_jobs.clear()

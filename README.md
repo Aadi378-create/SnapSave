@@ -1,88 +1,96 @@
-# SnapSave Platform Documentation
+# SnapSave
 
-## Overview
-SnapSave is a full-stack, real-time grocery concierge and price optimization platform. It bridges the gap between consumers looking for the best deals and multiple delivery services (like Zepto, Blinkit, Instamart, BigBasket, and JioMart) without requiring the user to app-hop. 
+SnapSave is a human-first grocery concierge. Customers send a list; staff verify store prices, send an itemised quote, then record payment, placement and delivery. Each order has a separate conversation and history, and every fee is visible before confirmation. Optional AI research requires a configured provider and cannot overwrite human work.
 
-Instead of traditional cart building, SnapSave uses a chat-based concierge interface (with both AI and human-in-the-loop workflows) where customers can simply text their grocery list. A moderator (or AI) calculates the optimal cart split across stores, negotiates the best final price including delivery fees and platform discounts, and presents a final quote. Once the customer confirms, they make a single payment, and SnapSave handles the fulfillment.
+The apps use vanilla JavaScript/HTML; the API uses FastAPI, SQLAlchemy and SQLite by default. Manual concierge fulfillment is the supported workflow. SMS, inventory and bank settlement have not been live-tested by the regression suite.
 
-## Architecture
+## Setup (PowerShell)
 
-SnapSave is built using a modern, decoupled architecture:
+From the project root with Python 3.11 or newer:
 
-### 1. Frontend (`SnapSave-FRONTEND`)
-- **Technology:** Vanilla JavaScript, HTML5, CSS3, with FontAwesome for iconography.
-- **Architecture:** Single-Page Application (SPA) utilizing ES Modules (for the customer app) and IIFE scoping (for the admin app).
-- **Communication:** RESTful API polling and bidirectional AJAX for chat.
-- **Key Files:**
-  - `index.html`: The customer-facing concierge interface. Includes the chat stream, order tracking stepper, grocery list builder, and order history sidebar.
-  - `admin.html`: The secure, feature-rich operations console for Moderators and Admins. Includes ticket queue management, live chat monitoring, dynamic pricing entry, role management, and analytics dashboards.
-  - `serve.py`: A lightweight Python HTTP server for local development, configured to disable caching for rapid iteration.
+```powershell
+python -m venv .venv
+./.venv/Scripts/python.exe -m pip install -r SnapSave-Backend/requirements-dev.txt
+Copy-Item SnapSave-Backend/.env.example SnapSave-Backend/.env
+```
 
-### 2. Backend (`SnapSave-Backend`)
-- **Technology:** Python 3, FastAPI, SQLAlchemy, SQLite (Development).
-- **Authentication:** Dual-layer authentication supporting Firebase Admin SDK for production and local PyJWT RS256 for local development and smoke tests.
-- **Key Modules:**
-  - `api/server.py`: The core FastAPI application containing 38 route endpoints for authentication, order management, chat processing, analytics, and admin controls.
-  - `models.py`: Declarative SQLAlchemy models defining 10 database tables (`users`, `addresses`, `orders`, `order_items`, `messages`, etc.).
-  - `database.py`: Database connection lifecycle and session management.
+Only copy the example when `.env` does not already exist. Configure Firebase service-account credentials (or application default credentials) for Firebase Phone Authentication. The frontend uses the existing `snapsave-501c7` project; configure its authorized frontend domains and Phone Authentication. Verification checks revoked tokens. Initializing the SDK with a project ID alone does not supply credentials for account checks.
 
-## Key Features & Standouts
+Customer and staff logins use Firebase OTP; roles come from the database. For an offline local demo only, set `APP_ENV=development` and `ENABLE_DEV_AUTH=true`. Development token issuance accepts loopback clients, uses distinct phone identities, and grants no staff role automatically. Disable it on public deployments. There is no reserved admin phone or public bootstrap endpoint.
 
-### 1. Hybrid Chat-Based Ordering
-The core customer experience mimics talking to a helpful store clerk. Customers can either build a structured list via a modal or simply type "I need 2 liters of milk and some eggs" into the chat. The system tracks the active order contextually.
+Set `UPI_ID` and `UPI_PAYEE_NAME` in `.env`. Each payment QR includes the approved amount and order reference. Staff must check the bank receipt and enter its reference, paid amount, actual fulfillment cost and ETA before placement. Paid cancellations require an administrator to complete the bank refund and record its reference. Orders cancelled while awaiting payment remain flagged for bank reconciliation, including partial, excess or late receipts.
 
-### 2. Concierge Moderation Workflow
-Instead of relying solely on error-prone scraping, SnapSave implements a robust human-in-the-loop moderation queue:
-1. **Pending Review:** New orders enter the global queue.
-2. **Reviewing (Claimed):** A moderator claims the ticket. They can chat with the customer to clarify requirements.
-3. **Pricing Entry:** The moderator enters the lowest prices found for each item, selecting the optimal store. The system automatically calculates subtotal, platform fees, and savings.
-4. **Awaiting Customer:** A detailed, itemized quote is sent to the customer for approval.
-5. **Awaiting Payment:** Upon customer confirmation, an automated payment QR code is displayed.
-6. **Placement & Delivery:** The moderator confirms payment receipt, inputs a delivery ETA, and marks the order as delivered once fulfilled.
+Start the backend:
 
-### 3. "ChatGPT-style" Order History
-SnapSave treats each order as a separate session. The customer interface features a sidebar where past orders are archived. Clicking a past order loads its historical chat log and final receipt in a read-only view, while a "+ New Order" button instantly provisions a fresh session.
-
-### 4. Real-time Analytics & Moderation Dashboard
-The admin panel includes comprehensive metrics:
-- **Operational Dashboard:** Tracks today's revenue, profit margins, active tickets, average response times, and total customer savings.
-- **Beta Metrics:** Tracks long-term KPIs like average time to first response and average profit per order.
-
-### 5. Multi-Role RBAC (Role-Based Access Control)
-The backend enforces strict security across three tiers:
-- **CUSTOMER:** Can only view their own orders and chat.
-- **MODERATOR:** Can view the queue, claim tickets, submit quotes, and chat with assigned customers.
-- **ADMIN:** Has full access, including role promotion, user blacklisting, delivery fee configuration, global AI status toggles, and financial overrides.
-
-### 6. Resilient Authentication Fallbacks
-To ensure the platform can be developed and demoed offline or without active Firebase credentials, the backend dynamically falls back to generating and verifying its own cryptographically secure RS256 JWTs (`kid="test_kid"`).
-
-## Setup & Execution
-
-### Prerequisites
-- Python 3.9+
-- Node.js (Optional, for tooling)
-
-### Running the Backend
-```bash
+```powershell
 cd SnapSave-Backend
-pip install fastapi uvicorn sqlalchemy pyjwt cryptography firebase-admin python-dotenv requests
-python -m uvicorn api.server:app --reload --port 8000
+../.venv/Scripts/python.exe -m uvicorn api.server:app --host 127.0.0.1 --port 8000
 ```
 
-### Running the Frontend
-```bash
+Start the frontend in a second terminal:
+
+```powershell
 cd SnapSave-FRONTEND
-python -u serve.py
+../.venv/Scripts/python.exe serve.py
 ```
-- Customer App: `http://localhost:3000/`
-- Admin App: `http://localhost:3000/admin.html`
 
-### Demo Credentials
-- **Admin Phone:** `9999999999` (Automatically granted `ADMIN` privileges upon login)
-- **Customer Phone:** Any valid 10-digit number (e.g., `9876543210`)
+Open `http://localhost:3000/` or `http://localhost:3000/admin.html`. The static server binds to loopback and is for development.
 
-## Future Enhancements
-- Re-integration of the fully autonomous AI scraper (currently toggled off in favor of the human-concierge MVP).
-- Webhook integrations for automated store checkout.
-- Razorpay/Stripe integration replacing static QR codes.
+For the first administrator, sign in through the customer app, save the profile email, then run this private command on the backend host:
+
+```powershell
+cd SnapSave-Backend
+../.venv/Scripts/python.exe bootstrap_admin.py person@example.com
+```
+
+The administrator can manage subsequent roles.
+
+## Data and order rules
+
+Default database and environment paths are relative to the backend directory. SQLite enforces foreign keys and a busy timeout; startup enables WAL. Additive startup migrations preserve data, add missing fields, and convert legacy line totals once. Back up an existing database before the first updated startup. The repair suite uses disposable databases; it has not migrated the real development database.
+
+Migration version 2 flags legacy fulfilled orders without payment-verification evidence for bank reconciliation. Administrators can record the actual receipt, or audit that no receipt was found, without changing fulfillment status. Cancelling an unreconciled legacy order retains its review flag. Use the Completed or Cancelled queue filter to reopen archived tickets for this follow-up. No bank receipt is inferred automatically from an old amount or delivery status.
+
+Transitions follow `pending_review → reviewing → awaiting_customer → awaiting_payment → placed → delivered → completed`. Administrators can quote before explicitly claiming. Cancellation is limited to active states. Ticket assignment is separate from a customer's dedicated moderator. Revision checks protect claims, quotes and AI results. Order creation supports an `Idempotency-Key` and rejects its reuse for a different payload. Confirmation, placement and delivery retries cannot duplicate transitions or counters.
+
+`line_total` is the total for the requested quantity; response `unit_price` is per unit. Preview shipping is calculated separately for each store. Current defaults are ₹35 shipping below ₹199 per store and ₹5 platform fee. Staff enter verified actual fees and discounts. Service fees are disclosed separately; the server reconciles the complete basket and final amount. Quotes expire after 15 minutes. Substitutions and new prices require customer discussion and approval.
+
+## Optional research
+
+Research is disabled by default; no mock prices are presented as live results. Enabling it requires:
+
+- `ENABLE_LIVE_RESEARCH=true` and `RESEARCH_PROVIDER=module:function` naming installed backend code.
+- A provider that verifies SKU, quantity, stock, postal code, fees and promotion eligibility.
+- The administrator's global AI switch enabled and an eligible pending/reviewing ticket in AI or HYBRID mode.
+
+The callable accepts `(items, postal_code)`; each item contains `item_id`, `name` and `quantity`. It returns `verified: true`, the exact `postal_code`, a `source`, one `items` row per requested ID with `store` and `line_total`, plus verified `delivery_fee`, `platform_fee`, `service_fee`, `store_discount` and `snapsave_discount`. HYBRID drafts require staff approval; AI may publish a quote. Invalid data, saturation, failures and interrupted jobs return to human review. Takeover and the kill switch invalidate running work.
+
+Legacy scraping adapters remain disabled. Configuring a research callable does not enable a functioning live scraper for `/deal` or `/optimize-cart`; they safely report unavailable/incomplete data. Provider integration and checkout require live integration validation.
+
+Research uses two in-process workers and at most twenty outstanding orders. Use one API process with this executor; move research to a shared durable queue before using multiple API processes with AI enabled. SQLite serializes writers. JSON learning stores, caches and request limits are local to each process. Production capacity needs deployment measurements and appropriate shared database/cache/queue infrastructure.
+
+## Verification
+
+```powershell
+cd SnapSave-Backend
+../.venv/Scripts/python.exe -m playwright install chromium
+../.venv/Scripts/python.exe -m pytest -q
+```
+
+Tests cover access control, pricing, lifecycle, payment/refund records, migrations, concurrent writes, deterministic AI races, bounded queries and Chromium flows. Firebase, stores and payment services use fixtures. Test configuration selects a disposable database before importing the app.
+
+The original audit and repair verification are in `audit/2026-10-13/`. Original reproduction scripts describe the old checkout; pytest is the current acceptance suite.
+
+## Hosting
+
+Configure an HTTPS backend, Firebase credentials, `APP_ENV=production`, `ENABLE_DEV_AUTH=false`, exact frontend `CORS_ORIGINS`, persistent storage and database backups. Add edge request/rate limits alongside the app's 64 KB body and 120 mutations/minute per-IP limits. Proxy identity handling needs deliberate configuration; the app does not trust forwarded IP headers.
+
+Build the static package with the actual backend origin:
+
+```powershell
+cd SnapSave-FRONTEND
+$env:API_ORIGIN='https://api.example.com'
+../.venv/Scripts/python.exe prepare_hosting.py
+```
+
+Replace the example with the deployed backend origin. Firebase publishes only `dist`; the builder copies app files/assets and writes the API origin. Building does not deploy. Never host the backend folder, environment, database or service account as static assets.

@@ -41,9 +41,9 @@ def calculate_store_availability(basket_results):
 
 
 def check_store_availability(location):
-    """
-    Returns list of stores available for a given location.
-    Filters out stores that are disabled behind feature flags.
-    """
-    all_stores = ["zepto", "blinkit", "instamart", "bigbasket", "amazon", "flipkart", "jiomart"]
-    return [store for store in all_stores if STORE_FEATURE_FLAGS.get(store, True)]
+    # Serviceability is explicit; feature flags alone do not establish coverage.
+    import json,os
+    try: coverage=json.loads(os.getenv("STORE_SERVICEABILITY","{}"))
+    except ValueError:return []
+    stores=coverage.get(str(location).strip().lower(),[])
+    return [s for s in stores if STORE_FEATURE_FLAGS.get(s,False)]

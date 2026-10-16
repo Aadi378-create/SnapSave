@@ -30,13 +30,13 @@ def run_pricing_engine(scraped_results, location):
             filtered_results[item] = valid_products
 
     # If nothing is available
-    if not filtered_results:
+    if len(filtered_results)!=len(scraped_results) or not filtered_results:
         return {
             "cart": {},
             "savings": 0,
             "deals": [],
             "recommendations": [],
-            "message": "No products available for this location"
+            "message": "The complete requested basket is unavailable for this location"
         }
 
     # -------------------------------

@@ -1,5 +1,10 @@
 import json
 import os
+import threading
+from copy import deepcopy
+from core.json_store import write_json
+
+_lock=threading.RLock()
 
 # ======================================================
 # Store prediction engine for SnapSave
@@ -25,14 +30,14 @@ DEFAULT_MODEL = {
 def load_model():
 
     if not os.path.exists(MODEL_PATH):
-        return DEFAULT_MODEL.copy()
+        return deepcopy(DEFAULT_MODEL)
 
     try:
         with open(MODEL_PATH, "r", encoding="utf8") as f:
             return json.load(f)
     except Exception:
         # if model file corrupt
-        return DEFAULT_MODEL.copy()
+        return deepcopy(DEFAULT_MODEL)
 
 
 MODEL = load_model()
@@ -49,9 +54,10 @@ def predict_store_order(product):
     # match using product words
     words = product.split()
 
-    for key in MODEL:
-        if key in words or key in product:
-            return MODEL[key]
+    with _lock:
+        for key in MODEL:
+            if key in words:
+                return list(MODEL[key])
 
     # fallback order if product unknown
     return [
@@ -86,13 +92,12 @@ def update_model(product, price_map):
     if not ranking:
         return
 
-    MODEL[product_key] = ranking
-
-    try:
-        with open(MODEL_PATH, "w", encoding="utf8") as f:
-            json.dump(MODEL, f, indent=2)
-    except Exception:
-        pass
+    with _lock:
+        updated=deepcopy(MODEL)
+        updated[product_key]=ranking
+        write_json(MODEL_PATH,updated)
+        MODEL.clear()
+        MODEL.update(updated)
 
 
 # ======================================================

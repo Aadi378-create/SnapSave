@@ -6,6 +6,10 @@ from stores.price_parallel import get_prices_parallel
 
 def process_basket(user_items, city=None):
 
+    if not user_items:
+        return []
+    if len(user_items)>100:
+        raise ValueError("Basket exceeds 100 items")
     basket_results = []
 
     # Cache to avoid duplicate store queries
@@ -13,7 +17,7 @@ def process_basket(user_items, city=None):
 
     futures = {}
 
-    with ThreadPoolExecutor(max_workers=len(user_items)) as executor:
+    with ThreadPoolExecutor(max_workers=min(4,len(user_items))) as executor:
 
         for item in user_items:
 

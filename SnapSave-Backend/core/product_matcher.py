@@ -40,6 +40,8 @@ def clean_query(text):
 def match_product(query):
 
     query = clean_query(query)
+    if not query:
+        return {"product":None,"confidence":0,"method":"none"}
 
     # words we should avoid when possible
     BAD_WORDS = [

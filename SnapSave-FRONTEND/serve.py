@@ -17,7 +17,7 @@ class NoCacheHandler(http.server.SimpleHTTPRequestHandler):
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
-with http.server.HTTPServer(("127.0.0.1", PORT), NoCacheHandler) as httpd:
+with http.server.ThreadingHTTPServer(("127.0.0.1", PORT), NoCacheHandler) as httpd:
     print(f"[Frontend] Serving at http://127.0.0.1:{PORT}")
     print(f"[Frontend] Cache-Control: no-store (always fresh)")
     httpd.serve_forever()

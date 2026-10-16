@@ -1,0 +1,43 @@
+{
+  "exit_code": 1,
+  "results": [
+    {
+      "test": "tests/test_ai_concierge.py::test_human_ticket_ai_cannot_act",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "test": "tests/test_ai_concierge.py::test_admin_assigns_ai_can_act",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "test": "tests/test_ai_concierge.py::test_moderator_takeover_halts_ai",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "test": "tests/test_ai_concierge.py::test_human_edited_price_not_overwritten",
+      "phase": "call",
+      "outcome": "passed"
+    },
+    {
+      "test": "tests/test_auth_e2e.py::test_integration_flow",
+      "phase": "call",
+      "outcome": "failed",
+      "reason": "AssertionError: Order completion failed: {\"detail\":\"Missing or invalid Authorization header\"}\nassert 401 == 200\n +  where 401 = <Response [401 Unauthorized]>.status_code"
+    },
+    {
+      "test": "tests/test_concierge_e2e.py::test_concierge_workflow",
+      "phase": "call",
+      "outcome": "failed",
+      "reason": "AssertionError: Prices entry failed: {\"detail\":\"Not Found\"}\nassert 404 == 200\n +  where 404 = <Response [404 Not Found]>.status_code"
+    },
+    {
+      "test": "tests/test_full_flow.py::test_item",
+      "phase": "setup",
+      "outcome": "failed",
+      "reason": "file C:\\Users\\Aadi Jain\\Desktop\\SnapSave\\SnapSave-Backend\\tests\\test_full_flow.py, line 11"
+    }
+  ]
+}

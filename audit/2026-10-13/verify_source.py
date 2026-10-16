@@ -6,10 +6,11 @@ import re
 import shutil
 import subprocess
 import sys
+import argparse
 
 ROOT=Path(__file__).resolve().parents[2]
 
-def verify():
+def verify(output_dir=None):
     files=list((ROOT/"SnapSave-Backend").rglob("*.py"))+list((ROOT/"SnapSave-FRONTEND").glob("*.py"))
     files=[p for p in files if "__pycache__" not in p.parts and ".venv" not in p.parts]
     for path in files:
@@ -29,8 +30,12 @@ def verify():
             scripts+=1
     json.loads((ROOT/"SnapSave-FRONTEND/firebase.json").read_text(encoding="utf-8"))
     result={"python_files_parsed":len(files),"javascript_scripts_parsed":scripts,"hosting_json_valid":True,"python":sys.version.split()[0],"node":subprocess.check_output([node,"--version"],text=True).strip()}
-    (Path(__file__).with_name("source-verification.json")).write_text(json.dumps(result,indent=2)+"\n",encoding="utf-8")
+    destination=Path(output_dir) if output_dir else Path(__file__).parent
+    destination.mkdir(parents=True,exist_ok=True)
+    (destination/"source-verification.json").write_text(json.dumps(result,indent=2)+"\n",encoding="utf-8")
     print(json.dumps(result,indent=2))
 
 if __name__=="__main__":
-    verify()
+    parser=argparse.ArgumentParser()
+    parser.add_argument("--output-dir")
+    verify(parser.parse_args().output_dir)

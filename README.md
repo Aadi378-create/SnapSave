@@ -45,6 +45,8 @@ cd SnapSave-Backend
 
 The administrator can manage subsequent roles.
 
+The private bootstrap also accepts `--phone 9876543210` for an existing Indian phone account, or an international `+countrycode` number. It promotes the existing database identity and does not bypass Firebase OTP. Relative SQLite database URLs in `.env` are resolved against the backend directory, so running this command from another folder uses the same database as the API.
+
 ## Data and order rules
 
 Default database and environment paths are relative to the backend directory. SQLite enforces foreign keys and a busy timeout; startup enables WAL. Additive startup migrations preserve data, add missing fields, and convert legacy line totals once. Back up an existing database before the first updated startup. The repair suite uses disposable databases; it has not migrated the real development database.

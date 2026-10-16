@@ -1,5 +1,7 @@
 # SnapSave follow-up repairs — 17 October 2026
 
+Subsequent administrator provisioning and the latest 73-test result are recorded in [ADMIN_CHECKPOINT.md](ADMIN_CHECKPOINT.md). The results below describe the preceding repair pass.
+
 Continued the existing repair work in the same checkout. No deployment or commit was performed. The real application database, store accounts and bank were not accessed by verification.
 
 ## Changes

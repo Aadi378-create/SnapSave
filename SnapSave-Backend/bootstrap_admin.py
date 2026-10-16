@@ -1,33 +1,50 @@
 import sys
+import argparse
+import re
+from sqlalchemy import func
 from database import SessionLocal
 import models
 
+def promote_admin(db, *, email=None, phone=None):
+    if bool(email)==bool(phone):
+        raise ValueError("Provide exactly one email or phone number")
+    if phone:
+        number=re.sub(r"[\s()-]","",phone)
+        if re.fullmatch(r"[0-9]{10}",number):
+            number="+91"+number
+        if not re.fullmatch(r"\+[1-9][0-9]{7,14}",number):
+            raise ValueError("Use a 10-digit Indian number or an international +countrycode number")
+        normalized=models.User.phone_number
+        for character in (" ","-","(",")","+"):
+            normalized=func.replace(normalized,character,"")
+        variants=[number[1:]]
+        if number.startswith("+91") and len(number)==13:
+            variants.append(number[3:])
+        matches=db.query(models.User).filter(normalized.in_(variants)).all()
+    else:
+        matches=db.query(models.User).filter(func.lower(models.User.email)==email.strip().lower()).all()
+    if len(matches)>1:
+        raise ValueError("Multiple matching accounts exist; resolve the identity conflict before promotion")
+    if not matches:
+        raise ValueError("No account found. Sign in once before using the private administrator bootstrap")
+    user=matches[0]
+    user.role="ADMIN"
+    db.commit()
+    return user
+
 def main():
-    if len(sys.argv) < 2:
-        print("Usage: python bootstrap_admin.py <email>")
-        sys.exit(1)
-
-    email = sys.argv[1].strip()
-    db = SessionLocal()
-    try:
-        user = db.query(models.User).filter(models.User.email == email).first()
-        if not user:
-            # Try case-insensitive search
-            user = db.query(models.User).filter(models.User.email.ilike(email)).first()
-
-        if not user:
-            print(f"Error: User with email '{email}' not found in the database.")
+    parser=argparse.ArgumentParser(description="Privately promote an existing account; Firebase verification remains required")
+    parser.add_argument("email",nargs="?")
+    parser.add_argument("--phone")
+    args=parser.parse_args()
+    with SessionLocal() as db:
+        try:
+            user=promote_admin(db,email=args.email,phone=args.phone)
+            print(f"Administrator role saved for account {user.id}. Sign in using Firebase OTP.")
+        except Exception as exc:
+            db.rollback()
+            print(f"Administrator provisioning failed: {exc}",file=sys.stderr)
             sys.exit(1)
-
-        user.role = "ADMIN"
-        db.commit()
-        print(f"Success: User '{email}' (ID: {user.id}) has been promoted to ADMIN.")
-    except Exception as e:
-        print(f"Error occurred during admin bootstrapping: {e}")
-        db.rollback()
-        sys.exit(1)
-    finally:
-        db.close()
 
 if __name__ == "__main__":
     main()

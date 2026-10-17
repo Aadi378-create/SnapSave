@@ -102,6 +102,8 @@ def test_hosting_contains_only_assets_and_explicit_backend(tmp_path):
     with pytest.raises(ValueError):module.prepare("http://localhost:8000",tmp_path/"invalid")
     output=module.prepare("https://api.example.com",tmp_path/"dist")
     assert "https://api.example.com" in (output/"config.js").read_text()
+    for asset in ("phone-login.js","phone-login.css","conversation.js","conversation.css"):
+        assert (output/asset).is_file()
     assert not list(output.glob("*.py")) and not list(output.glob("*.txt"))
 
 def test_request_body_limit(client,actors):

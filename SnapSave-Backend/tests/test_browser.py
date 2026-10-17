@@ -48,7 +48,7 @@ def open_app(browser,client,actor,db,file):
             else:request_route.fulfill(status=404,body="Not found")
         else:request_route.fulfill(status=200,body="",content_type="text/css")
     page.route("**/*",route)
-    page.goto("http://snapsave.test/"+file)
+    page.goto("https://snapsave.test/"+file)
     return page,errors
 
 def test_customer_history_new_order_and_safe_chat(browser,client,actors,quoted,db):

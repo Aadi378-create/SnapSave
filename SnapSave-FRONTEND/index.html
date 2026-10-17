@@ -904,7 +904,7 @@
         </aside>
 
         <!-- 2. Center: ChatGPT-Like Conversational Grocery Stream -->
-        <main class="chat-main" id="chat-main">
+        <main class="chat-main mobile-active" id="chat-main">
           <div class="chat-stream" id="chat-stream">
             <!-- Welcome Hero if empty -->
             <div class="chat-welcome" id="chat-welcome">
@@ -942,13 +942,14 @@
               <textarea
                 id="chat-textarea"
                 class="chat-textarea"
-                placeholder="List groceries here; use Support for questions (e.g. 2L Milk, 1kg Tomatoes, 6 Eggs)..."
+                placeholder="List your groceries…" aria-label="Message or grocery list"
                 rows="1"
               ></textarea>
-              <button id="btn-send-chat" class="btn btn-icon" onclick="handleSendChat()" title="Send List">
+              <button id="btn-send-chat" class="btn btn-icon" onclick="handleSendChat()" title="Send message" aria-label="Send message">
                 <i class="fa-solid fa-arrow-up"></i>
               </button>
             </div>
+            <p id="customer-chat-feedback" class="conversation-feedback" role="status" aria-live="polite"></p>
           </div>
         </main>
 
@@ -1067,8 +1068,9 @@
         <div id="help-thread" style="flex: 1; min-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; padding: 4px;"></div>
         <div style="display: flex; gap: 8px;">
           <input type="text" id="help-input" class="input-control" placeholder="Type your message to support..." />
-          <button class="btn btn-icon" onclick="sendHelp()"><i class="fa-solid fa-paper-plane"></i></button>
+          <button id="btn-send-help" class="btn btn-icon" onclick="sendHelp()" aria-label="Send support message"><i class="fa-solid fa-paper-plane"></i></button>
         </div>
+        <p id="customer-help-feedback" class="conversation-feedback" role="status" aria-live="polite"></p>
         <button class="btn btn-secondary" style="margin-top: 10px;" onclick="closeHelp()">Close</button>
       </div>
     </div>
@@ -1099,6 +1101,8 @@
     <script src="config.js"></script>
     <script src="common.js"></script>
     <script src="phone-login.js"></script>
+    <script src="conversation.js"></script>
+    <link rel="stylesheet" href="conversation.css" />
     <!-- Firebase & Frontend Logic -->
     <script type="module">
       import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -1210,6 +1214,7 @@
 
       window.handleLogout = async function () {
         customerLogin.reset();
+        customerRequests.clear();
         try { await signOut(auth); } catch (e) {}
         idToken = null;
         currentUser = null;
@@ -1372,13 +1377,19 @@
         txt.focus();
       };
 
+      let customerSending=false;
+      const customerRequests=new Map();
       window.handleSendChat = async function () {
         const textarea=document.getElementById("chat-textarea");
         const text=textarea.value.trim();
         const btn=document.getElementById("btn-send-chat");
-        if(!text || btn.disabled) return;
-        if(selectedHistoryOrderId && activeOrder && ["delivered","completed","cancelled"].includes(activeOrder.status)) return alert("This order is archived. Start a new order to send a grocery list.");
+        if(!text || btn.disabled || customerSending) return;
+        const orderId=activeOrder?.id||null;
+        const context=orderId||"new";
+        if(selectedHistoryOrderId && activeOrder && ["delivered","completed","cancelled"].includes(activeOrder.status)) return conversationFeedback("customer-chat-feedback","This order is archived. Start a new order to send a grocery list.",true);
         if(!savedAddresses.length) { showAddAddressModal(); return; }
+        customerSending=true;
+        conversationFeedback("customer-chat-feedback","Sending…");
         setLoading("btn-send-chat",true);
         try {
           if(!activeOrder) {
@@ -1391,16 +1402,21 @@
             sendKey=null;
             await loadOrders(true);
           } else {
-            await apiRequest(`/api/chat/${encodeURIComponent(currentUser.id)}/send`,"POST",{message:text,order_id:activeOrder.id});
+            const previous=customerRequests.get(context);
+            const request=previous?.text===text?previous:{text,id:crypto.randomUUID()};
+            customerRequests.set(context,request);
+            await apiRequest(`/api/chat/${encodeURIComponent(currentUser.id)}/send`,"POST",{message:text,order_id:orderId,request_id:request.id});
+            customerRequests.delete(context);
           }
-          if(textarea.value.trim()===text) textarea.value="";
-          await pollMessages();
-        } catch(e) { alert("Could not send: "+e.message); }
-        finally {setLoading("btn-send-chat",false);}
+          if((!orderId || activeOrder?.id===orderId) && textarea.value.trim()===text) textarea.value="";
+          conversationFeedback("customer-chat-feedback","Sent");
+          try { await pollMessages(); } catch(e) { conversationFeedback("customer-chat-feedback","Sent. Conversation will refresh when the connection returns."); }
+        } catch(e) { conversationFeedback("customer-chat-feedback","Could not send. Your draft is saved. "+e.message,true); }
+        finally {customerSending=false;setLoading("btn-send-chat",false);document.getElementById("btn-send-chat").disabled=!!activeOrder && ["delivered","completed","cancelled"].includes(activeOrder.status);}
       };
 
       document.getElementById("chat-textarea").addEventListener("keydown", (e) => {
-        if (e.key === "Enter" && !e.shiftKey) {
+        if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
           e.preventDefault();
           if (!document.getElementById("btn-send-chat").disabled) {
             handleSendChat();
@@ -1420,7 +1436,7 @@
         if(cached.length) params.set("after_id",cached[cached.length-1].id);
         const incoming=await apiRequest(`/api/chat/${encodeURIComponent(currentUser.id)}/messages?${params}`);
         if((activeOrder?.id||null)!==view || !currentUser) return;
-        const merged=[...cached,...incoming].filter((m,i,a)=>a.findIndex(x=>x.id===m.id)===i).slice(-500);
+        const merged=mergeConversation(chatCache.get(context)||[],incoming);
         chatCache.set(context,merged);
         const signature=JSON.stringify([context,activeOrder?.revision,merged]);
         if(signature===_lastMsgSignature) return;
@@ -1442,13 +1458,13 @@
 
         if (!msgs.length) {
           if (welcome) welcome.style.display = "flex";
-          container.querySelectorAll(".message-wrapper").forEach(m => m.remove());
+          container.querySelectorAll(".message-wrapper, .conversation-event").forEach(m => m.remove());
           return;
         }
         if (welcome) welcome.style.display = "none";
 
         // Keep DOM clean
-        container.querySelectorAll(".message-wrapper").forEach(m => m.remove());
+        container.querySelectorAll(".message-wrapper, .conversation-event").forEach(m => m.remove());
 
         msgs.forEach(m => {
           const role = m.sender_role.toLowerCase();
@@ -1456,6 +1472,7 @@
           // If admin, we use the moderator styling
           const roleClass = (role === "admin") ? "moderator" : role;
           wrapper.className = `message-wrapper ${roleClass}`;
+          wrapper.dataset.kind=m.kind||"text";
 
           let avatarIcon = '<i class="fa-solid fa-user"></i>';
           let senderLabel = "You";
@@ -1471,6 +1488,9 @@
           }
 
           const timeStr = m.created_at ? utcDate(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
+
+          const event=conversationEvent(m,timeStr);
+          if(event){container.appendChild(event);return;}
 
           // Check if message is a price quote with confirmation action
           let confirmActionHtml = "";
@@ -1525,8 +1545,9 @@
           renderActiveTracker(activeOrder); renderRecentHistory(orderCache);
         }
         const archived=activeOrder && ["delivered","completed","cancelled"].includes(activeOrder.status);
+        document.getElementById("chat-textarea").placeholder=activeOrder?"Message your concierge…":"List your groceries…";
         document.getElementById("chat-textarea").disabled=!!archived;
-        document.getElementById("btn-send-chat").disabled=!!archived;
+        document.getElementById("btn-send-chat").disabled=!!archived || customerSending;
       }
 
       function renderActiveTracker(order) {
@@ -1587,14 +1608,21 @@
       }
 
       window.startNewOrder = async function() {
+        if(customerSending)return;
+        document.getElementById("chat-textarea").value="";
+        conversationFeedback("customer-chat-feedback");
         selectedHistoryOrderId=null; newOrderDraft=true; activeOrder=null; sendKey=null;
         _lastOrderSignature=""; _lastMsgSignature="";
+        document.getElementById("chat-textarea").placeholder="List your groceries…";
         document.getElementById("chat-textarea").disabled=false;
         document.getElementById("btn-send-chat").disabled=false;
         renderActiveTracker(null); renderRecentHistory(orderCache); renderChatMessages([]);
       };
 
       window.viewHistoryOrder = async function(orderId) {
+        if(customerSending)return;
+        document.getElementById("chat-textarea").value="";
+        conversationFeedback("customer-chat-feedback");
         selectedHistoryOrderId=orderId; newOrderDraft=false;
         _lastOrderSignature=""; _lastMsgSignature="";
         await loadOrders(); await pollMessages();
@@ -1699,6 +1727,7 @@
         try {
           const msgs = await apiRequest("/api/help/messages");
           const thread = document.getElementById("help-thread");
+          const nearBottom=thread.scrollHeight-thread.scrollTop-thread.clientHeight<100;
           thread.innerHTML = "";
           if (!msgs.length) {
             thread.innerHTML = `<div style="font-size:12.5px;color:var(--text-muted);text-align:center;margin:auto;">Send a message to contact our admin team directly.</div>`;
@@ -1711,23 +1740,27 @@
             b.innerHTML = `<div style="font-size:10px;opacity:0.7;margin-bottom:2px;">${isMe ? "You" : "SnapSave Admin"}</div><div>${escapeHTML(m.message)}</div>`;
             thread.appendChild(b);
           });
-          thread.scrollTop = thread.scrollHeight;
+          if(nearBottom)thread.scrollTop = thread.scrollHeight;
         } catch (e) {
           console.error(e);
         }
       }
 
+      let sendingHelp=false;
       window.sendHelp = async function () {
         const inp = document.getElementById("help-input");
         const txt = inp.value.trim();
-        if (!txt) return;
+        if (!txt || sendingHelp) return;
+        sendingHelp=true;setLoading("btn-send-help",true);
+        conversationFeedback("customer-help-feedback","Sending…");
         try {
           await apiRequest("/api/help", "POST", { message: txt });
           if(inp.value.trim()===txt)inp.value="";
+          conversationFeedback("customer-help-feedback","Sent");
           await loadHelpMessages();
         } catch (e) {
-          alert("Error: " + e.message);
-        }
+          conversationFeedback("customer-help-feedback","Could not send. Your draft is saved. "+e.message,true);
+        } finally {sendingHelp=false;setLoading("btn-send-help",false);}
       };
 
       // ── Maintenance Banner ──

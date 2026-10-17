@@ -241,6 +241,7 @@ class MaintenanceUpdate(StrictRequest):
 class SendMessageRequest(StrictRequest):
     message: str = Field(..., min_length=1, max_length=4000)
     order_id: Optional[str] = Field(None, max_length=36)
+    request_id: Optional[uuid.UUID] = None
 
 
 class OrderFinancialsUpdate(StrictRequest):
@@ -1045,6 +1046,15 @@ def set_global_ai_status(data: AiStatusRequest, current_user: models.User = Depe
 @app.post("/api/chat/{customer_id}/send")
 def send_chat_message(customer_id: str, data: SendMessageRequest, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     row=authorize_chat(db,customer_id,data.order_id,current_user)
+    def replay():
+        existing=db.get(models.Message,str(data.request_id)) if data.request_id else None
+        if existing:
+            if (existing.user_id,existing.order_id,existing.sender_id,existing.message)!=(customer_id,data.order_id,current_user.id,data.message.strip()):
+                raise HTTPException(409,"Message request already used for different content")
+            return {"message":"Message sent","id":existing.id}
+    previous=replay()
+    if previous:
+        return previous
     if row:
         require_state(row,ACTIVE_STATUSES)
     if not data.message.strip():
@@ -1054,8 +1064,17 @@ def send_chat_message(customer_id: str, data: SendMessageRequest, current_user: 
     if row and current_user.role in {"MODERATOR","ADMIN"} and not row.first_response_at:
         change_order(db,row,first_response_at=utcnow())
     msg=models.Message(user_id=customer_id,order_id=data.order_id,sender_id=current_user.id,sender_role=current_user.role,message=data.message.strip(),kind="text")
+    if data.request_id:
+        msg.id=str(data.request_id)
     db.add(msg)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        previous=replay()
+        if previous:
+            return previous
+        raise
     return {"message":"Message sent","id":msg.id}
 
 

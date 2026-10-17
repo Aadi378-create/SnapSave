@@ -885,7 +885,9 @@
       .btn-admin-login:hover:not(:disabled) { box-shadow: 0 6px 20px rgba(249,115,22,0.38); }
 
       @media (max-width: 1024px) {
-        body.admin-shell .admin-nav { display: none; }
+        body.admin-shell .admin-nav { position: relative; top: auto; bottom: auto; width: 100%; height: auto; display: flex; flex-direction: row; overflow-x: auto; padding: 8px; border-right: 0; border-bottom: 1px solid var(--border); }
+        body.admin-shell .admin-nav-logo { display: none; }
+        body.admin-shell .admin-nav-item { width: auto; flex: 0 0 auto; padding: 10px 12px; }
         body.admin-shell header,
         body.admin-shell #dashboard-metrics,
         body.admin-shell #dashboard-main,
@@ -893,7 +895,7 @@
       }
 
       /* ── Beta view margin for admin shell ── */
-      body.admin-shell #beta-program-view { margin-left: 240px; }
+      @media (min-width: 1025px) { body.admin-shell #beta-program-view { margin-left: 220px; } }
 
       /* ── Ticket unselected placeholder ── */
       #ticket-unselected-placeholder {
@@ -972,6 +974,8 @@
     <script src="config.js"></script>
     <script src="common.js"></script>
     <script src="phone-login.js"></script>
+    <script src="conversation.js"></script>
+    <link rel="stylesheet" href="conversation.css" />
   </head>
   <body>
     <!-- Admin Left Nav Rail (admin only) -->
@@ -1121,14 +1125,14 @@
           <i class="fa-solid fa-indian-rupee-sign"></i>
         </div>
         <div>
-          <div class="metric-label">Revenue Today</div>
+          <div class="metric-label">Total Revenue</div>
           <div id="metric-revenue" class="metric-value">₹0.00</div>
         </div>
       </div>
       <div class="metric-card glass-panel">
         <div class="metric-icon"><i class="fa-solid fa-wallet"></i></div>
         <div>
-          <div class="metric-label">Profit Today</div>
+          <div class="metric-label">Total Profit</div>
           <div id="metric-profit" class="metric-value">₹0.00</div>
         </div>
       </div>
@@ -1307,11 +1311,13 @@
                 id="btn-send-message"
                 class="btn"
                 style="padding: 12px"
+                aria-label="Send message"
                 onclick="sendMessage()"
                 disabled
               >
                 <i class="fa-solid fa-paper-plane"></i>
               </button>
+              <p id="staff-chat-feedback" class="conversation-feedback" role="status" aria-live="polite"></p>
             </div>
           </div>
         </div>
@@ -1702,14 +1708,14 @@
               <i class="fa-solid fa-indian-rupee-sign"></i>
             </div>
             <div>
-              <div class="metric-label">Revenue Today</div>
+              <div class="metric-label">Total Revenue</div>
               <div id="metric-revenue-analytics" class="metric-value">₹0.00</div>
             </div>
           </div>
           <div class="metric-card glass-panel">
             <div class="metric-icon"><i class="fa-solid fa-wallet"></i></div>
             <div>
-              <div class="metric-label">Profit Today</div>
+              <div class="metric-label">Total Profit</div>
               <div id="metric-profit-analytics" class="metric-value">₹0.00</div>
             </div>
           </div>
@@ -2080,6 +2086,7 @@
 
       window.handleLogout = function () {
         staffLogin.reset();
+        staffDrafts.clear();staffRequests.clear();
         idToken = null;
         currentUser = null;
         selectedOrder = null;
@@ -2477,6 +2484,7 @@
         }
       }
       let currentHelpThread = null;
+      let replyingHelp=false;
       async function openHelpThread(t) {
         const draft=selectedHelpUserId===t.user_id ? document.getElementById("help-reply-input")?.value||"" : "";
         selectedHelpUserId = t.user_id;
@@ -2504,8 +2512,8 @@
           <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px; margin-bottom:12px; max-height:48vh;">${bubbles}</div>
           <div style="display:flex; gap:10px;">
             <input type="text" id="help-reply-input" class="input-control" placeholder="Reply to customer..." style="flex:1;" />
-            <button class="btn" style="padding:10px 16px;" onclick="replyHelp(decodeURIComponent('${encodeURIComponent(t.user_id).replaceAll("'","%27")}'))"><i class="fa-solid fa-paper-plane"></i></button>
-          </div>`;
+            <button id="btn-reply-help" aria-label="Send support reply" class="btn" style="padding:10px 16px;" onclick="replyHelp(decodeURIComponent('${encodeURIComponent(t.user_id).replaceAll("'","%27")}'))"><i class="fa-solid fa-paper-plane"></i></button>
+          </div><p id="staff-help-feedback" class="conversation-feedback" role="status" aria-live="polite"></p>`;
         const inp = document.getElementById("help-reply-input");
         inp.value=draft;
         inp.addEventListener("keypress", (e) => {
@@ -2515,17 +2523,20 @@
       window.replyHelp = async function (userId) {
         const inp = document.getElementById("help-reply-input");
         const msg = inp.value.trim();
-        if (!msg) return;
+        if (!msg || replyingHelp) return;
+        replyingHelp=true;setLoading("btn-reply-help",true);
+        conversationFeedback("staff-help-feedback","Sending…");
         try {
           await apiRequest(`/api/admin/help/${escapeHTML(userId)}/reply`, "POST", {
             message: msg,
           });
-          const threads = await apiRequest("/api/admin/help");
-          const t = threads.find((x) => x.user_id === userId);
-          if (t) openHelpThread(t);
+          if(selectedHelpUserId!==userId)return;
+          if(inp.value.trim()===msg)inp.value="";
+          conversationFeedback("staff-help-feedback","Sent");
+          try {await openHelpThread(currentHelpThread);} catch(e) {conversationFeedback("staff-help-feedback","Sent. Refresh the conversation to see updates.");}
         } catch (e) {
-          alert("Failed to reply: " + e.message);
-        }
+          if(selectedHelpUserId===userId)conversationFeedback("staff-help-feedback","Could not send. Your draft is saved. "+e.message,true);
+        } finally {replyingHelp=false;setLoading("btn-reply-help",false);}
       };
       window.resolveHelp = async function (userId) {
         try {
@@ -2970,8 +2981,14 @@
         });
       }
 
+      const staffDrafts=new Map();
+      const staffRequests=new Map();
+      let staffSending=false;
       async function selectTicket(order) {
+        if(selectedOrder)staffDrafts.set(selectedOrder.order_id,document.getElementById("composer-text").value);
         selectedOrder = order;
+        document.getElementById("composer-text").value=staffDrafts.get(order.order_id)||"";
+        conversationFeedback("staff-chat-feedback");
         staffChatCache=[];staffChatSignature="";staffChatOrder=order.order_id;
         document.getElementById("chat-messages").textContent="";
         renderQueue();
@@ -2980,7 +2997,7 @@
         document.getElementById("chat-header-title").innerText =
           `Chat: ${escapeHTML(order.customer_phone)}`;
         document.getElementById("composer-text").disabled = false;
-        document.getElementById("btn-send-message").disabled = false;
+        document.getElementById("btn-send-message").disabled = staffSending;
         await pollChat();
 
         renderTicketDetails();
@@ -2997,7 +3014,7 @@
         if(staffChatCache.length) params.set("after_id",staffChatCache.at(-1).id);
         const messages=await apiRequest(`/api/chat/${encodeURIComponent(customer)}/messages?${params}`);
         if(!selectedOrder || selectedOrder.order_id!==order)return;
-        staffChatCache=[...staffChatCache,...messages].filter((m,i,a)=>a.findIndex(x=>x.id===m.id)===i).slice(-500);
+        staffChatCache=mergeConversation(staffChatCache,messages);
         const sig=JSON.stringify([order,staffChatCache]);
         if(sig===staffChatSignature)return;
         staffChatSignature=sig;renderMessages(staffChatCache);
@@ -3014,6 +3031,8 @@
         }
 
         msgs.forEach((m) => {
+          const event=conversationEvent(m,utcDate(m.created_at).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}));
+          if(event){chat.appendChild(event);return;}
           const bubble = document.createElement("div");
           let senderClass = "system";
           let senderName = "System";
@@ -3047,21 +3066,28 @@
       window.sendMessage = async function () {
         const input=document.getElementById("composer-text");const text=input.value.trim();
         const button=document.getElementById("btn-send-message");
-        if(!text || !selectedOrder || button.disabled)return;
-        const order=selectedOrder;setLoading("btn-send-message",true);
+        if(!text || !selectedOrder || button.disabled || staffSending)return;
+        const order=selectedOrder;staffSending=true;setLoading("btn-send-message",true);
+        conversationFeedback("staff-chat-feedback","Sending…");
         try {
-          await apiRequest(`/api/chat/${encodeURIComponent(order.customer_id)}/send`,"POST",{message:text,order_id:order.order_id});
+          const previous=staffRequests.get(order.order_id);
+          const request=previous?.text===text?previous:{text,id:crypto.randomUUID()};
+          staffRequests.set(order.order_id,request);
+          await apiRequest(`/api/chat/${encodeURIComponent(order.customer_id)}/send`,"POST",{message:text,order_id:order.order_id,request_id:request.id});
+          staffRequests.delete(order.order_id);
+          if(staffDrafts.get(order.order_id)?.trim()===text)staffDrafts.delete(order.order_id);
           if(selectedOrder?.order_id===order.order_id && input.value.trim()===text)input.value="";
-          await pollChat();
-        } catch(e){alert("Message could not be sent: "+e.message);}
-        finally {setLoading("btn-send-message",false);}
+          if(selectedOrder?.order_id===order.order_id)conversationFeedback("staff-chat-feedback","Sent");
+          try { await pollChat(); } catch(e) { if(selectedOrder?.order_id===order.order_id)conversationFeedback("staff-chat-feedback","Sent. Conversation will refresh when the connection returns."); }
+        } catch(e){if(selectedOrder?.order_id===order.order_id)conversationFeedback("staff-chat-feedback","Could not send. Your draft is saved. "+e.message,true);}
+        finally {staffSending=false;setLoading("btn-send-message",false);}
       };
 
       // Handle enter key press
       document
         .getElementById("composer-text")
         .addEventListener("keypress", (e) => {
-          if (e.key === "Enter") sendMessage();
+          if (e.key === "Enter" && !e.isComposing) {e.preventDefault();sendMessage();}
         });
 
       function renderTicketDetails() {

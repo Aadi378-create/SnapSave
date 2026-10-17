@@ -2784,6 +2784,16 @@
             );
             if (elOrdersToday) elOrdersToday.innerText = m.orders_today;
 
+            for(const [id,key] of Object.entries({
+              "metric-orders-pending":"orders_pending_review",
+              "metric-orders-awaiting":"orders_awaiting_customer",
+              "metric-orders-confirmed":"orders_confirmed",
+              "metric-orders-delivered":"orders_delivered"
+            })) {
+              const element=document.getElementById(id);
+              if(element)element.innerText=m[key];
+            }
+
             const elRevenue = document.getElementById("metric-revenue");
             if (elRevenue)
               elRevenue.innerText = `₹${parseFloat(m.revenue).toFixed(2)}`;

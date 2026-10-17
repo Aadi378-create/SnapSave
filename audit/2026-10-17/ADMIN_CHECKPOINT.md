@@ -1,5 +1,7 @@
 # Administrator provisioning and GitHub checkpoint
 
+Subsequent real Edge login and local-service verification are recorded in [LIVE_BROWSER_CHECK.md](LIVE_BROWSER_CHECK.md), including successful CAPTCHA/SMS sign-in by the user.
+
 The requested existing local phone account was promoted from CUSTOMER to ADMIN using the private bootstrap function. Its original identity was preserved; no phone-number-based automatic role grant or OTP bypass was added. A SQLite backup was saved locally before the role update. Databases, that backup and environment credentials remain excluded from Git.
 
 The private `bootstrap_admin.py` command now supports `--phone` as well as the existing email argument. Indian ten-digit and international phone formats resolve to existing accounts; ambiguous or missing identities are rejected. Relative SQLite paths are resolved against the backend directory, so running the private command from the repository root targets the same database as the API.

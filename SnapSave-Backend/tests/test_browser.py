@@ -139,3 +139,17 @@ def test_admin_can_find_and_reconcile_archived_legacy_payment(browser,client,act
         assert row.payment_status=="refund_required" and row.payment_reference=="archived-bank-receipt"
         assert not errors,errors
     finally:page.close()
+
+def test_admin_operational_cards_show_actual_order_counts(browser,client,actors,quoted,db):
+    for status,count in {"pending_review":2,"awaiting_payment":3,"delivered":4,"completed":1,"cancelled":1}.items():
+        for _ in range(count):
+            db.add(models.Order(user_id=actors["customer"]["id"],store="zepto",status=status,delivery_street="Test street",delivery_city="Pune",delivery_postal_code="411004",subtotal=0,delivery_fee=0,platform_fee=0,final_price=0))
+    db.commit()
+    page,errors=open_app(browser,client,actors["admin"],db,"admin.html")
+    try:
+        page.wait_for_function("document.querySelector('#metric-orders-pending')?.textContent==='2'")
+        expected={"metric-orders-pending":"2","metric-orders-awaiting":"1","metric-orders-confirmed":"3","metric-orders-delivered":"4"}
+        for element,value in expected.items():
+            assert page.locator("#"+element).inner_text()==value
+        assert not errors,errors
+    finally:page.close()

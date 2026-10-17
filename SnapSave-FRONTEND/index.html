@@ -1214,7 +1214,7 @@
 
       window.handleLogout = async function () {
         customerLogin.reset();
-        customerRequests.clear();
+        customerRequests.clear();historyOffset=0;
         try { await signOut(auth); } catch (e) {}
         idToken = null;
         currentUser = null;
@@ -1400,7 +1400,7 @@
             const created=await apiRequest("/api/orders","POST",{address_id:address.id,items_text:text},sendKey);
             selectedHistoryOrderId=null; newOrderDraft=false; activeOrder=created;
             sendKey=null;
-            await loadOrders(true);
+            renderActiveTracker(created);
           } else {
             const previous=customerRequests.get(context);
             const request=previous?.text===text?previous:{text,id:crypto.randomUUID()};
@@ -1410,7 +1410,7 @@
           }
           if((!orderId || activeOrder?.id===orderId) && textarea.value.trim()===text) textarea.value="";
           conversationFeedback("customer-chat-feedback","Sent");
-          try { await pollMessages(); } catch(e) { conversationFeedback("customer-chat-feedback","Sent. Conversation will refresh when the connection returns."); }
+          try { if(!orderId)await loadOrders(true); await pollMessages(); } catch(e) { conversationFeedback("customer-chat-feedback","Sent. Conversation will refresh when the connection returns."); }
         } catch(e) { conversationFeedback("customer-chat-feedback","Could not send. Your draft is saved. "+e.message,true); }
         finally {customerSending=false;setLoading("btn-send-chat",false);document.getElementById("btn-send-chat").disabled=!!activeOrder && ["delivered","completed","cancelled"].includes(activeOrder.status);}
       };
@@ -1705,8 +1705,10 @@
           const created=await apiRequest("/api/orders", "POST", { address_id: addressId, items },sendKey);
           activeOrder=created; selectedHistoryOrderId=null; newOrderDraft=false; sendKey=null;
           hideGroceryModal();
-          await loadOrders();
-          await pollMessages();
+          renderActiveTracker(created);
+          conversationFeedback("customer-chat-feedback","Order submitted");
+          try {await loadOrders();await pollMessages();}
+          catch(e){conversationFeedback("customer-chat-feedback","Order submitted. Conversation will refresh when the connection returns.");}
         } catch (err) {
           alert("Submission failed: " + err.message);
         } finally {
@@ -1861,10 +1863,17 @@
           const img=document.createElement("img");img.alt="Payment QR for this order";img.style.maxWidth="250px";img.src=url;img.onload=()=>URL.revokeObjectURL(url);card.appendChild(img);
         } catch(e) {const text=document.createElement("p");text.textContent="Use the UPI link or contact your concierge for payment details.";card.appendChild(text);}
       }
+      let historyLoading=false;
       window.loadMoreHistory = async function() {
-        historyOffset+=50;
-        const rows=await apiRequest(`/api/orders?limit=50&offset=${historyOffset}`);
-        orderCache=[...new Map([...orderCache,...rows].map(o=>[o.id,o])).values()];renderRecentHistory(orderCache);
+        if(historyLoading)return;
+        historyLoading=true;
+        const nextOffset=historyOffset+50;
+        try {
+          const rows=await apiRequest(`/api/orders?limit=50&offset=${nextOffset}`);
+          historyOffset=nextOffset;
+          orderCache=[...new Map([...orderCache,...rows].map(o=>[o.id,o])).values()];renderRecentHistory(orderCache);
+        } catch(e){conversationFeedback("customer-chat-feedback","Could not load older orders. Please try again.",true);}
+        finally{historyLoading=false;}
       };
       // API Request Wrapper
       async function apiRequest(endpoint, method = "GET", body = null, requestKey=null) {

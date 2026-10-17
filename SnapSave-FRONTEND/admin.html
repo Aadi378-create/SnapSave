@@ -2087,6 +2087,8 @@
       window.handleLogout = function () {
         staffLogin.reset();
         staffDrafts.clear();staffRequests.clear();
+        helpDrafts.clear();helpRequest++;renderedHelpUser=null;selectedHelpUserId=null;currentHelpThread=null;
+        document.getElementById("help-conversation").textContent="";
         idToken = null;
         currentUser = null;
         selectedOrder = null;
@@ -2485,12 +2487,15 @@
       }
       let currentHelpThread = null;
       let replyingHelp=false;
+      let helpRequest=0,renderedHelpUser=null;
+      const helpDrafts=new Map();
       async function openHelpThread(t) {
-        const draft=selectedHelpUserId===t.user_id ? document.getElementById("help-reply-input")?.value||"" : "";
+        if(renderedHelpUser)helpDrafts.set(renderedHelpUser,document.getElementById("help-reply-input")?.value||"");
+        const request=++helpRequest;
         selectedHelpUserId = t.user_id;
         currentHelpThread = t;
         const messages=await apiRequest(`/api/admin/help/${encodeURIComponent(t.user_id)}/messages`);
-        if(selectedHelpUserId!==t.user_id)return;
+        if(selectedHelpUserId!==t.user_id || request!==helpRequest || !currentUser)return;
         t={...t,messages};
         currentHelpThread=t;
         const conv = document.getElementById("help-conversation");
@@ -2504,18 +2509,26 @@
             </div>`;
           })
           .join("");
+        if(renderedHelpUser===t.user_id && document.getElementById("help-message-list")) {
+          const list=document.getElementById("help-message-list");
+          const nearBottom=list.scrollHeight-list.scrollTop-list.clientHeight<100;
+          list.innerHTML=bubbles;
+          if(nearBottom)list.scrollTop=list.scrollHeight;
+          return;
+        }
         conv.innerHTML = `
           <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:10px; margin-bottom:12px;">
             <strong>${escapeHTML(t.customer_phone)}</strong>
             <button class="btn btn-secondary" style="padding:6px 12px;" onclick="resolveHelp(decodeURIComponent('${encodeURIComponent(t.user_id).replaceAll("'","%27")}'))">Mark Resolved</button>
           </div>
-          <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px; margin-bottom:12px; max-height:48vh;">${bubbles}</div>
+          <div id="help-message-list" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px; margin-bottom:12px; max-height:48vh;">${bubbles}</div>
           <div style="display:flex; gap:10px;">
             <input type="text" id="help-reply-input" class="input-control" placeholder="Reply to customer..." style="flex:1;" />
             <button id="btn-reply-help" aria-label="Send support reply" class="btn" style="padding:10px 16px;" onclick="replyHelp(decodeURIComponent('${encodeURIComponent(t.user_id).replaceAll("'","%27")}'))"><i class="fa-solid fa-paper-plane"></i></button>
           </div><p id="staff-help-feedback" class="conversation-feedback" role="status" aria-live="polite"></p>`;
         const inp = document.getElementById("help-reply-input");
-        inp.value=draft;
+        renderedHelpUser=t.user_id;
+        inp.value=helpDrafts.get(t.user_id)||"";
         inp.addEventListener("keypress", (e) => {
           if (e.key === "Enter") replyHelp(t.user_id);
         });
@@ -2531,7 +2544,8 @@
             message: msg,
           });
           if(selectedHelpUserId!==userId)return;
-          if(inp.value.trim()===msg)inp.value="";
+          const latestInput=document.getElementById("help-reply-input");
+          if(latestInput?.value.trim()===msg)latestInput.value="";
           conversationFeedback("staff-help-feedback","Sent");
           try {await openHelpThread(currentHelpThread);} catch(e) {conversationFeedback("staff-help-feedback","Sent. Refresh the conversation to see updates.");}
         } catch (e) {

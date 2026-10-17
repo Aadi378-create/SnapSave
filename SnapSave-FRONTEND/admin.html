@@ -968,8 +968,10 @@
         box-shadow: 0 4px 20px rgba(234,88,12,0.4);
       }
     </style>
+    <link rel="stylesheet" href="phone-login.css">
     <script src="config.js"></script>
     <script src="common.js"></script>
+    <script src="phone-login.js"></script>
   </head>
   <body>
     <!-- Admin Left Nav Rail (admin only) -->
@@ -1041,30 +1043,37 @@
         </div>
         <div class="login-subtitle">Management Login</div>
 
-        <div id="auth-alert-container"></div>
-
-        <div class="input-group">
-          <label for="login-phone">Phone Number</label>
-          <div style="display:flex; align-items:center; gap:0; background:rgba(8,14,28,0.75); border:1px solid var(--border-bright); border-radius:var(--radius-md); overflow:hidden; transition:border-color 0.2s, box-shadow 0.2s;" id="phone-input-wrap">
-            <span style="padding:11px 12px 11px 14px; font-size:13px; font-weight:700; color:var(--primary); background:rgba(59,130,246,0.08); border-right:1px solid var(--border-bright); white-space:nowrap; flex-shrink:0;">🇮🇳 +91</span>
-            <input
-              type="tel"
-              id="login-phone"
-              style="flex:1; padding:11px 14px; background:transparent; border:none; color:var(--text-main); font-family:var(--font-body); font-size:13px; outline:none;"
-              placeholder="98765 43210"
-              maxlength="10"
-              onkeypress="if(event.key==='Enter') handleProductionLogin()"
-            />
+        <div id="auth-alert-container" class="auth-status" data-auth-status role="status" aria-live="polite" aria-atomic="true" hidden></div>
+        <form id="staff-phone-flow" class="auth-form" data-auth-phone-form novalidate>
+          <div class="auth-field">
+            <label for="login-phone">Phone number</label>
+            <div class="auth-phone-wrap" id="phone-input-wrap">
+              <span class="auth-country" aria-label="India country code +91">🇮🇳 +91</span>
+              <input id="login-phone" data-auth-phone type="tel" inputmode="tel" autocomplete="tel-national" placeholder="98765 43210" maxlength="17" aria-describedby="phone-hint">
+            </div>
+            <p id="phone-hint" class="auth-hint">Use your 10-digit Indian mobile number.</p>
           </div>
-        </div>
-
-        <button
-          class="btn"
-          style="width: 100%; background-color: var(--primary)"
-          onclick="handleProductionLogin()"
-        >
-          <i class="fa-solid fa-sign-in-alt"></i> Login
-        </button>
+          <div class="auth-captcha-shell">
+            <div id="staff-recaptcha" class="auth-captcha-slot" data-auth-captcha></div>
+            <p class="auth-captcha-hint" data-auth-captcha-hint aria-live="polite">Enter your number to load the security check.</p>
+            <button type="button" class="auth-refresh" data-auth-retry-captcha>Refresh check</button>
+          </div>
+          <button id="btn-staff-send-otp" type="submit" class="btn auth-primary" data-auth-send disabled>Send code</button>
+          <p class="auth-hint">We’ll send a one-time code by SMS.</p>
+        </form>
+        <form id="staff-otp-panel" class="auth-form" data-auth-otp-form novalidate hidden>
+          <p class="auth-code-note">Code sent to <span class="auth-destination" data-auth-destination></span></p>
+          <div class="auth-field">
+            <label for="login-otp">Verification code</label>
+            <input id="login-otp" class="input-control auth-otp-input" data-auth-code type="text" inputmode="numeric" autocomplete="one-time-code" placeholder="6-digit code" maxlength="6" pattern="[0-9]{6}" aria-describedby="otp-hint">
+            <p id="otp-hint" class="auth-hint">Enter the six digits from your SMS.</p>
+          </div>
+          <button id="btn-staff-verify-otp" type="submit" class="btn btn-accent auth-primary" data-auth-verify disabled>Verify &amp; sign in</button>
+          <div class="auth-secondary-actions">
+            <button type="button" class="btn btn-secondary" data-auth-change>Change number</button>
+            <button type="button" class="btn btn-secondary" data-auth-resend>Resend code</button>
+          </div>
+        </form>
       </div>
 
     </section>
@@ -2033,11 +2042,6 @@
     (async function() {
       const API_BASE = window.SNAPSAVE_API_BASE;
 
-      const loginCard=document.getElementById("phone-login-card");
-      const otpPanel=document.createElement("div");otpPanel.id="staff-otp-panel";otpPanel.style.display="none";
-      otpPanel.innerHTML='<input id="staff-otp" class="input-control" maxlength="6" placeholder="6-digit OTP"><button class="btn" onclick="verifyStaffOTP()">Verify OTP</button>';
-      const recaptcha=document.createElement("div");recaptcha.id="staff-recaptcha";
-      loginCard.appendChild(recaptcha);loginCard.appendChild(otpPanel);
       const queuePager=document.createElement("div");queuePager.innerHTML='<button class="btn btn-secondary" onclick="pageQueue(-1)">Previous tickets</button><button class="btn btn-secondary" onclick="pageQueue(1)">Next tickets</button>';
       document.getElementById("queue-list").parentElement.appendChild(queuePager);
       // Role-management: enables RBAC for admin control over user roles
@@ -2063,25 +2067,19 @@
       let queuePending=false;
       let queuePage=0;
       let lastQueueFilter="";
-      // Management login — phone lookup, token, RBAC check
-      window.handleProductionLogin = async function () {
-        const raw=document.getElementById("login-phone").value.trim();
-        const phone=raw.startsWith("+")?raw:"+91"+raw;
-        if(!/^\+[1-9]\d{7,14}$/.test(phone)) return showAuthAlert("Enter a valid phone number","error");
-        const button=document.querySelector("#phone-login-card .btn");button.disabled=true;
-        try {
-          await window.SnapSaveAuth.send(phone);
-          document.getElementById("staff-otp-panel").style.display="block";
-          showAuthAlert("OTP sent. Enter the code to continue.","success");
-        } catch(e) {showAuthAlert("Could not send OTP: "+e.message,"error");}
-        finally {button.disabled=false;}
-      };
-      window.verifyStaffOTP = async function() {
-        try {idToken=await window.SnapSaveAuth.verify(document.getElementById("staff-otp").value.trim()); await checkUserSession();}
-        catch(e) {showAuthAlert("Verification failed: "+e.message,"error");}
-      };
+      const staffLogin=createPhoneLogin(document.getElementById("phone-login-card"),{
+        captcha:(container,options)=>window.SnapSaveAuth.createVerifier(container,options),
+        send:(phone,verifier)=>window.SnapSaveAuth.send(phone,verifier),
+        async verified(result) {
+          idToken=await result.user.getIdToken();
+          await checkUserSession();
+        }
+      });
+      window.handleProductionLogin=()=>staffLogin.send();
+      window.verifyStaffOTP=()=>staffLogin.verify();
 
       window.handleLogout = function () {
+        staffLogin.reset();
         idToken = null;
         currentUser = null;
         selectedOrder = null;
@@ -3483,12 +3481,7 @@
         return await res.json();
       }
 
-      function showAuthAlert(msg, type) {
-        const container = document.getElementById("auth-alert-container");
-        container.innerHTML = msg
-          ? `<div class="alert alert-${type}"><i class="fa-solid ${type === "error" ? "fa-circle-exclamation" : "fa-circle-check"}"></i> ${escapeHTML(msg)}</div>`
-          : "";
-      }
+      function showAuthAlert(msg, type) {staffLogin.message(msg,type);}
 
       function timeSince(dateStr) {
         const now = new Date();

@@ -764,6 +764,7 @@
         text-align: center;
       }
     </style>
+    <link rel="stylesheet" href="phone-login.css">
   </head>
   <body>
     <!-- Maintenance Banner -->
@@ -787,7 +788,7 @@
 
     <!-- ── AUTH SECTION ── -->
     <section id="auth-section">
-      <div class="login-card glass-panel">
+      <div id="customer-login-card" class="login-card glass-panel">
         <div class="header-logo" style="justify-content: center; font-size: 32px; margin-bottom: 8px;">
           <i class="fa-solid fa-bolt-lightning" style="color: var(--accent-cyan)"></i> SnapSave
         </div>
@@ -795,51 +796,37 @@
           Your AI-powered grocery concierge. Type your list, we find lowest prices and deliver.
         </p>
 
-        <div id="auth-alert-container"></div>
-
-        <!-- Phone Input Flow -->
-        <div id="phone-flow">
-          <div style="margin-bottom: 16px; text-align: left;">
-            <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px; display: block;">Phone Number</label>
-            <div style="display:flex; align-items:center; background:rgba(8,14,28,0.75); border:1px solid rgba(255,255,255,0.13); border-radius:12px; overflow:hidden; transition:border-color 0.2s, box-shadow 0.2s;" id="phone-input-wrap">
-              <span style="padding:13px 12px 13px 16px; font-size:13px; font-weight:700; color:var(--primary); background:rgba(59,130,246,0.08); border-right:1px solid rgba(255,255,255,0.1); white-space:nowrap; flex-shrink:0;">🇮🇳 +91</span>
-              <input
-                type="tel"
-                id="login-phone"
-                style="flex:1; padding:13px 14px; background:transparent; border:none; color:#f1f5f9; font-size:14px; outline:none; font-family:inherit;"
-                placeholder="98765 43210"
-                maxlength="10"
-                onkeypress="if(event.key==='Enter') sendOTP()"
-              />
+        <div id="auth-alert-container" class="auth-status" data-auth-status role="status" aria-live="polite" aria-atomic="true" hidden></div>
+        <form id="phone-flow" class="auth-form" data-auth-phone-form novalidate>
+          <div class="auth-field">
+            <label for="login-phone">Phone number</label>
+            <div class="auth-phone-wrap" id="phone-input-wrap">
+              <span class="auth-country" aria-label="India country code +91">🇮🇳 +91</span>
+              <input id="login-phone" data-auth-phone type="tel" inputmode="tel" autocomplete="tel-national" placeholder="98765 43210" maxlength="17" aria-describedby="phone-hint">
             </div>
+            <p id="phone-hint" class="auth-hint">Use your 10-digit Indian mobile number.</p>
           </div>
-          <div id="recaptcha-container" style="margin-bottom: 16px;"></div>
-          <button id="btn-send-otp" class="btn" style="width: 100%; margin-bottom: 12px;" onclick="sendOTP()">
-            <i class="fa-solid fa-paper-plane"></i> Send Verification Code
-          </button>
-        </div>
-
-        <!-- OTP Verify Flow -->
-        <div id="otp-flow" style="display: none;">
-          <div style="margin-bottom: 16px; text-align: left;">
-            <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px; display: block;">6-Digit OTP</label>
-            <input
-              type="text"
-              id="login-otp"
-              class="input-control"
-              placeholder="123456"
-              maxlength="6"
-              style="letter-spacing: 0.3em; font-size: 18px; text-align: center; font-family: var(--font-mono);"
-              onkeypress="if(event.key==='Enter') verifyOTP()"
-            />
+          <div class="auth-captcha-shell">
+            <div id="recaptcha-container" class="auth-captcha-slot" data-auth-captcha></div>
+            <p class="auth-captcha-hint" data-auth-captcha-hint aria-live="polite">Enter your number to load the security check.</p>
+            <button type="button" class="auth-refresh" data-auth-retry-captcha>Refresh check</button>
           </div>
-          <button id="btn-verify-otp" class="btn btn-accent" style="width: 100%; margin-bottom: 12px;" onclick="verifyOTP()">
-            <i class="fa-solid fa-check"></i> Verify &amp; Continue
-          </button>
-          <button class="btn btn-secondary" style="width: 100%;" onclick="showPhoneFlow()">
-            <i class="fa-solid fa-arrow-left"></i> Change Number
-          </button>
-        </div>
+          <button id="btn-send-otp" type="submit" class="btn auth-primary" data-auth-send disabled>Send code</button>
+          <p class="auth-hint">We’ll send a one-time code by SMS.</p>
+        </form>
+        <form id="otp-flow" class="auth-form" data-auth-otp-form novalidate hidden>
+          <p class="auth-code-note">Code sent to <span class="auth-destination" data-auth-destination></span></p>
+          <div class="auth-field">
+            <label for="login-otp">Verification code</label>
+            <input id="login-otp" class="input-control auth-otp-input" data-auth-code type="text" inputmode="numeric" autocomplete="one-time-code" placeholder="6-digit code" maxlength="6" pattern="[0-9]{6}" aria-describedby="otp-hint">
+            <p id="otp-hint" class="auth-hint">Enter the six digits from your SMS.</p>
+          </div>
+          <button id="btn-verify-otp" type="submit" class="btn btn-accent auth-primary" data-auth-verify disabled>Verify &amp; sign in</button>
+          <div class="auth-secondary-actions">
+            <button type="button" class="btn btn-secondary" data-auth-change>Change number</button>
+            <button type="button" class="btn btn-secondary" data-auth-resend>Resend code</button>
+          </div>
+        </form>
 
         <!-- Quick Demo Login -->
         <div id="demo-login" style="display:none; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border);">
@@ -1111,6 +1098,7 @@
 
     <script src="config.js"></script>
     <script src="common.js"></script>
+    <script src="phone-login.js"></script>
     <!-- Firebase & Frontend Logic -->
     <script type="module">
       import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -1136,8 +1124,6 @@
       const app = initializeApp(firebaseConfig);
       const auth = getAuth(app);
 
-      let confirmationResult = null;
-      let recaptchaVerifier = null;
       let idToken = null;
       let currentUser = null;
       let savedAddresses = [];
@@ -1157,8 +1143,23 @@
 
       const CUST_STORAGE_KEY = 'snapsave_customer_token';
 
+      const customerLogin=createPhoneLogin(document.getElementById("customer-login-card"),{
+        async captcha(container,options) {
+          const verifier=new RecaptchaVerifier(auth,container,options);
+          try {await verifier.render();return verifier;}
+          catch(error){try {verifier.clear();} catch(e) {} throw error;}
+        },
+        send:(phone,verifier)=>signInWithPhoneNumber(auth,phone,verifier),
+        async verified(result) {
+          idToken=await result.user.getIdToken(true);
+          localStorage.setItem(CUST_STORAGE_KEY,idToken);
+          await checkUserSession();
+        }
+      });
+
       // Auto check session via Firebase (real OTP logins)
       onAuthStateChanged(auth, async (user) => {
+        if(customerLogin.isVerifying())return;
         if (user) {
           try {
             idToken = await user.getIdToken(true);
@@ -1203,51 +1204,12 @@
         }
       };
 
-      window.sendOTP = async function () {
-        const rawPhone = document.getElementById("login-phone").value.trim();
-        const phone = rawPhone.startsWith("+") ? rawPhone : "+91" + rawPhone.replace(/\s/g, "");
-        if (!rawPhone) return alert("Please enter your 10-digit mobile number.");
-        setLoading("btn-send-otp", true);
-        try {
-          if (recaptchaVerifier) {
-            recaptchaVerifier.clear();
-            recaptchaVerifier = null;
-          }
-          document.getElementById("recaptcha-container").innerHTML = "";
-          recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", { size: "normal" });
-          await recaptchaVerifier.render();
-          confirmationResult = await signInWithPhoneNumber(auth, phone, recaptchaVerifier);
-          document.getElementById("phone-flow").style.display = "none";
-          document.getElementById("otp-flow").style.display = "block";
-        } catch (err) {
-          alert("Failed to send OTP: " + err.message);
-        } finally {
-          setLoading("btn-send-otp", false);
-        }
-      };
-
-      window.verifyOTP = async function () {
-        const code = document.getElementById("login-otp").value.trim();
-        if (!code) return alert("Please enter the OTP code.");
-        setLoading("btn-verify-otp", true);
-        try {
-          const res = await confirmationResult.confirm(code);
-          idToken = await res.user.getIdToken(true);
-          localStorage.setItem(CUST_STORAGE_KEY, idToken);
-          await checkUserSession();
-        } catch (err) {
-          alert("Verification failed: " + err.message);
-        } finally {
-          setLoading("btn-verify-otp", false);
-        }
-      };
-
-      window.showPhoneFlow = function () {
-        document.getElementById("phone-flow").style.display = "block";
-        document.getElementById("otp-flow").style.display = "none";
-      };
+      window.sendOTP=()=>customerLogin.send();
+      window.verifyOTP=()=>customerLogin.verify();
+      window.showPhoneFlow=()=>customerLogin.change();
 
       window.handleLogout = async function () {
+        customerLogin.reset();
         try { await signOut(auth); } catch (e) {}
         idToken = null;
         currentUser = null;

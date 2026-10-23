@@ -961,7 +961,9 @@ def get_chat_messages(customer_id: str, current_user: models.User = Depends(get_
         rows=query.order_by(models.Message.created_at.asc(),models.Message.id.asc()).limit(limit).all()
     else:
         rows=list(reversed(query.order_by(models.Message.created_at.desc(),models.Message.id.desc()).limit(limit).all()))
-    return [{"id":m.id,"sender_id":m.sender_id,"sender_role":m.sender_role,"message":m.message,"order_id":m.order_id,"kind":m.kind,"created_at":m.created_at} for m in rows]
+    # Conversation participation is distinct from an account's management role.
+    # Normalize historical own-thread messages without rewriting stored records.
+    return [{"id":m.id,"sender_id":m.sender_id,"sender_role":"CUSTOMER" if m.sender_id==customer_id and m.sender_role in {"ADMIN","MODERATOR"} and m.kind=="text" else m.sender_role,"message":m.message,"order_id":m.order_id,"kind":m.kind,"created_at":m.created_at} for m in rows]
 
 
 @app.put("/api/admin/orders/{order_id}/mode")
@@ -1061,9 +1063,10 @@ def send_chat_message(customer_id: str, data: SendMessageRequest, current_user: 
         raise HTTPException(422,"Message cannot be empty")
     if current_user.is_blacklisted:
         raise HTTPException(403,"Your account is restricted. Use Support")
-    if row and current_user.role in {"MODERATOR","ADMIN"} and not row.first_response_at:
+    sender_role="CUSTOMER" if current_user.id==customer_id else current_user.role
+    if row and sender_role in {"MODERATOR","ADMIN"} and not row.first_response_at:
         change_order(db,row,first_response_at=utcnow())
-    msg=models.Message(user_id=customer_id,order_id=data.order_id,sender_id=current_user.id,sender_role=current_user.role,message=data.message.strip(),kind="text")
+    msg=models.Message(user_id=customer_id,order_id=data.order_id,sender_id=current_user.id,sender_role=sender_role,message=data.message.strip(),kind="text")
     if data.request_id:
         msg.id=str(data.request_id)
     db.add(msg)
@@ -1375,7 +1378,7 @@ def authorize_chat(db,customer_id,order_id,user):
             raise HTTPException(403,"Order does not belong to this conversation")
         read_access(row,user)
         return row
-    if user.role=="MODERATOR":
+    if user.role=="MODERATOR" and user.id!=customer_id:
         raise HTTPException(403,"Select an assigned order to chat")
     return None
 

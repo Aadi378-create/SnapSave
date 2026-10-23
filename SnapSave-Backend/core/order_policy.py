@@ -11,6 +11,8 @@ def staff_access(order, user):
         raise HTTPException(403, "You are not assigned to this order")
 
 def read_access(order, user):
+    if order.user_id == user.id:
+        return
     if user.role == "CUSTOMER":
         if order.user_id != user.id:
             raise HTTPException(403, "Not authorized to view this order")

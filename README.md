@@ -62,10 +62,10 @@ Transitions follow `pending_review → reviewing → awaiting_customer → await
 Research is disabled by default; no mock prices are presented as live results. Enabling it requires:
 
 - `ENABLE_LIVE_RESEARCH=true` and `RESEARCH_PROVIDER=module:function` naming installed backend code.
-- A provider that verifies SKU, quantity, stock, postal code, fees and promotion eligibility.
+- For automatic quote publication, a provider that verifies SKU, quantity, stock, postal code, fees and promotion eligibility. The built-in public-catalogue provider instead creates review-only evidence drafts.
 - The administrator's global AI switch enabled and an eligible pending/reviewing ticket in AI or HYBRID mode.
 
-The callable accepts `(items, postal_code)`; each item contains `item_id`, `name` and `quantity`. It returns `verified: true`, the exact `postal_code`, a `source`, one `items` row per requested ID with `store` and `line_total`, plus verified `delivery_fee`, `platform_fee`, `service_fee`, `store_discount` and `snapsave_discount`. HYBRID drafts require staff approval; AI may publish a quote. Invalid data, saturation, failures and interrupted jobs return to human review. Takeover and the kill switch invalidate running work.
+The callable accepts `(items, postal_code)`; each item contains `item_id`, `name` and `quantity`. A fully verified provider returns `verified: true`, the exact `postal_code`, a `source`, one `items` row per requested ID with `store` and `line_total`, plus verified `delivery_fee`, `platform_fee`, `service_fee`, `store_discount` and `snapsave_discount`. HYBRID drafts require staff approval; AI may publish a quote. Invalid data, saturation, failures and interrupted jobs return to human review. Takeover and the kill switch invalidate running work.
 
 ### Public catalogue research (review-only)
 
@@ -113,3 +113,5 @@ $env:API_ORIGIN='https://api.example.com'
 ```
 
 Replace the example with the deployed backend origin. Firebase publishes only `dist`; the builder copies app files/assets and writes the API origin. Building does not deploy. Never host the backend folder, environment, database or service account as static assets.
+
+The product inspection, prioritized feature roadmap and actual retailer-access results are recorded in `audit/2026-10-25/AI_ENGINE_AND_FEATURE_REVIEW.md`.

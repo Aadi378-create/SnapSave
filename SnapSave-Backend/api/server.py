@@ -24,7 +24,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy.exc import IntegrityError
 from settings import BASE_DIR, dev_auth_enabled, research_enabled, ACTIVE_STATUSES, STORES
 from migrations import migrate
-from core.order_policy import staff_access, read_access, require_state, change_order, message as order_message
+from core.order_policy import staff_access, read_access, require_state, change_order, has_human_prices, message as order_message
 from pricing.quotes import money, quote_items, totals as preview_totals, final_amount, store_id
 from api.guardrails import RequestLimits
 
@@ -1057,7 +1057,7 @@ def set_order_mode(order_id: str, data: OrderModeRequest, current_user: models.U
     if data.mode!="HUMAN":
         require_state(row,{"pending_review","reviewing"})
         require_ai_enabled(db)
-        if row.manual_prices and not row.is_ai_priced:
+        if has_human_prices(row):
             raise HTTPException(409,"Human prices are already recorded. Keep this ticket in human review")
     change_order(db,row,mode=data.mode,assigned_worker_type="HUMAN" if data.mode=="HUMAN" else "AI",ai_stopped_at=utcnow() if data.mode=="HUMAN" else None,ai_error=None)
     order_message(db,row,f"Ticket mode changed to {data.mode} by an administrator.")
@@ -1078,7 +1078,7 @@ def delegate_worker(order_id: str, data: DelegateWorkerRequest, current_user: mo
     if data.assigned_worker_type=="AI":
         require_state(row,{"pending_review","reviewing"})
         require_ai_enabled(db)
-        if row.manual_prices and not row.is_ai_priced:
+        if has_human_prices(row):
             raise HTTPException(409,"Human prices are already recorded")
     change_order(db,row,assigned_worker_type=data.assigned_worker_type,ai_stopped_at=utcnow() if data.assigned_worker_type=="HUMAN" else None)
     order_message(db,row,f"Worker delegated to {data.assigned_worker_type}.")

@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 from sqlalchemy import exists, select
 import models
-from core.order_policy import message,change_order
+from core.order_policy import message,change_order,has_human_prices
 from pricing.quotes import money, final_amount
 from settings import research_enabled, research_provider
 
@@ -21,7 +21,7 @@ class AI_CONCIERGE_PROVIDER:
         enabled=db.get(models.SystemSetting,"ai_enabled")
         if not order:
             return
-        if order.status not in {"pending_review","reviewing"} or order.mode not in {"AI","HYBRID"} or order.assigned_worker_type!="AI" or (order.manual_prices and not order.is_ai_priced):
+        if order.status not in {"pending_review","reviewing"} or order.mode not in {"AI","HYBRID"} or order.assigned_worker_type!="AI" or has_human_prices(order):
             return
         if not research_enabled() or not enabled or enabled.value!="true":
             change_order(db,order,mode="HUMAN",assigned_worker_type="HUMAN",ai_stopped_at=utcnow(),ai_error="Live research is unavailable.")

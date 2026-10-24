@@ -1,0 +1,15 @@
+{
+  "checked_at": "2026-10-25T04:58:19.6823886+05:30",
+  "backend_status": 200,
+  "api_status": {
+    "maintenance_mode": false,
+    "orders_enabled": true,
+    "dev_auth_enabled": false,
+    "research_available": false
+  },
+  "frontend_status": 200,
+  "updated_pricing_ui": true,
+  "no_store": [
+    "no-store"
+  ]
+}

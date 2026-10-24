@@ -3,6 +3,20 @@ from time_utils import utcnow
 from datetime import datetime
 from fastapi import HTTPException
 import models
+import json
+
+def has_human_prices(order):
+    if not order.manual_prices or order.is_ai_priced:
+        return False
+    try:
+        draft = json.loads(order.manual_prices)
+    except (ValueError, TypeError):
+        return True  # Preserve malformed legacy drafts for manual review.
+    evidence = draft.get('research_draft') if isinstance(draft, dict) else None
+    evidence_only = (isinstance(draft, dict) and set(draft) == {'research_draft'}
+                     and isinstance(evidence, dict) and evidence.get('verified') is False
+                     and evidence.get('requires_human_review') is True)
+    return not evidence_only
 
 def staff_access(order, user):
     if user.is_blacklisted:

@@ -1,0 +1,44 @@
+{
+  "checks": [
+    {
+      "url": "http://127.0.0.1:8000/",
+      "invalid_host_test": false,
+      "status": 200,
+      "frame_options": "DENY",
+      "cache_control": "no-store"
+    },
+    {
+      "url": "http://127.0.0.1:8000/",
+      "invalid_host_test": true,
+      "status": 400,
+      "frame_options": null,
+      "cache_control": null
+    },
+    {
+      "url": "http://127.0.0.1:3000/admin.html",
+      "invalid_host_test": false,
+      "status": 200,
+      "frame_options": "DENY",
+      "cache_control": "no-store, no-cache, must-revalidate, max-age=0"
+    },
+    {
+      "url": "http://127.0.0.1:3000/serve.py",
+      "invalid_host_test": false,
+      "status": 404,
+      "frame_options": "DENY",
+      "cache_control": "no-store, no-cache, must-revalidate, max-age=0"
+    },
+    {
+      "url": "http://127.0.0.1:3000/.env",
+      "invalid_host_test": false,
+      "status": 404,
+      "frame_options": "DENY",
+      "cache_control": "no-store, no-cache, must-revalidate, max-age=0"
+    }
+  ],
+  "external_database_backup": {
+    "sha256_verified": true,
+    "restore_integrity": "ok",
+    "tables": 11
+  }
+}

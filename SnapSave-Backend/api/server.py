@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field, ConfigDict
 from sqlalchemy import func, or_, case
 from sqlalchemy.orm import Session, selectinload, joinedload
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 import time
 import jwt
 import requests
@@ -94,6 +95,10 @@ app.add_middleware(
 
 
 app.add_middleware(RequestLimits)
+allowed_hosts=[host.strip() for host in os.getenv('ALLOWED_HOSTS','localhost,127.0.0.1').split(',') if host.strip()]
+if not allowed_hosts or '*' in allowed_hosts:raise RuntimeError('ALLOWED_HOSTS must name explicit API hostnames')
+if os.getenv('APP_ENV')=='test':allowed_hosts+=['testserver','snapsave.test']
+app.add_middleware(TrustedHostMiddleware,allowed_hosts=allowed_hosts)
 
 def run_sqlite_column_migrations():
     migrate(engine)

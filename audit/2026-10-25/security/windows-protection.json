@@ -1,0 +1,44 @@
+{
+  "checked_at": "2026-10-25T04:19:07.9781526+05:30",
+  "firewall": [
+    {
+      "name": "Domain",
+      "enabled": true,
+      "default_inbound": "Block",
+      "default_outbound": "Allow"
+    },
+    {
+      "name": "Private",
+      "enabled": true,
+      "default_inbound": "Block",
+      "default_outbound": "Allow"
+    },
+    {
+      "name": "Public",
+      "enabled": true,
+      "default_inbound": "Block",
+      "default_outbound": "Allow"
+    }
+  ],
+  "defender": {
+    "antivirus_enabled": true,
+    "realtime_enabled": true,
+    "behavior_monitor_enabled": true,
+    "tamper_protected": true,
+    "signatures_updated": "2026-10-24T22:01:48+05:30",
+    "quick_scan_started": "2026-10-25T04:15:25.749+05:30",
+    "quick_scan_finished": "2026-10-25T04:15:34.022+05:30",
+    "active_threat_count": 0,
+    "controlled_folder_access": "0"
+  },
+  "listeners": [
+    {
+      "LocalAddress": "127.0.0.1",
+      "LocalPort": 8000
+    },
+    {
+      "LocalAddress": "127.0.0.1",
+      "LocalPort": 3000
+    }
+  ]
+}

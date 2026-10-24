@@ -24,7 +24,7 @@ Start the backend:
 
 ```powershell
 cd SnapSave-Backend
-../.venv/Scripts/python.exe -m uvicorn api.server:app --host 127.0.0.1 --port 8000
+../.venv/Scripts/python.exe -m uvicorn api.server:app --host 127.0.0.1 --port 8000 --no-proxy-headers
 ```
 
 Start the frontend in a second terminal:
@@ -128,6 +128,25 @@ The original audit and repair verification are in `audit/2026-10-13/`. Original 
 ## Hosting
 
 Configure an HTTPS backend, Firebase credentials, `APP_ENV=production`, `ENABLE_DEV_AUTH=false`, exact frontend `CORS_ORIGINS`, persistent storage and database backups. Add edge request/rate limits alongside the app's 64 KB body and 120 mutations/minute per-IP limits. Proxy identity handling needs deliberate configuration; the app does not trust forwarded IP headers.
+
+Set `ALLOWED_HOSTS` to the actual API hostname (without scheme/path); the default permits only localhost/127.0.0.1. Wildcard `*` is rejected. Local launch uses `--no-proxy-headers`; production proxy trust must be limited to the actual reverse proxy, which must replace untrusted forwarded headers. App limits are 300 reads/minute, 120 writes/minute and 10 development-token requests/minute per peer IP, with a 10-second mutation-body deadline and 64 KB body cap. These are bounded, in-process safeguards; public deployment still needs HTTPS ingress, a correctly configured firewall/edge service, shared rate limits and capacity testing. Shared proxy IPs must be considered before serving many users.
+
+API responses are marked no-store/nosniff and cannot be framed. Frontend serving is restricted to approved public files/assets, and local/Firebase hosting headers restrict framing, base URLs and embedded objects. The local file server is for development, not internet hosting. The hosting builder refuses reused output folders containing unexpected files and excludes unapproved asset types. Firebase configuration changes take effect after a hosting deployment; this work does not deploy automatically.
+
+### Private database backups
+
+GitHub preserves source code, not the private database, `.env` or Firebase credentials. Create a consistent SQLite snapshot while the API is running:
+
+```powershell
+cd SnapSave-Backend
+../.venv/Scripts/python.exe backup_database.py
+# Or use an explicitly selected, preferably encrypted external drive:
+../.venv/Scripts/python.exe backup_database.py --output-dir "E:/SnapSave-Backups"
+```
+
+The default `.private-backups` directory is ignored by Git. Each unique snapshot includes committed WAL data and passes `PRAGMA integrity_check`; its manifest records SHA-256 and size. It does not overwrite the live database or older snapshots. Non-SQLite databases require vendor backup tooling. Snapshots contain private customer records and are not encrypted by this script. Keep verified copies on encrypted offline media or a separately protected versioned backup service, disconnect offline media after copying, and test restores periodically. A same-PC copy is useful recovery material but is not ransomware isolation. No automatic recurring private-data backup is configured by these commands.
+
+Windows Firewall and Defender protect the host; an application cannot guarantee that malware will not delete files. Controlled Folder Access can help, but it must be tested with the legitimate database/runtime writers before enforcement. Avoid broad antivirus exclusions or trusting every Python script. Keep Windows and dependencies patched, use least-privilege accounts and MFA for GitHub/Firebase, and keep recovery credentials outside the hosted/Git files. Detailed inspected status and limitations: `audit/2026-10-25/security/SECURITY_REVIEW.md`.
 
 Build the static package with the actual backend origin:
 

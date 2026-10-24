@@ -5,6 +5,8 @@ from fastapi import HTTPException
 import models
 
 def staff_access(order, user):
+    if user.is_blacklisted:
+        raise HTTPException(403, 'Staff access is restricted')
     if user.role == "ADMIN":
         return
     if user.role != "MODERATOR" or order.assigned_moderator_id != user.id:

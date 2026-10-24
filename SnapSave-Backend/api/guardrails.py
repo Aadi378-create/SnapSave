@@ -44,7 +44,8 @@ class RequestLimits(BaseHTTPMiddleware):
             length=request.headers.get('content-length')
             if length is not None:
                 if not length.isascii() or not length.isdigit():return reject('Invalid Content-Length',400)
-                if int(length)>65536:return reject('Request exceeds 64 KB',413)
+                digits=length.lstrip('0') or '0'
+                if len(digits)>5 or int(digits)>65536:return reject('Request exceeds 64 KB',413)
             body = bytearray()
             try:
                 async with asyncio.timeout(10):

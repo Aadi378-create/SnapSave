@@ -149,7 +149,7 @@ class AddressCreate(StrictRequest):
     street_address: str = Field(..., min_length=1, max_length=500)
     city: str = Field(..., min_length=1, max_length=100)
     state: str = Field(..., min_length=1, max_length=100)
-    postal_code: str = Field(..., pattern=r"^\d{6}$")
+    postal_code: str = Field(..., pattern=r"^[1-9][0-9]{5}$")
     latitude: Optional[float] = Field(None, ge=-90, le=90, allow_inf_nan=False)
     longitude: Optional[float] = Field(None, ge=-180, le=180, allow_inf_nan=False)
     is_default: bool = False
@@ -434,10 +434,16 @@ def get_test_token(request: Request, phone: str, uid: Optional[str] = None):
 # User Address Management
 # -------------------------------
 
+def lock_address_owner(db,user_id):
+    # Serialize address/default changes before reading the current default.
+    # A no-op owner-row update acquires a write/row lock until commit.
+    db.query(models.User).filter(models.User.id==user_id).update({models.User.updated_at:models.User.updated_at},synchronize_session=False)
+
 @app.post("/api/addresses", status_code=status.HTTP_201_CREATED)
 def create_address(address_data: AddressCreate, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     if (address_data.latitude is None) != (address_data.longitude is None):
         raise HTTPException(422, "Provide both coordinates or neither")
+    lock_address_owner(db,current_user.id)
     first = not db.query(models.Address.id).filter_by(user_id=current_user.id).first()
     if address_data.is_default or first:
         db.query(models.Address).filter_by(user_id=current_user.id).update({"is_default":False})
@@ -454,6 +460,7 @@ def list_addresses(current_user: models.User = Depends(get_current_user), db: Se
 
 @app.delete("/api/addresses/{address_id}")
 def delete_address(address_id: str, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    lock_address_owner(db,current_user.id)
     addr = db.query(models.Address).filter(
         models.Address.id == address_id,
         models.Address.user_id == current_user.id
@@ -463,20 +470,19 @@ def delete_address(address_id: str, current_user: models.User = Depends(get_curr
 
     was_default = addr.is_default
     db.delete(addr)
-    db.commit()
-
-    # If the deleted address was default, set another address as default if available
+    # Delete and fallback selection commit together.
     if was_default:
-        fallback = db.query(models.Address).filter(models.Address.user_id == current_user.id).first()
+        fallback = db.query(models.Address).filter(models.Address.user_id == current_user.id,models.Address.id!=address_id).order_by(models.Address.created_at,models.Address.id).first()
         if fallback:
             fallback.is_default = True
-            db.commit()
+    db.commit()
 
     return {"message": "Address deleted successfully", "id": address_id}
 
 
 @app.put("/api/addresses/{address_id}/default")
 def set_default_address(address_id: str, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    lock_address_owner(db,current_user.id)
     addr = db.query(models.Address).filter(
         models.Address.id == address_id,
         models.Address.user_id == current_user.id
@@ -503,12 +509,12 @@ def serialize_order_items(order: models.Order):
 
 
 def clean_item_name(name: str, quantity: int) -> str:
-    """Clean leading multiplier or count prefix from product name if quantity > 1."""
+    """Clean an explicit matching count prefix from a text-parsed item."""
     name = name.strip()
-    if quantity and quantity > 1:
+    if quantity and quantity >= 1:
         # Strip leading multiplier patterns like '2x ', '2 * ', '2 pcs ', '2 packet ', '2 '
         cleaned = re.sub(
-            r'^\s*\d+\s*(?:x|\*|pcs|pieces|packets?|packs?|pkts?|bottles?|cans?|box(?:es)?)\s*',
+            r'^\s*'+str(quantity)+r'\s*(?:x\b|×|\*|pcs\b|pieces?\b|packets?\b|packs?\b|pkts?\b|bottles?\b|cans?\b|box(?:es)?\b)\s*',
             '',
             name,
             flags=re.IGNORECASE
@@ -516,7 +522,7 @@ def clean_item_name(name: str, quantity: int) -> str:
         if cleaned == name:
             # Strip leading numbers followed by space if not a volume unit (kg, g, gm, ml, l, etc.)
             cleaned = re.sub(
-                r'^\s*\d+\s+(?!(?:kg|g|gm|ml|l|ltr|litre|liter)\b)',
+                r'^\s*'+str(quantity)+r'\s+(?!(?:kg|g|gm|ml|l|ltr|litre|liter)\b)',
                 '',
                 name,
                 flags=re.IGNORECASE
@@ -549,11 +555,15 @@ def create_order(order_data: OrderCreate, current_user: models.User = Depends(ge
             entries.append(OrderItemInput(name=clean_item_name(item["original_query"],item["quantity"]), quantity=item["quantity"]))
     if not entries or len(entries)>100 or any(not i.name.strip() for i in entries):
         raise HTTPException(422, "Provide between 1 and 100 grocery items")
-    row = models.Order(user_id=current_user.id, address_id=address.id, request_key=idempotency_key, request_hash=request_hash, assigned_moderator_id=current_user.assigned_moderator_id, store="pending", status="pending_review", delivery_street=address.street_address, delivery_city=address.city, delivery_postal_code=address.postal_code, subtotal=0, delivery_fee=0, platform_fee=0, final_price=0)
+    worker=db.get(models.User,current_user.assigned_moderator_id) if current_user.assigned_moderator_id else None
+    assigned=worker.id if worker and worker.role in {'MODERATOR','ADMIN'} and not worker.is_blacklisted else None
+    row = models.Order(user_id=current_user.id, address_id=address.id, request_key=idempotency_key, request_hash=request_hash, assigned_moderator_id=assigned, store="pending", status="pending_review", delivery_street=address.street_address, delivery_city=address.city, delivery_postal_code=address.postal_code, subtotal=0, delivery_fee=0, platform_fee=0, final_price=0)
     db.add(row)
     db.flush()
     for item in entries:
-        db.add(models.OrderItem(order_id=row.id, name=clean_item_name(item.name,item.quantity), quantity=item.quantity))
+        # Structured item names are already separate from their quantity;
+        # stripping numeric prefixes here destroys brands such as "7 Up".
+        db.add(models.OrderItem(order_id=row.id, name=item.name.strip(), quantity=item.quantity))
     order_message(db,row,", ".join(f"{i.quantity}× {i.name}" for i in entries),role="CUSTOMER",sender=current_user.id)
     order_message(db,row,"Order received. Your concierge will verify availability and prices.")
     try:
@@ -601,12 +611,19 @@ def complete_order_endpoint(order_id: str, current_user: models.User = Depends(g
 
 @app.put("/api/admin/roles")
 def update_user_role(data: RoleUpdate, current_user: models.User = Depends(require_role(["ADMIN"])), db: Session = Depends(get_db)):
+    # Serialize role changes on one persistent row; separate admin rows alone
+    # allow concurrent demotions to each observe another administrator.
+    db.query(models.AppSetting).filter(models.AppSetting.id==1).update({models.AppSetting.orders_enabled:models.AppSetting.orders_enabled},synchronize_session=False)
+    db.refresh(current_user)
+    if current_user.role!='ADMIN' or current_user.is_blacklisted:
+        raise HTTPException(403,'Administrator access changed. Sign in again')
     user = db.get(models.User,data.user_id)
     if not user:
         raise HTTPException(404,"User not found")
     if data.role not in {"CUSTOMER","MODERATOR","ADMIN"}:
         raise HTTPException(422,"Invalid role")
-    if user.role=="ADMIN" and data.role!="ADMIN" and db.query(models.User).filter_by(role="ADMIN").count()<=1:
+    db.refresh(user)
+    if user.role=="ADMIN" and not user.is_blacklisted and data.role!="ADMIN" and db.query(models.User).filter_by(role="ADMIN",is_blacklisted=False).count()<=1:
         raise HTTPException(409,"Cannot remove the last administrator")
     user.role=data.role
     db.commit()
@@ -638,7 +655,7 @@ def assign_moderator(data: AssignModerator, current_user: models.User = Depends(
     moderator = db.query(models.User).filter(models.User.id == data.moderator_id).first()
     if not moderator:
         raise HTTPException(status_code=404, detail="Moderator not found")
-    if moderator.role not in ["MODERATOR", "ADMIN"]:
+    if moderator.role not in ["MODERATOR", "ADMIN"] or moderator.is_blacklisted:
         raise HTTPException(status_code=400, detail="Target user is not a moderator or admin")
 
     customer.assigned_moderator_id = moderator.id
@@ -810,7 +827,17 @@ def get_moderator_queue(status_filter: Optional[str] = None, current_user: model
     query = query.filter(models.Order.status == status_filter) if status_filter else query.filter(models.Order.status.in_(ACTIVE_STATUSES))
     if current_user.role=="MODERATOR":
         query=query.filter(or_(models.Order.assigned_moderator_id==None,models.Order.assigned_moderator_id==current_user.id))
-    return [{**serialize_order(o,current_user),"order_id":o.id,"customer_id":o.user_id,"customer_name":f"{o.user.first_name or ''} {o.user.last_name or ''}".strip() if o.user else "Unknown","customer_phone":o.user.phone_number if o.user else None} for o in query.order_by(models.Order.created_at.asc(),models.Order.id.asc()).offset(offset).limit(limit).all()]
+    results=[]
+    for o in query.order_by(models.Order.created_at.asc(),models.Order.id.asc()).offset(offset).limit(limit).all():
+        needs_claim=current_user.role=='MODERATOR' and o.assigned_moderator_id is None and o.user_id!=current_user.id
+        entry={**serialize_order(o,current_user),'order_id':o.id,'customer_id':o.user_id,
+               'customer_name':(f"{o.user.first_name or ''} {o.user.last_name or ''}".strip() or 'Customer') if o.user else 'Unknown',
+               'customer_phone':o.user.phone_number if o.user and not needs_claim else None,'requires_claim':needs_claim}
+        if needs_claim:
+            for key in ('delivery_street','delivery_city','delivery_postal_code','address_id','customer_paid','payment_reference','refund_reference','payment_uri'):
+                entry.pop(key,None)
+        results.append(entry)
+    return results
 
 
 @app.put("/api/moderator/orders/{order_id}/claim")
@@ -978,7 +1005,7 @@ def assign_order_to_moderator(order_id: str, data: AssignModeratorToOrder, curre
     row=load_order(db,order_id)
     require_state(row,ACTIVE_STATUSES)
     worker=db.get(models.User,data.moderator_id)
-    if not worker or worker.role not in {"MODERATOR","ADMIN"}:
+    if not worker or worker.role not in {"MODERATOR","ADMIN"} or worker.is_blacklisted:
         raise HTTPException(422,"Invalid moderator")
     values={"assigned_moderator_id":worker.id}
     if row.status=="pending_review":
@@ -1397,7 +1424,9 @@ def serialize_order(row, viewer=None):
         result[k]=dt.isoformat()+"Z" if dt else None
     result["items"]=serialize_order_items(row)
     result["payment_uri"]=payment_uri(row) if row.status=="awaiting_payment" else None
-    if viewer and viewer.role=="CUSTOMER":
+    result['requires_claim']=bool(viewer and viewer.role=='MODERATOR' and row.assigned_moderator_id is None and row.user_id!=viewer.id)
+    staff_view=viewer and not viewer.is_blacklisted and (viewer.role=='ADMIN' or (viewer.role=='MODERATOR' and row.assigned_moderator_id==viewer.id))
+    if viewer and not staff_view:
         for key in ("store_cost","profit","ai_error","manual_prices"):
             result.pop(key,None)
     return result
@@ -1421,6 +1450,8 @@ def quote_text(row,items):
     return "Your itemised quote is ready:\n"+"\n".join(f"- {i['quantity']}× {i['name']}: ₹{i['line_total']:.2f} ({i['store']})" for i in items)+f"\n\nSubtotal: ₹{row.subtotal:.2f}\nDelivery: ₹{row.delivery_fee:.2f}\nPlatform fee: ₹{row.platform_fee:.2f}\nService fee: ₹{row.service_fee:.2f}\nStore discount: -₹{row.store_discount:.2f}\nSnapSave discount: -₹{row.snapsave_discount:.2f}\nFinal price: ₹{row.final_price:.2f}\nQuote valid for 15 minutes."
 
 def authorize_chat(db,customer_id,order_id,user):
+    if user.is_blacklisted and user.id!=customer_id:
+        raise HTTPException(403,'Staff access is restricted')
     if user.role=="CUSTOMER" and user.id!=customer_id:
         raise HTTPException(403,"Not your conversation")
     if not db.get(models.User,customer_id):
@@ -1431,7 +1462,7 @@ def authorize_chat(db,customer_id,order_id,user):
             raise HTTPException(403,"Order does not belong to this conversation")
         read_access(row,user)
         return row
-    if user.role=="MODERATOR" and user.id!=customer_id:
+    if user.role!="ADMIN" and user.id!=customer_id:
         raise HTTPException(403,"Select an assigned order to chat")
     return None
 

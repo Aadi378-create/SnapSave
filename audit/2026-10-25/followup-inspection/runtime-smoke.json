@@ -1,0 +1,17 @@
+[
+  {
+    "url": "http://127.0.0.1:8000/api/status",
+    "status": 200,
+    "flags": {
+      "maintenance_mode": false,
+      "orders_enabled": true,
+      "dev_auth_enabled": false,
+      "research_available": false
+    }
+  },
+  {
+    "url": "http://127.0.0.1:3000/admin.html",
+    "status": 200,
+    "delivery_panel_present": true
+  }
+]

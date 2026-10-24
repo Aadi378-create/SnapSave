@@ -2108,7 +2108,7 @@
         document.getElementById("beta-program-view").style.display="none";
         moderatorsList=[];customersList=[];helpPage=0;helpListRequest++;
         _lastQueueSignature="";queuePage=0;lastQueueFilter="";
-        for(const id of ['chat-messages','queue-list','help-thread-list','customers-admin-list','roles-admin-list','admin-assignments-list','user-phone','research-evidence-panel']) {
+        for(const id of ['chat-messages','queue-list','help-thread-list','customers-admin-list','roles-admin-list','admin-assignments-list','user-phone','research-evidence-panel','delivery-address-panel']) {
           const node=document.getElementById(id);if(node)node.textContent='';
         }
         document.getElementById('composer-text').value='';
@@ -3046,7 +3046,7 @@
 
         // Set chat header + enable composer
         document.getElementById("chat-header-title").innerText =
-          `Chat: ${escapeHTML(order.customer_phone)}`;
+          order.requires_claim ? 'Claim ticket to contact customer' : `Chat: ${order.customer_phone || order.customer_name || 'Customer'}`;
         document.getElementById("composer-text").disabled = !canStaffChat(order);
         document.getElementById("btn-send-message").disabled = !canStaffChat(order) || staffSending;
         await pollChat();
@@ -3223,6 +3223,14 @@
           return;
         }
 
+        let deliveryPanel=document.getElementById('delivery-address-panel');
+        document.getElementById('chat-header-title').textContent=selectedOrder.requires_claim ? 'Claim ticket to contact customer' : 'Chat: '+(selectedOrder.customer_phone||selectedOrder.customer_name||'Customer');
+        if(!deliveryPanel){deliveryPanel=document.createElement('div');deliveryPanel.id='delivery-address-panel';deliveryPanel.className='detail-card';panel.prepend(deliveryPanel);}
+        deliveryPanel.replaceChildren();
+        const deliveryTitle=document.createElement('h4');deliveryTitle.textContent='Delivery address';deliveryPanel.append(deliveryTitle);
+        const deliveryText=document.createElement('p');deliveryText.style.cssText='white-space:pre-wrap;font-size:12px;line-height:1.5;margin:8px 0;';
+        deliveryText.textContent=selectedOrder.requires_claim ? 'Claim this ticket to view customer delivery details.' : [selectedOrder.delivery_street,selectedOrder.delivery_city,selectedOrder.delivery_postal_code].filter(Boolean).join('\n')||'Delivery details need administrator review.';
+        deliveryPanel.append(deliveryText);
         renderResearchEvidence(selectedOrder);
         currentQuotePreview = null;
         const qpBlock = document.getElementById("quote-preview-block");

@@ -70,8 +70,22 @@ class RobotsPolicy:
         for _,rules,_ in self._groups(agent):
             for rule,allowed in rules:
                 rule=normalize(rule);end=rule.endswith('$');body=rule[:-1] if end else rule
-                pattern='^'+'.*'.join(re.escape(part) for part in body.split('*'))+('$' if end else '')
-                if re.search(pattern,path):matches.append((len(body.replace('*','').encode()),allowed))
+                # Only '*' is special. Ordered literal searches avoid regex
+                # backtracking on adversarial policies supplied in captures.
+                parts=body.split('*')
+                matched=False
+                if len(parts)==1:
+                    matched=path==body if end else path.startswith(body)
+                elif path.startswith(parts[0]):
+                    cursor=len(parts[0]);matched=True
+                    for part in parts[1:-1]:
+                        position=path.find(part,cursor)
+                        if position<0:matched=False;break
+                        cursor=position+len(part)
+                    if matched:
+                        tail=parts[-1]
+                        matched=(path.endswith(tail) and len(path)-len(tail)>=cursor) if end else path.find(tail,cursor)>=0
+                if matched:matches.append((len(body.replace('*','').encode()),allowed))
         return max(matches,default=(0,True))[1]
 
     def crawl_delay(self,agent):

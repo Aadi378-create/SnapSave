@@ -148,6 +148,8 @@ The default `.private-backups` directory is ignored by Git. Each unique snapshot
 
 Windows Firewall and Defender protect the host; an application cannot guarantee that malware will not delete files. Controlled Folder Access can help, but it must be tested with the legitimate database/runtime writers before enforcement. Avoid broad antivirus exclusions or trusting every Python script. Keep Windows and dependencies patched, use least-privilege accounts and MFA for GitHub/Firebase, and keep recovery credentials outside the hosted/Git files. Detailed inspected status and limitations: `audit/2026-10-25/security/SECURITY_REVIEW.md`.
 
+The subsequent inspection and regression fixes are recorded in `audit/2026-10-25/followup-inspection/REPORT.md`. Restricted staff lose shared customer-data access, unclaimed moderator tickets hide precise contact/delivery and internal pricing fields, and authorized ticket views display the frozen delivery address. Role and address changes are serialized to protect the last administrator and prevent concurrent defaults. New addresses require ASCII Indian postcodes. Structured grocery item names preserve numeric brands; for free text use an explicit count such as `1x 7 Up 750 ml` when the product begins with a number.
+
 Build the static package with the actual backend origin:
 
 ```powershell

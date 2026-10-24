@@ -1,0 +1,23 @@
+{
+  "firewall": [
+    {
+      "profile": "Domain",
+      "enabled": true,
+      "default_inbound": "Block"
+    },
+    {
+      "profile": "Private",
+      "enabled": true,
+      "default_inbound": "Block"
+    },
+    {
+      "profile": "Public",
+      "enabled": true,
+      "default_inbound": "Block"
+    }
+  ],
+  "realtime_protection": true,
+  "tamper_protection": true,
+  "active_threats": 0,
+  "checked_at": "2026-10-25T04:43:29.7211877+05:30"
+}

@@ -2,6 +2,8 @@
 
 Date: 25 October 2026. Reviewed baseline: `48d1e05`.
 
+**Status update:** the five findings below have now been repaired; see [REPAIR_REPORT.md](REPAIR_REPORT.md). The descriptions and original observational results remain the record of the pre-repair baseline. Historical probes assert that baseline behavior and are deliberately excluded from normal test discovery. Use the regression tests in `SnapSave-Backend/tests/test_session_and_inbox_repairs.py` to verify the repairs.
+
 **Five additional defects were reproduced.** Three have priority P1 because they can expose a stale session view or attach a customer's draft to the wrong order. Two are P2 recovery/operational defects. This is an audit report; application code has not been changed in this pass.
 
 ## Confirmed findings
@@ -77,14 +79,14 @@ Recommendation: add inbox pagination or a load-more control, preserve selection 
 
 Verification: **all six observational probes passed** (five defect reproductions and one archived-chat control), and **all five existing sender regressions passed**. One upstream Starlette/HTTPX deprecation warning remains. Git whitespace checks passed.
 
-The six observational probes comprise five defect reproductions and one archived-chat control. **A passing observational probe means the defect was reproduced, not fixed.** They live outside the normal application test suite in [test_observational_probes.py](test_observational_probes.py), with output in [observational-results.xml](observational-results.xml). The sender regression results are recorded separately in [sender-regression-results.xml](sender-regression-results.xml).
+The six observational probes comprise five defect reproductions and one archived-chat control. **A passing observational probe means the defect was reproduced, not fixed.** They live outside the normal application test suite in [observational_probes.py](observational_probes.py), with output in [observational-results.xml](observational-results.xml). The sender regression results are recorded separately in [sender-regression-results.xml](sender-regression-results.xml).
 
 All probes use disposable SQLite databases, simulated identities and intercepted external browser requests. No live Firebase sign-in, SMS, customer message, production order or bank action was submitted. Source review covered both frontends, the shared phone controller and relevant backend policy/chat/support endpoints. It does not certify every project path, production concurrency, real account switching, store integrations or deployment behavior.
 
 To rerun the audit probes from `SnapSave-Backend`:
 
 ```powershell
-../.venv/Scripts/python.exe -m pytest -p tests.conftest ../audit/2026-10-25/test_observational_probes.py -q
+../.venv/Scripts/python.exe -m pytest -p tests.conftest ../audit/2026-10-25/observational_probes.py -q
 ```
 
 Recommended repair order: A01 and A03 together using shared session invalidation; A02 next to prevent wrong-order messages; then A04 and A05. Additional earlier UI proposals remain in the 17 October communication report. This pass intentionally documents findings without implementing those repairs.

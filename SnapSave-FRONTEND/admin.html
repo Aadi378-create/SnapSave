@@ -1603,6 +1603,11 @@
             </div>
           </div>
         </div>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap;">
+          <button id="help-page-prev" class="btn btn-secondary" onclick="pageHelp(-1)" disabled>Previous requests</button>
+          <span id="help-page-label" role="status" aria-live="polite">Page 1</span>
+          <button id="help-page-next" class="btn btn-secondary" onclick="pageHelp(1)" disabled>Next requests</button>
+        </div>
       </div>
 
       <!-- Admin Section: Settings -->
@@ -2057,6 +2062,7 @@
 
       let idToken = null;
       let currentUser = null;
+      const session=createSessionScope();
 
       let activeOrders = [];
       let selectedOrder = null;
@@ -2077,15 +2083,17 @@
         captcha:(container,options)=>window.SnapSaveAuth.createVerifier(container,options),
         send:(phone,verifier)=>window.SnapSaveAuth.send(phone,verifier),
         async verified(result) {
-          idToken=await result.user.getIdToken();
-          await checkUserSession();
+          const version=session.version;
+          const token=await result.user.getIdToken();
+          if(!session.current(version))return;
+          idToken=token;await checkUserSession(version);
         }
       });
       window.handleProductionLogin=()=>staffLogin.send();
       window.verifyStaffOTP=()=>staffLogin.verify();
 
-      window.handleLogout = function () {
-        staffLogin.reset();
+      function clearStaffSession() {
+        session.reset();staffLogin.reset();
         staffDrafts.clear();staffRequests.clear();
         helpDrafts.clear();helpRequest++;renderedHelpUser=null;selectedHelpUserId=null;currentHelpThread=null;
         document.getElementById("help-conversation").textContent="";
@@ -2098,8 +2106,17 @@
         if(betaMetricsInterval)betaMetricsInterval();
         staffChatCache=[]; staffChatSignature=""; staffChatOrder=null; activeOrders=[];
         document.getElementById("beta-program-view").style.display="none";
-        window.SnapSaveAuth.logout();
+        moderatorsList=[];customersList=[];helpPage=0;helpListRequest++;
+        _lastQueueSignature="";queuePage=0;lastQueueFilter="";
+        for(const id of ['chat-messages','queue-list','help-thread-list','customers-admin-list','roles-admin-list','admin-assignments-list','user-phone']) {
+          const node=document.getElementById(id);if(node)node.textContent='';
+        }
+        document.getElementById('composer-text').value='';
+        currentQuotePreview=null;renderTicketDetails();
         showLoggedOutView();
+      }
+      window.handleLogout = function () {
+        clearStaffSession();void window.SnapSaveAuth.logout().catch(()=>{});
       };
 
       function showLoggedOutView() {
@@ -2109,12 +2126,12 @@
         document.getElementById("dashboard-main").style.display = "none";
       }
 
-      async function checkUserSession() {
+      async function checkUserSession(version=session.version) {
         try {
           const me = await apiRequest("/api/auth/me");
-
-
+          if(!session.current(version))return;
           if (me.role !== "ADMIN" && me.role !== "MODERATOR") {
+            clearStaffSession();
             showAuthAlert(
               "Access Denied: Customers cannot view the management console.",
               "error",
@@ -2129,15 +2146,17 @@
           } else if (me.role === "MODERATOR") {
           }
 
-          await startDashboard();
+          await startDashboard(version);
         } catch (err) {
+          if(!session.current(version))return;
           console.error("❌ [SESSION] Error checking session:", err.message);
           showAuthAlert("Session check failed: " + err.message, "error");
           handleLogout();
         }
       }
 
-      async function startDashboard() {
+      async function startDashboard(version=session.version) {
+        if(!session.current(version))return;
         setupMetricCards();
         document.getElementById("auth-section").style.display = "none";
         document.getElementById("dashboard-header").style.display = "flex";
@@ -2161,22 +2180,26 @@
           }
           showAdminSection("tickets");
           await loadAdminConfigurations();
+          if(!session.current(version))return;
         } else {
           showAdminSection("tickets");
         }
         // Always start on queue tab
         switchOrdersTab("queue");
 
-        await loadMetrics();
-        await loadQueue();
+        await loadMetrics();if(!session.current(version))return;
+        await loadQueue();if(!session.current(version))return;
 
         // Periodic background polling - only real-time updates (chat, queue, assignments)
         // Metrics are loaded only on Analytics section view and initial dashboard load
         const isAdmin = currentUser.role === "ADMIN";
         if(backgroundPolling)backgroundPolling();
         backgroundPolling=singleFlightPolling(async()=>{
-          await loadQueue();await pollChat();
-          if(isAdmin){await updateHelpBadge();if(currentAdminSection==="help"){await loadHelpInbox();if(currentHelpThread)await openHelpThread(currentHelpThread);}}
+          for(const step of [loadQueue,pollChat]) {if(!session.current(version))return;await step();}
+          if(isAdmin && session.current(version)) {
+            await updateHelpBadge();if(!session.current(version))return;
+            if(currentAdminSection==="help") {await loadHelpInbox();if(session.current(version)&&currentHelpThread)await openHelpThread(currentHelpThread);}
+          }
         },10000);
       }
 
@@ -2440,8 +2463,8 @@
       // ── Help inbox ──
       async function updateHelpBadge() {
         try {
-          const threads = await apiRequest("/api/admin/help");
-          const openCount = threads.filter((t) => t.open).length;
+          const summary=await apiRequest("/api/admin/help/summary");
+          const openCount=summary.open_threads;
           const badge = document.getElementById("help-badge");
           if (badge) {
             badge.style.display = openCount ? "flex" : "none";
@@ -2452,11 +2475,22 @@
         }
       }
 
+      let helpPage=0,helpListRequest=0;
+      window.pageHelp=async step=>{helpPage=Math.max(0,helpPage+step);await loadHelpInbox();};
       async function loadHelpInbox() {
+        const request=++helpListRequest;
+        const page=helpPage;
         const list = document.getElementById("help-thread-list");
         try {
-          const threads = await apiRequest("/api/admin/help");
-          const openCount = threads.filter((t) => t.open).length;
+          const [threads,summary]=await Promise.all([
+            apiRequest(`/api/admin/help?limit=50&offset=${page*50}`),apiRequest("/api/admin/help/summary")
+          ]);
+          if(request!==helpListRequest || page!==helpPage || !currentUser)return;
+          if(page>0 && !threads.length){helpPage--;await loadHelpInbox();return;}
+          document.getElementById('help-page-label').textContent=`Page ${page+1} · ${summary.total_threads} threads`;
+          document.getElementById('help-page-prev').disabled=page===0;
+          document.getElementById('help-page-next').disabled=(page+1)*50>=summary.total_threads;
+          const openCount=summary.open_threads;
           const badge = document.getElementById("help-badge");
           if (badge) {
             badge.style.display = openCount ? "flex" : "none";
@@ -2482,7 +2516,7 @@
             list.appendChild(item);
           });
         } catch (e) {
-          list.innerHTML = `<p style="color:#ef4444; padding:10px;">${escapeHTML(e.message)}</p>`;
+          if(request===helpListRequest)list.innerHTML = `<p style="color:#ef4444; padding:10px;">${escapeHTML(e.message)}</p>`;
         }
       }
       let currentHelpThread = null;
@@ -2998,6 +3032,9 @@
       const staffDrafts=new Map();
       const staffRequests=new Map();
       let staffSending=false;
+      function canStaffChat(order) {
+        return !!currentUser && !!order && (currentUser.role==="ADMIN" || order.assigned_moderator_id===currentUser.id) && !["delivered","completed","cancelled"].includes(order.status);
+      }
       async function selectTicket(order) {
         if(selectedOrder)staffDrafts.set(selectedOrder.order_id,document.getElementById("composer-text").value);
         selectedOrder = order;
@@ -3010,8 +3047,8 @@
         // Set chat header + enable composer
         document.getElementById("chat-header-title").innerText =
           `Chat: ${escapeHTML(order.customer_phone)}`;
-        document.getElementById("composer-text").disabled = false;
-        document.getElementById("btn-send-message").disabled = staffSending;
+        document.getElementById("composer-text").disabled = !canStaffChat(order);
+        document.getElementById("btn-send-message").disabled = !canStaffChat(order) || staffSending;
         await pollChat();
 
         renderTicketDetails();
@@ -3094,7 +3131,7 @@
           if(selectedOrder?.order_id===order.order_id)conversationFeedback("staff-chat-feedback","Sent");
           try { await pollChat(); } catch(e) { if(selectedOrder?.order_id===order.order_id)conversationFeedback("staff-chat-feedback","Sent. Conversation will refresh when the connection returns."); }
         } catch(e){if(selectedOrder?.order_id===order.order_id)conversationFeedback("staff-chat-feedback","Could not send. Your draft is saved. "+e.message,true);}
-        finally {staffSending=false;setLoading("btn-send-message",false);}
+        finally {staffSending=false;setLoading("btn-send-message",false);document.getElementById("btn-send-message").disabled=!canStaffChat(selectedOrder);}
       };
 
       // Handle enter key press
@@ -3128,9 +3165,9 @@
         const isClaimedByMe =
           selectedOrder.assigned_moderator_id === currentUser.id;
         const isAdmin = currentUser.role === "ADMIN";
-        const canChat=(isAdmin || isClaimedByMe) && !["delivered","completed","cancelled"].includes(selectedOrder.status);
+        const canChat=canStaffChat(selectedOrder);
         document.getElementById("composer-text").disabled=!canChat;
-        document.getElementById("btn-send-message").disabled=!canChat;
+        document.getElementById("btn-send-message").disabled=!canChat || staffSending;
 
         // 0. AI Controls Block
         const aiControlsBlock = document.getElementById("ai-controls-block");
@@ -3492,8 +3529,10 @@
 
       // API Fetch Wrapper
       async function apiRequest(endpoint, method = "GET", body = null) {
+        const version=session.version, signal=session.signal;
         const headers = { "Content-Type": "application/json" };
-        idToken=await window.SnapSaveAuth.token();
+        const token=await window.SnapSaveAuth.token();
+        session.assert(version);idToken=token;
         if (idToken) headers["Authorization"] = `Bearer ${idToken}`;
 
         const options = { method, headers };
@@ -3501,7 +3540,8 @@
           options.body = JSON.stringify(body);
         }
 
-        const res = await fetch(`${API_BASE}${endpoint}`, {...options,signal:AbortSignal.timeout(20000)});
+        const res = await fetch(`${API_BASE}${endpoint}`, {...options,signal:AbortSignal.any([signal,AbortSignal.timeout(20000)])});
+        session.assert(version);
         if (!res.ok) {
           const errorData = await res
             .json()
@@ -3518,7 +3558,7 @@
           }
           throw new Error(msg);
         }
-        return await res.json();
+        const data=await res.json();session.assert(version);return data;
       }
 
       function showAuthAlert(msg, type) {staffLogin.message(msg,type);}
@@ -3771,21 +3811,22 @@
         }
       };
 
-      // ── Session Restore on page load ──
+      // Observe both initial restoration and sign-out/account changes from other pages.
       localStorage.removeItem(STORAGE_KEY);
-      let saved=null;
-      try {saved=await window.SnapSaveAuth.token();} catch(e){showAuthAlert("Authentication is unavailable. Please retry.","error");}
-      if (saved) {
-        idToken = saved;
-        try {
-          await checkUserSession();
-        } catch (e) {
-          // Token expired or invalid — clear it and show login
-          localStorage.removeItem(STORAGE_KEY);
-          idToken = null;
-          showLoggedOutView();
-        }
-      }
+      try {
+        await window.SnapSaveAuth.initialize();
+        window.SnapSaveAuth.api.onAuthStateChanged(window.SnapSaveAuth.auth,async user=>{
+          if(user && staffLogin.isVerifying())return;
+          clearStaffSession();
+          if(!user)return;
+          const version=session.version;
+          try {
+            const token=await user.getIdToken();
+            if(!session.current(version))return;
+            idToken=token;await checkUserSession(version);
+          } catch(error){if(session.current(version))clearStaffSession();}
+        });
+      } catch(error){showAuthAlert("Authentication is unavailable. Please retry.","error");}
     })();
     </script>
   </body>

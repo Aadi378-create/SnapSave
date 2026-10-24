@@ -17,6 +17,15 @@ function showAlert(containerId, msg, type="error") {
   const element=document.getElementById(containerId);
   if(element) element.textContent=msg;
 }
+function createSessionScope() {
+  let version=0, controller=new AbortController();
+  return {
+    get version(){return version;}, get signal(){return controller.signal;},
+    current(value){return value===version;},
+    assert(value){if(value!==version)throw new DOMException('Session changed','AbortError');},
+    reset(){version++;controller.abort();controller=new AbortController();}
+  };
+}
 window.SnapSaveAuth = {
   auth:null, api:null, confirmation:null, initializing:null, ready:false,
   async initialize() {

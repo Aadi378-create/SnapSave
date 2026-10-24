@@ -737,6 +737,13 @@ def get_help_inbox(current_user: models.User = Depends(require_role(["ADMIN"])),
     return [{"user_id":u.id,"messages":[_serialize_help(m)],"open":bool(opened),"customer_phone":u.phone_number,"customer_email":u.email} for m,u,opened in rows]
 
 
+@app.get("/api/admin/help/summary")
+def get_help_summary(current_user: models.User = Depends(require_role(["ADMIN"])), db: Session = Depends(get_db)):
+    total=db.query(func.count(func.distinct(models.HelpMessage.user_id))).scalar() or 0
+    opened=db.query(func.count(func.distinct(models.HelpMessage.user_id))).filter(models.HelpMessage.sender_role=="CUSTOMER",models.HelpMessage.is_resolved==False).scalar() or 0
+    return {"total_threads":total,"open_threads":opened}
+
+
 @app.post("/api/admin/help/{user_id}/reply")
 def reply_help_message(user_id: str, data: HelpMessageCreate, current_user: models.User = Depends(require_role(["ADMIN"])), db: Session = Depends(get_db)):
     target = db.query(models.User).filter(models.User.id == user_id).first()

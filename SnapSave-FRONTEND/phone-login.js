@@ -7,6 +7,7 @@ window.createPhoneLogin = function(root, adapter) {
   const captcha=find('captcha'), hint=find('captcha-hint'), status=find('status');
   let verifier=null, confirmation=null, solved=false, busy=false, verifying=false;
   let epoch=0, rendering=null, cooldownUntil=0, sentNumber=null, timer=null;
+  let attempt=0, pendingReset=false;
 
   function number() {
     let value=phone.value.replace(/[\s()-]/g,'');
@@ -80,9 +81,11 @@ window.createPhoneLogin = function(root, adapter) {
     if(!destination){message('Enter your 10-digit mobile number.','error');phone.focus();return;}
     if(destination===sentNumber && Date.now()<cooldownUntil){message('Please wait for the resend countdown before requesting another code.');return;}
     if(!solved || !verifier){message('Complete the security check before sending your code.');await prepare();return;}
+    const version=attempt;
     busy=true;message();update();
     try {
       confirmation=await adapter.send(destination,verifier);
+      if(version!==attempt)return;
       sentNumber=destination;cooldownUntil=Date.now()+60000;startTimer();
       phoneForm.hidden=true;otpForm.hidden=false;code.value='';
       find('destination').textContent=`+91 ${destination.slice(3,8)} ${destination.slice(8)}`;
@@ -90,16 +93,17 @@ window.createPhoneLogin = function(root, adapter) {
       code.focus();
     } catch(error) {
       confirmation=null;clearCaptcha();message(errorText(error,'send'),'error');
-    } finally {busy=false;update();if(!phoneForm.hidden)await prepare();else code.focus();}
+    } finally {busy=false;if(pendingReset){pendingReset=false;resetNow();}update();if(!phoneForm.hidden)await prepare();else code.focus();}
   }
   async function verifyCode() {
     if(busy)return;
     if(!confirmation){message('Request a verification code first.','error');return;}
     if(!/^[0-9]{6}$/.test(code.value.trim())){message('Enter all six digits from your SMS.','error');code.focus();return;}
+    const version=attempt;
     busy=true;verifying=true;message();code.removeAttribute('aria-invalid');update();
-    try {const credential=await confirmation.confirm(code.value.trim());await adapter.verified(credential);}
+    try {const credential=await confirmation.confirm(code.value.trim());if(version===attempt)await adapter.verified(credential);}
     catch(error){code.setAttribute('aria-invalid','true');message(errorText(error,'verify'),'error');}
-    finally {busy=false;verifying=false;update();if(!otpForm.hidden)code.focus();}
+    finally {busy=false;verifying=false;if(pendingReset){pendingReset=false;resetNow();}update();if(!otpForm.hidden)code.focus();}
   }
   function backToPhone(resending=false) {
     if(busy)return;
@@ -107,6 +111,9 @@ window.createPhoneLogin = function(root, adapter) {
     otpForm.hidden=true;phoneForm.hidden=false;clearCaptcha();
     message(resending?'Complete the security check to request another code.':'');
     phone.focus();update();void prepare();
+  }
+  function resetNow() {
+    clearInterval(timer);timer=null;cooldownUntil=0;sentNumber=null;phone.value='';backToPhone();
   }
   phoneForm.addEventListener('submit',event=>{event.preventDefault();void sendCode();});
   otpForm.addEventListener('submit',event=>{event.preventDefault();void verifyCode();});
@@ -118,7 +125,7 @@ window.createPhoneLogin = function(root, adapter) {
   update();
   return {
     send:sendCode,verify:verifyCode,change:backToPhone,isVerifying:()=>verifying,
-    reset(){if(busy)return;clearInterval(timer);timer=null;cooldownUntil=0;phone.value='';backToPhone();},
+    reset(){attempt++;if(busy){pendingReset=true;return;}resetNow();},
     message
   };
 };

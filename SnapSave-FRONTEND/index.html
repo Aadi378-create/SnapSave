@@ -1130,6 +1130,7 @@
 
       let idToken = null;
       let currentUser = null;
+      const session=createSessionScope();
       let savedAddresses = [];
       let activeOrder = null;
       let selectedHistoryOrderId = null;
@@ -1155,55 +1156,44 @@
         },
         send:(phone,verifier)=>signInWithPhoneNumber(auth,phone,verifier),
         async verified(result) {
-          idToken=await result.user.getIdToken(true);
-          localStorage.setItem(CUST_STORAGE_KEY,idToken);
-          await checkUserSession();
+          const version=session.version;
+          const token=await result.user.getIdToken(true);
+          if(!session.current(version))return;
+          idToken=token;
+          await checkUserSession(version);
         }
       });
 
-      // Auto check session via Firebase (real OTP logins)
+      // Firebase session changes invalidate all pending private reads.
       onAuthStateChanged(auth, async (user) => {
-        if(customerLogin.isVerifying())return;
-        if (user) {
-          try {
-            idToken = await user.getIdToken(true);
-            localStorage.setItem(CUST_STORAGE_KEY, idToken);
-            await checkUserSession();
-          } catch (err) {
-            console.error("Auth state token error:", err);
-          }
-        } else {
-          // Firebase has no session — try restoring a saved test/demo token
-          const saved = localStorage.getItem(CUST_STORAGE_KEY);
-          if (saved && !currentUser) {
-            idToken = saved;
-            try {
-              await checkUserSession();
-            } catch (e) {
-              localStorage.removeItem(CUST_STORAGE_KEY);
-        activeOrder=null; orderCache=[]; chatCache.clear(); selectedHistoryOrderId=null; newOrderDraft=false;
-        _lastMsgSignature=""; _lastOrderSignature="";
-        if(helpPolling) helpPolling();
-              idToken = null;
-            }
-          }
-        }
+        if(user && customerLogin.isVerifying())return;
+        clearCustomerSession();
+        if(!user)return;
+        const version=session.version;
+        try {
+          const token=await user.getIdToken(true);
+          if(!session.current(version))return;
+          idToken=token;
+          await checkUserSession(version);
+        } catch(error) {if(session.current(version))clearCustomerSession();}
       });
 
       fetch(`${API_BASE}/api/status`).then(r=>r.json()).then(s=>{document.getElementById("demo-login").style.display=s.dev_auth_enabled ? "block" : "none";}).catch(()=>{});
 
       // ── Quick Demo Login ──
       window.quickLogin = async function () {
+        const version=session.version;
         try {
           const rawPhone = document.getElementById("login-phone").value.trim() || "9876543210";
           const phone = rawPhone.startsWith("+") ? rawPhone : "+91" + rawPhone.replace(/\s/g, "");
           const res = await fetch(`${API_BASE}/api/auth/test-token?phone=${encodeURIComponent(phone)}`);
           if (!res.ok) throw new Error("Could not obtain test token from server");
           const data = await res.json();
+          if(!session.current(version))return;
           idToken = data.idToken;
-          localStorage.setItem(CUST_STORAGE_KEY, idToken);
           await checkUserSession();
         } catch (err) {
+          if(!session.current(version))return;
           alert("Quick login failed: " + err.message);
         }
       };
@@ -1212,34 +1202,48 @@
       window.verifyOTP=()=>customerLogin.verify();
       window.showPhoneFlow=()=>customerLogin.change();
 
-      window.handleLogout = async function () {
-        customerLogin.reset();
-        customerRequests.clear();historyOffset=0;
-        try { await signOut(auth); } catch (e) {}
-        idToken = null;
-        currentUser = null;
-        if (chatPollingInterval) chatPollingInterval();
+      function clearCustomerSession() {
+        session.reset();customerLogin.reset();
+        customerRequests.clear();customerDrafts.clear();historyOffset=0;orderRequest++;
+        idToken=null;currentUser=null;savedAddresses=[];sendKey=null;sendPayload=null;pendingFeedbackOrderId=null;
+        if(chatPollingInterval)chatPollingInterval();
+        if(helpPolling)helpPolling();
         localStorage.removeItem(CUST_STORAGE_KEY);
-        activeOrder=null; orderCache=[]; chatCache.clear(); selectedHistoryOrderId=null; newOrderDraft=false;
-        _lastMsgSignature=""; _lastOrderSignature="";
-        if(helpPolling) helpPolling();
-        document.getElementById("auth-section").style.display = "flex";
-        document.getElementById("dashboard-app").style.display = "none";
+        activeOrder=null;orderCache=[];chatCache.clear();selectedHistoryOrderId=null;newOrderDraft=false;
+        _lastMsgSignature="";_lastOrderSignature="";
+        document.querySelectorAll('.modal-overlay.active').forEach(n=>n.classList.remove('active'));
+        document.querySelectorAll('.modal-overlay input,.modal-overlay textarea').forEach(n=>n.value='');
+        for(const id of ['user-name','user-avatar','active-order-container','mini-history-list','addresses-list','help-thread']) {
+          const n=document.getElementById(id);if(n)n.textContent='';
+        }
+        document.querySelectorAll('#chat-stream .message-wrapper,#chat-stream .conversation-event').forEach(n=>n.remove());
+        document.getElementById('chat-textarea').value='';
+        document.getElementById('help-input').value='';
+        document.getElementById('grocery-addr-select').replaceChildren();
+        document.getElementById('dock-address-text').textContent='No delivery address set';
+        document.getElementById('auth-section').style.display='flex';
+        document.getElementById('dashboard-app').style.display='none';
+      }
+      window.handleLogout = async function () {
+        clearCustomerSession();
+        try {await signOut(auth);} catch(error) {}
       };
 
-      async function checkUserSession() {
+      async function checkUserSession(version=session.version) {
         try {
           const me = await apiRequest("/api/auth/me");
+          if(!session.current(version))return;
           currentUser = me;
           if (!me.first_name || !me.last_name || me.email.includes("@snapsave.com")) {
             document.getElementById("profile-modal").classList.add("active");
           } else {
             document.getElementById("profile-modal").classList.remove("active");
-            startDashboard(me);
+            await startDashboard(me,version);
           }
         } catch (err) {
+          if(!session.current(version))return;
           console.error("Session check failed:", err);
-          window.handleLogout();
+          await window.handleLogout();
         }
       }
 
@@ -1260,14 +1264,21 @@
         }
       };
 
-      async function startDashboard(user) {
+      async function startDashboard(user,version=session.version) {
+        if(!session.current(version))return;
         document.getElementById("auth-section").style.display="none";
         document.getElementById("dashboard-app").style.display="flex";
         document.getElementById("user-name").innerText=`${user.first_name} ${user.last_name}`;
         document.getElementById("user-avatar").innerText=`${user.first_name[0]}${user.last_name[0]}`.toUpperCase();
-        await loadAddresses(); await loadOrders(true); await pollMessages(); await checkMaintenance();
-        if(chatPollingInterval) chatPollingInterval();
-        chatPollingInterval=singleFlightPolling(async()=>{await loadOrders(); await pollMessages(); await checkMaintenance();},8000);
+        for(const step of [loadAddresses,()=>loadOrders(true),pollMessages,checkMaintenance]) {
+          await step();if(!session.current(version))return;
+        }
+        if(chatPollingInterval)chatPollingInterval();
+        chatPollingInterval=singleFlightPolling(async()=>{
+          for(const step of [loadOrders,pollMessages,checkMaintenance]) {
+            if(!session.current(version))return;await step();
+          }
+        },8000);
       }
 
       // ── Address Management ──
@@ -1379,6 +1390,7 @@
 
       let customerSending=false;
       const customerRequests=new Map();
+      const customerDrafts=new Map();
       window.handleSendChat = async function () {
         const textarea=document.getElementById("chat-textarea");
         const text=textarea.value.trim();
@@ -1408,7 +1420,7 @@
             await apiRequest(`/api/chat/${encodeURIComponent(currentUser.id)}/send`,"POST",{message:text,order_id:orderId,request_id:request.id});
             customerRequests.delete(context);
           }
-          if((!orderId || activeOrder?.id===orderId) && textarea.value.trim()===text) textarea.value="";
+          if((!orderId || activeOrder?.id===orderId) && textarea.value.trim()===text) {textarea.value="";customerDrafts.delete(context);}
           conversationFeedback("customer-chat-feedback","Sent");
           try { if(!orderId)await loadOrders(true); await pollMessages(); } catch(e) { conversationFeedback("customer-chat-feedback","Sent. Conversation will refresh when the connection returns."); }
         } catch(e) { conversationFeedback("customer-chat-feedback","Could not send. Your draft is saved. "+e.message,true); }
@@ -1537,6 +1549,7 @@
         orderCache=[...map.values()].sort((a,b)=>b.created_at.localeCompare(a.created_at));
         if(selectedHistoryOrderId) activeOrder=map.get(selectedHistoryOrderId)||await apiRequest(`/api/orders/${selectedHistoryOrderId}`);
         else if(newOrderDraft) activeOrder=null;
+        else if(activeOrder) activeOrder=map.get(activeOrder.id)||activeOrder;
         else activeOrder=active[0]||orderCache.find(o=>o.status==="delivered")||null;
         if(request!==orderRequest || !currentUser)return;
         const signature=JSON.stringify([selectedHistoryOrderId,newOrderDraft,activeOrder,orderCache]);
@@ -1609,7 +1622,8 @@
 
       window.startNewOrder = async function() {
         if(customerSending)return;
-        document.getElementById("chat-textarea").value="";
+        customerDrafts.set(activeOrder?.id||"new",document.getElementById("chat-textarea").value);
+        document.getElementById("chat-textarea").value=customerDrafts.get("new")||"";
         conversationFeedback("customer-chat-feedback");
         selectedHistoryOrderId=null; newOrderDraft=true; activeOrder=null; sendKey=null;
         _lastOrderSignature=""; _lastMsgSignature="";
@@ -1621,7 +1635,8 @@
 
       window.viewHistoryOrder = async function(orderId) {
         if(customerSending)return;
-        document.getElementById("chat-textarea").value="";
+        customerDrafts.set(activeOrder?.id||"new",document.getElementById("chat-textarea").value);
+        document.getElementById("chat-textarea").value=customerDrafts.get(orderId)||"";
         conversationFeedback("customer-chat-feedback");
         selectedHistoryOrderId=orderId; newOrderDraft=false;
         _lastOrderSignature=""; _lastMsgSignature="";
@@ -1877,13 +1892,16 @@
       };
       // API Request Wrapper
       async function apiRequest(endpoint, method = "GET", body = null, requestKey=null) {
+        const version=session.version, signal=session.signal;
         const headers = { "Content-Type": "application/json" };
-        if(auth.currentUser) idToken=await auth.currentUser.getIdToken();
+        const token=auth.currentUser?await auth.currentUser.getIdToken():idToken;
+        session.assert(version);idToken=token;
         if (idToken) headers["Authorization"] = `Bearer ${idToken}`;
         if(requestKey) headers["Idempotency-Key"]=requestKey;
         const opt = { method, headers };
         if (body) opt.body = JSON.stringify(body);
-        const res = await fetch(`${API_BASE}${endpoint}`, {...opt,signal:AbortSignal.timeout(20000)});
+        const res = await fetch(`${API_BASE}${endpoint}`, {...opt,signal:AbortSignal.any([signal,AbortSignal.timeout(20000)])});
+        session.assert(version);
         if (!res.ok) {
           const err = await res.json().catch(() => ({ detail: "Server error" }));
           let msg = `HTTP ${res.status}`;
@@ -1898,7 +1916,7 @@
           }
           throw new Error(msg);
         }
-        return await res.json();
+        const data=await res.json();session.assert(version);return data;
       }
 
       function setLoading(id, loading) {

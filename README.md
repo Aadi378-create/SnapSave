@@ -67,6 +67,23 @@ Research is disabled by default; no mock prices are presented as live results. E
 
 The callable accepts `(items, postal_code)`; each item contains `item_id`, `name` and `quantity`. It returns `verified: true`, the exact `postal_code`, a `source`, one `items` row per requested ID with `store` and `line_total`, plus verified `delivery_fee`, `platform_fee`, `service_fee`, `store_discount` and `snapsave_discount`. HYBRID drafts require staff approval; AI may publish a quote. Invalid data, saturation, failures and interrupted jobs return to human review. Takeover and the kill switch invalidate running work.
 
+### Public catalogue research (review-only)
+
+Beautiful Soup is already a project dependency. The built-in provider `core.catalog_research:research_catalog` reads product-scoped JSON-LD and microdata, checks exact requested pack size, and records price/currency/stock metadata and source links. It respects retailer robots policies, restricts URLs to supported HTTPS origins, stops on denied/challenge responses, and bounds request time/count/response size. It never marks public catalogue data as postcode-verified or publishes a payable quote. The AI worker stores an evidence draft for staff review; no prices are automatically filled into the quote form.
+
+Run a read-only diagnostic without opening the application database:
+
+```powershell
+cd SnapSave-Backend
+../.venv/Scripts/python.exe research_catalog.py --query "Amul milk 1 L" --postal-code 110001 --live --output research-diagnostic.json
+```
+
+The postcode labels the requested delivery context; it is **not** a claim that the retailer has been set to that location. Search pages blocked by robots, HTTP 403/202 responses, missing structured product data, wrong packs and unavailable products produce diagnostics, not invented prices. This extractor does not execute JavaScript; dynamic sites still need an authorized feed or a separately validated browser adapter. Beautiful Soup can also parse HTML rendered by a browser, but cannot render a page itself.
+
+To try the provider in the management workflow, configure `RESEARCH_PROVIDER=core.catalog_research:research_catalog` and `ENABLE_LIVE_RESEARCH=true`, restart the backend, enable the administrator's global AI switch, then select HYBRID on an eligible ticket. Current live checks did not yield usable prices from the default retailer sources, so unattended pricing remains unsuitable. This implementation pass did not enable research in the existing environment or turn on the global AI switch.
+
+Optional `RESEARCH_CATALOG_SOURCES` is a server-owned JSON mapping of supported store IDs to up to three HTTPS page URLs each. `{query}` is URL-encoded. Defaults include a Zepto milk category as a narrow initial catalogue source; this is not full grocery coverage. Do not configure private APIs or checkout URLs. `--live` explicitly permits public network requests; it does not place orders.
+
 Legacy scraping adapters remain disabled. Configuring a research callable does not enable a functioning live scraper for `/deal` or `/optimize-cart`; they safely report unavailable/incomplete data. Provider integration and checkout require live integration validation.
 
 Research uses two in-process workers and at most twenty outstanding orders. Use one API process with this executor; move research to a shared durable queue before using multiple API processes with AI enabled. SQLite serializes writers. JSON learning stores, caches and request limits are local to each process. Production capacity needs deployment measurements and appropriate shared database/cache/queue infrastructure.

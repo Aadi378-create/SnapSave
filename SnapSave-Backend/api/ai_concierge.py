@@ -41,29 +41,44 @@ class AI_CONCIERGE_PROVIDER:
         items=[{"item_id":i.id,"name":i.name,"quantity":i.quantity} for i in order.items]
         location=order.delivery_postal_code
         db.rollback() # Do not retain a transaction/connection while researching.
+        draft=None;rows=None
         try:
             quote=AI_CONCIERGE_PROVIDER.research(items,location)
-            if not quote or quote.get("verified") is not True or quote.get("postal_code")!=location:
-                raise ValueError("Live inventory and pricing could not be verified. A human must price this ticket.")
-            rows=quote["items"]
-            expected={i["item_id"]:i for i in items}
-            if len(rows)!=len(expected) or {i["item_id"] for i in rows}!=set(expected):
-                raise ValueError("Research did not cover the complete requested basket")
-            from pricing.quotes import store_id
-            for i in rows:
-                i["store"]=store_id(i["store"])
-                i["quantity"]=expected[i["item_id"]]["quantity"]
-                i["name"]=expected[i["item_id"]]["name"]
-                i["line_total"]=float(money(i["line_total"]))
-            subtotal=sum((money(i["line_total"]) for i in rows),Decimal(0))
-            fees={k:money(quote.get(k,0)) for k in ("delivery_fee","platform_fee","service_fee","store_discount","snapsave_discount")}
-            final=final_amount(subtotal,*[fees[k] for k in ("delivery_fee","platform_fee","service_fee","store_discount","snapsave_discount")])
-            values={"manual_prices":json.dumps({"items":rows,"source":quote.get("source"),"verified":True}),"is_ai_priced":True,"ai_stopped_at":utcnow(),"ai_error":None,"revision":version+1,"updated_at":utcnow()}
-            if order.mode=="AI":
-                values.update(status="awaiting_customer",subtotal=subtotal,final_price=final,store=rows[0]["store"],quote_expires_at=utcnow()+timedelta(minutes=15),savings=fees["store_discount"]+fees["snapsave_discount"],**fees)
+            if isinstance(quote,dict) and quote.get("requires_human_review") is True and quote.get("verified") is False:
+                if quote.get("postal_code")!=location or not isinstance(quote.get("items"),list):
+                    raise ValueError("Research draft does not match the requested delivery context")
+                expected={i["item_id"] for i in items}
+                if len(quote["items"])!=len(expected) or {i.get("item_id") for i in quote["items"]}!=expected:
+                    raise ValueError("Research draft must describe every requested item")
+                encoded=json.dumps({"research_draft":quote})
+                if len(encoded)>200000:
+                    raise ValueError("Research evidence exceeds the supported size")
+                draft=quote
+                values={"manual_prices":encoded,"is_ai_priced":True,"ai_stopped_at":utcnow(),
+                        "ai_error":"Public catalogue research requires human verification of products, availability and checkout fees." if any(i.get("candidates") for i in quote["items"]) else "No usable public catalogue prices were available. Review the source diagnostics and price this ticket manually.",
+                        "mode":"HYBRID","assigned_worker_type":"HUMAN","revision":version+1,"updated_at":utcnow()}
+            else:
+                if not quote or quote.get("verified") is not True or quote.get("postal_code")!=location:
+                    raise ValueError("Live inventory and pricing could not be verified. A human must price this ticket.")
+                rows=quote["items"]
+                expected={i["item_id"]:i for i in items}
+                if len(rows)!=len(expected) or {i["item_id"] for i in rows}!=set(expected):
+                    raise ValueError("Research did not cover the complete requested basket")
+                from pricing.quotes import store_id
+                for i in rows:
+                    i["store"]=store_id(i["store"])
+                    i["quantity"]=expected[i["item_id"]]["quantity"]
+                    i["name"]=expected[i["item_id"]]["name"]
+                    i["line_total"]=float(money(i["line_total"]))
+                subtotal=sum((money(i["line_total"]) for i in rows),Decimal(0))
+                fees={k:money(quote.get(k,0)) for k in ("delivery_fee","platform_fee","service_fee","store_discount","snapsave_discount")}
+                final=final_amount(subtotal,*[fees[k] for k in ("delivery_fee","platform_fee","service_fee","store_discount","snapsave_discount")])
+                values={"manual_prices":json.dumps({"items":rows,"source":quote.get("source"),"verified":True}),"is_ai_priced":True,"ai_stopped_at":utcnow(),"ai_error":None,"revision":version+1,"updated_at":utcnow()}
+                if order.mode=="AI":
+                    values.update(status="awaiting_customer",subtotal=subtotal,final_price=final,store=rows[0]["store"],quote_expires_at=utcnow()+timedelta(minutes=15),savings=fees["store_discount"]+fees["snapsave_discount"],**fees)
         except Exception as exc:
             values={"ai_error":str(exc)[:1000],"ai_stopped_at":utcnow(),"revision":version+1,"assigned_worker_type":"HUMAN","mode":"HUMAN"}
-            rows=None
+            rows=None;draft=None
         # This predicate is evaluated in the same UPDATE that writes the result.
         predicates=[models.Order.id==order_id,models.Order.revision==version,models.Order.assigned_worker_type=="AI",models.Order.mode.in_(["AI","HYBRID"]),models.Order.status.in_(["pending_review","reviewing"]),global_enabled]
         count=db.query(models.Order).filter(*predicates).update(values,synchronize_session=False)
@@ -72,7 +87,9 @@ class AI_CONCIERGE_PROVIDER:
             return
         db.expire_all()
         current=db.get(models.Order,order_id)
-        if rows:
+        if draft is not None:
+            message(db,current,"Catalogue research is ready for human review. Prices, delivery coverage and fees have not been confirmed." if any(i.get("candidates") for i in draft["items"]) else "Public sources did not provide usable product evidence. A concierge will price this order manually.")
+        elif rows:
             by_id={i.id:i for i in current.items}
             for i in rows:
                 by_id[i["item_id"]].line_total=money(i["line_total"])

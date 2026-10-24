@@ -2108,7 +2108,7 @@
         document.getElementById("beta-program-view").style.display="none";
         moderatorsList=[];customersList=[];helpPage=0;helpListRequest++;
         _lastQueueSignature="";queuePage=0;lastQueueFilter="";
-        for(const id of ['chat-messages','queue-list','help-thread-list','customers-admin-list','roles-admin-list','admin-assignments-list','user-phone']) {
+        for(const id of ['chat-messages','queue-list','help-thread-list','customers-admin-list','roles-admin-list','admin-assignments-list','user-phone','research-evidence-panel']) {
           const node=document.getElementById(id);if(node)node.textContent='';
         }
         document.getElementById('composer-text').value='';
@@ -3141,6 +3141,45 @@
           if (e.key === "Enter" && !e.isComposing) {e.preventDefault();sendMessage();}
         });
 
+      function renderResearchEvidence(order) {
+        let panel=document.getElementById('research-evidence-panel');
+        if(!panel){panel=document.createElement('div');panel.id='research-evidence-panel';panel.className='detail-card';document.getElementById('ticket-detail-panel').prepend(panel);}
+        panel.replaceChildren();panel.hidden=true;
+        let draft;
+        try {draft=JSON.parse(order.manual_prices||'{}').research_draft;} catch(error){return;}
+        if(!draft || !Array.isArray(draft.items))return;
+        panel.hidden=false;
+        const heading=document.createElement('h4');heading.textContent='Catalogue research · needs verification';panel.append(heading);
+        const note=document.createElement('p');note.style.cssText='font-size:12px;color:var(--text-muted);line-height:1.5;margin:10px 0;';
+        note.textContent='Public unit prices are evidence only. Verify the exact pack, postcode, stock and checkout fees before sending a quote.';panel.append(note);
+        if(draft.observed_at){const time=document.createElement('p');time.style.fontSize='11px';time.textContent='Collected: '+String(draft.observed_at);panel.append(time);}
+        const allowed=new Set(['www.bigbasket.com','bigbasket.com','www.zepto.com','zepto.com','blinkit.com','www.blinkit.com','www.swiggy.com','swiggy.com','www.jiomart.com','jiomart.com']);
+        for(const item of draft.items.slice(0,20)) {
+          if(!item || typeof item!=='object')continue;
+          const block=document.createElement('div');block.style.cssText='padding:10px 0;border-top:1px solid var(--border);overflow-wrap:anywhere;';
+          const title=document.createElement('strong');title.textContent=String(item.query||'Requested item');block.append(title);
+          const candidates=Array.isArray(item.candidates)?item.candidates:[];
+          if(!candidates.length){const empty=document.createElement('p');empty.textContent='No usable public product evidence. Price this item manually.';empty.style.fontSize='12px';block.append(empty);}
+          for(const candidate of candidates.slice(0,6)) {
+            if(!candidate || typeof candidate!=='object')continue;
+            const amount=Number(candidate.price);if(!Number.isFinite(amount)||amount<=0)continue;
+            const line=document.createElement('p');line.style.cssText='font-size:12px;line-height:1.5;margin:8px 0;';
+            line.textContent=String(candidate.store||'Store')+' · '+String(candidate.name||'Product')+' · ₹'+amount.toFixed(2)+' per listed pack · stock: '+String(candidate.availability||'unknown')+' ';
+            try {
+              const url=new URL(candidate.source_url);
+              if(url.protocol==='https:' && allowed.has(url.hostname) && !url.username && !url.password && (!url.port||url.port==='443')) {
+                const link=document.createElement('a');link.href=url.href;link.target='_blank';link.rel='noopener noreferrer';link.textContent='View source';line.append(link);
+              }
+            } catch(error) {}
+            block.append(line);
+          }
+          panel.append(block);
+        }
+        const failures=(Array.isArray(draft.diagnostics)?draft.diagnostics:[]).filter(d=>d&&d.status==='unavailable').slice(0,8);
+        if(failures.length){const details=document.createElement('details');const summary=document.createElement('summary');summary.textContent='Source availability';details.append(summary);
+          for(const failure of failures){const text=document.createElement('p');text.style.fontSize='11px';text.textContent=String(failure.store)+': '+String(failure.reason);details.append(text);}panel.append(details);}
+      }
+
       function renderTicketDetails() {
         const placeholder = document.getElementById(
           "ticket-unselected-placeholder",
@@ -3153,6 +3192,7 @@
           return;
         }
 
+        renderResearchEvidence(selectedOrder);
         currentQuotePreview = null;
         const qpBlock = document.getElementById("quote-preview-block");
         if(qpBlock) qpBlock.style.display = "none";

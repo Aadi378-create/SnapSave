@@ -4,8 +4,109 @@ import models
 from core.catalog_research import extract_products,matching_candidates,research_catalog,price,PublicCatalogClient,ResearchUnavailable,safe_url
 from api.ai_concierge import AI_CONCIERGE_PROVIDER as AI
 from tests.test_browser import browser,open_app
+from core.catalog_research import RobotsPolicy, BrowserCaptureClient, USER_AGENT
+from datetime import datetime, timezone, timedelta
 
 URL='https://www.bigbasket.com/pd/1/milk/'
+
+
+def rendered_card(amount='73.00',pack='1 L - Tetra Pak'):
+    return f'''<div class="SKUDeck___StyledDiv-sc-example"><h3><a href="/pd/306926/amul-milk/">Amul Taaza Homogenised Toned Milk</a>
+    <button>{pack}</button></h3><span>4.1</span><span class="sc-guJBdh">₹{amount}</span>
+    <span class="Pricing___StyledLabel2">₹77.00</span></div>'''
+
+
+def test_rendered_card_never_uses_mrp_rating_or_wrong_pack():
+    rows=extract_products(rendered_card()+rendered_card('40','500 ml - Pouch'),URL,'bigbasket')
+    matched=matching_candidates('Amul Taaza Homogenised Toned Milk 1 L',rows)
+    assert len(matched)==1 and matched[0]['price']==73
+    assert matched[0]['sku']=='306926' and matched[0]['availability']=='unknown'
+    assert extract_products(rendered_card().replace('sc-guJBdh','changed-selector'),URL,'bigbasket')==[]
+    assert extract_products(rendered_card().replace('</div>','<span class="sc-guJBdh">₹20</span></div>'),URL,'bigbasket')==[]
+
+
+def test_rendered_product_uses_labelled_selling_price_only():
+    markup='''<section><h1>Amul Taaza Milk 1 L</h1><table><tr><td>MRP:</td><td>₹77</td></tr>
+    <tr><td>Price: ₹73</td><td>(₹7.3 / 100ml)</td></tr></table></section>
+    <aside>Another pack ₹15 Not available</aside>'''
+    rows=extract_products(markup,URL,'bigbasket')
+    assert len(rows)==1 and rows[0]['price']==73 and rows[0]['availability']=='unknown'
+    assert extract_products(markup.replace('Price:','MRP:'),URL,'bigbasket')==[]
+
+
+def test_single_variant_card_uses_non_button_pack_selector():
+    markup=rendered_card().replace('<button>','<span class="PackSelector___StyledLabel">').replace('</button>','</span>')
+    rows=extract_products(markup,URL,'bigbasket')
+    assert len(rows)==1 and '1 L' in rows[0]['name']
+
+
+def test_capture_exporter_downloads_only_public_product_markup(browser,tmp_path):
+    from pathlib import Path
+    page=browser.new_page()
+    try:
+        page.route('https://www.bigbasket.com/**',lambda route:route.fulfill(
+            status=200,content_type='text/plain; charset=utf-8' if route.request.url.endswith('/robots.txt') else 'text/html; charset=utf-8',
+            body='User-agent: *\nAllow: /' if route.request.url.endswith('/robots.txt') else rendered_card()+
+            '<input value="private"><script>window.privateAccount="private"</script>'))
+        page.goto('https://www.bigbasket.com/pc/milk/')
+        script=(Path(__file__).resolve().parents[1]/'tools/export_catalogue_capture.js').read_text(encoding='utf-8')
+        with page.expect_download() as pending:page.evaluate(script)
+        download=pending.value;target=tmp_path/'capture.json';download.save_as(str(target))
+        captures=json.loads(target.read_text(encoding='utf-8'))
+        assert 'private' not in captures[0]['html']
+        client=BrowserCaptureClient(captures)
+        rows=extract_products(*client.fetch(captures[0]['url'],'bigbasket'),'bigbasket')
+        assert rows and rows[0]['price']==73
+    finally:page.close()
+
+
+def test_robots_longest_match_wildcard_anchor_and_allow_tie():
+    policy=RobotsPolicy('User-agent: *\nAllow: /\nDisallow: /ps/\nDisallow: /*?page=\nAllow: /*pc*?page=2$\nDisallow: /same\nAllow: /same')
+    assert not policy.can_fetch(USER_AGENT,'https://www.bigbasket.com/ps/?q=milk')
+    assert policy.can_fetch(USER_AGENT,URL)
+    assert policy.can_fetch(USER_AGENT,'https://www.bigbasket.com/pc/milk/?page=2')
+    assert not policy.can_fetch(USER_AGENT,'https://www.bigbasket.com/pc/milk/?page=20')
+    assert policy.can_fetch(USER_AGENT,'https://www.bigbasket.com/same')
+    assert not policy.can_fetch(USER_AGENT,'https://www.bigbasket.com/%70s/')
+
+
+def test_robots_specific_groups_merge_and_override_wildcard():
+    policy=RobotsPolicy('User-agent: *\nDisallow: /\nUser-agent: SnapSaveResearch\nAllow: /pd/\nUser-agent: SnapSaveResearch\nDisallow: /pd/private\nCrawl-delay: 4')
+    assert policy.can_fetch(USER_AGENT,URL)
+    assert not policy.can_fetch(USER_AGENT,'https://www.bigbasket.com/pd/private')
+    assert policy.crawl_delay(USER_AGENT)==4
+
+
+def capture(**changes):
+    return {'url':URL,'store':'bigbasket','html':rendered_card(), 'robots':'User-agent: *\nAllow: /',
+            'captured_at':datetime.now(timezone.utc).isoformat(),**changes}
+
+
+@pytest.mark.parametrize('changes',[
+    {'captured_at':(datetime.now(timezone.utc)-timedelta(minutes=16)).isoformat()},
+    {'captured_at':(datetime.now(timezone.utc)+timedelta(minutes=2)).isoformat()},
+    {'captured_at':'2026-10-25T12:00:00'}, {'robots':'User-agent: *\nAllow: /\nDisallow: /pd/'},
+    {'robots':'<html>Access Denied</html>'}, {'url':'https://evil.test/'}, {'html':'x'*2_000_001},
+])
+def test_invalid_stale_or_disallowed_capture_is_rejected(changes):
+    with pytest.raises(ResearchUnavailable):BrowserCaptureClient([capture(**changes)])
+
+
+def test_browser_capture_enters_same_review_only_provider_and_deduplicates(monkeypatch):
+    other='https://www.bigbasket.com/pc/milk/'
+    client=BrowserCaptureClient([capture(),capture(url=other)])
+    draft=research_catalog([{'item_id':'a','name':'Amul Taaza Homogenised Toned Milk 1 L','quantity':2}],'110001',client)
+    assert draft['transport']=='browser_capture' and draft['verified'] is False
+    rows=draft['items'][0]['candidates']
+    assert len(rows)==1 and rows[0]['price']==73 and rows[0]['observed_at']
+    assert draft['requires_human_review'] and 'delivery_fee' not in draft
+
+
+def test_configured_capture_is_consumed_by_provider(monkeypatch,tmp_path):
+    path=tmp_path/'public-capture.json';path.write_text(json.dumps([capture()]),encoding='utf-8')
+    monkeypatch.setenv('RESEARCH_BROWSER_CAPTURE_FILE',str(path))
+    result=research_catalog([{'item_id':'a','name':'Amul Taaza Homogenised Toned Milk 1 L','quantity':1}],'110001')
+    assert result['transport']=='browser_capture' and result['items'][0]['candidates'][0]['price']==73
 
 
 def product(name='Amul milk 1 L',amount='72.50',currency='INR',stock='InStock'):

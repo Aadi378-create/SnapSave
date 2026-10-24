@@ -10,7 +10,6 @@ import time
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from urllib.parse import quote, urljoin, urlsplit
-from urllib.robotparser import RobotFileParser
 
 import requests
 from bs4 import BeautifulSoup
@@ -24,7 +23,7 @@ HOSTS={
     'jiomart':{'www.jiomart.com','jiomart.com'},
 }
 DEFAULT_SOURCES={
-    'bigbasket':['https://www.bigbasket.com/ps/?q={query}'],
+    'bigbasket':['https://www.bigbasket.com/pc/bakery-cakes-dairy/dairy/milk/'],
     'zepto':['https://www.zepto.com/category/dairy-bread-eggs/milk'],
     'instamart':['https://www.swiggy.com/instamart/search?query={query}'],
     'jiomart':['https://www.jiomart.com/'],
@@ -33,6 +32,49 @@ DEFAULT_SOURCES={
 
 class ResearchUnavailable(ValueError):
     pass
+
+
+class RobotsPolicy:
+    """Longest matching rule, wildcard and end-anchor support for retailer policies."""
+    def __init__(self, text):
+        self.groups=[];agents=[];rules=[];delay=None;started=False
+        for line in text.splitlines()+['User-agent: __end__']:
+            key,sep,value=line.partition('#')[0].partition(':')
+            if not sep:continue
+            key=key.strip().lower();value=value.strip()
+            if key=='user-agent':
+                if started:
+                    self.groups.append((agents,rules,delay));agents=[];rules=[];delay=None;started=False
+                agents.append(value.lower())
+            elif agents and key in {'allow','disallow','crawl-delay'}:
+                started=True
+                if key=='crawl-delay':
+                    try:delay=max(0,float(value))
+                    except ValueError:pass
+                elif value:rules.append((value,key=='allow'))
+
+    def _groups(self, agent):
+        token=agent.split('/')[0].lower()
+        specific=[g for g in self.groups if token in g[0]]
+        return specific or [g for g in self.groups if '*' in g[0]]
+
+    def can_fetch(self, agent, url):
+        parts=urlsplit(url);path=parts.path or '/'
+        if parts.query:path+='?'+parts.query
+        # Decode only unreserved escapes; encoded slashes stay distinct.
+        def normalize(value):
+            value=quote(value,safe='/%?=&*.$~!()+,;:@-_')
+            return re.sub(r'%([0-9a-fA-F]{2})',lambda m:chr(int(m[1],16)) if chr(int(m[1],16)) in 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~' else '%'+m[1].upper(),value)
+        path=normalize(path);matches=[]
+        for _,rules,_ in self._groups(agent):
+            for rule,allowed in rules:
+                rule=normalize(rule);end=rule.endswith('$');body=rule[:-1] if end else rule
+                pattern='^'+'.*'.join(re.escape(part) for part in body.split('*'))+('$' if end else '')
+                if re.search(pattern,path):matches.append((len(body.replace('*','').encode()),allowed))
+        return max(matches,default=(0,True))[1]
+
+    def crawl_delay(self,agent):
+        return max((g[2] or 0 for g in self._groups(agent)),default=0)
 
 
 def safe_url(url, store=None):
@@ -114,6 +156,26 @@ def extract_products(html, url, store):
             tag=next((tag for tag in product.select(f'[itemprop="{name}"]') if tag.find_parent(attrs={'itemtype':re.compile(r'/Product$')}) is product),None)
             return tag.get('content') or tag.get('href') or tag.get_text(' ',strip=True) if tag else None
         add(field('name'),field('price'),field('priceCurrency'),field('availability'),field('url'),field('sku'),'microdata')
+    if store=='bigbasket':
+        # Observed rendered product page: labelled Price cell excludes MRP/unit price.
+        for heading in soup.select('h1')[:1]:
+            section=heading.find_parent('section')
+            if not section or not re.match(r'/pd/\d+/',urlsplit(url).path):continue
+            cells=[cell.get_text(' ',strip=True) for cell in section.select('td')]
+            selling=[re.sub(r'^Price:\s*','',cell) for cell in cells if re.match(r'^Price:\s*₹',cell)]
+            if len(selling)==1:
+                add(heading.get_text(' ',strip=True),selling[0],'INR',None,url,urlsplit(url).path.split('/')[2],'bigbasket-rendered-product')
+        # Product cards keep the heading, selected pack and selling price together.
+        for card in soup.select('[class*="SKUDeck___StyledDiv"]')[:200]:
+            link=card.select_one('h3 a[href^="/pd/"]')
+            pack=card.select_one('h3 button, h3 [class*="PackSelector___StyledLabel"]')
+            prices=card.select('span.sc-guJBdh')
+            if not link or not pack or len(prices)!=1:continue
+            href=link.get('href','').split('?')[0]
+            match=re.match(r'^/pd/(\d+)/',href)
+            if not match:continue
+            stock='OutOfStock' if re.search(r'\b(not available|out of stock)\b',card.get_text(' ',strip=True),re.I) else None
+            add(link.get_text(' ',strip=True)+' '+pack.get_text(' ',strip=True),prices[0].get_text(strip=True),'INR',stock,href,match[1],'bigbasket-rendered-card')
     unique={}
     for row in found:
         unique.setdefault((row['name'],row['price'],row['source_url']),row)
@@ -171,7 +233,7 @@ class PublicCatalogClient:
                     raise ResearchUnavailable('No valid robots policy was returned')
             except ResearchUnavailable as exc:
                 self.failures[origin+'/robots.txt']=str(exc);raise
-            parser=RobotFileParser();parser.parse(text.splitlines());self.policies[origin]=parser
+            self.policies[origin]=RobotsPolicy(text)
             self.last_request[origin]=time.monotonic()
         return self.policies[origin].can_fetch(USER_AGENT,url)
 
@@ -197,6 +259,43 @@ class PublicCatalogClient:
             self.failures[url]=str(exc);raise
         self.pages[url]=(html,final_url)
         return html,final_url
+
+
+class BrowserCaptureClient:
+    """Explicit offline import of public DOM captures; never simulates a live fetch.
+
+    Captures contain product markup only, no cookies, profiles or credentials.
+    The capture's robots policy is supplied evidence, not server authentication.
+    """
+    def __init__(self, captures, max_age=900):
+        if not isinstance(captures,list) or not 1<=len(captures)<=15:
+            raise ResearchUnavailable('Supply 1–15 browser captures')
+        self.captures={};self.observed_at={}
+        now=datetime.now(timezone.utc)
+        for capture in captures:
+            if not isinstance(capture,dict):raise ResearchUnavailable('Invalid browser capture')
+            url=capture.get('url');store=capture.get('store');safe_url(url,store)
+            if store not in HOSTS:raise ResearchUnavailable('Unsupported capture store')
+            html=capture.get('html');robots=capture.get('robots');stamp=capture.get('captured_at')
+            if not isinstance(html,str) or len(html.encode())>2_000_000 or not isinstance(robots,str) or len(robots.encode())>512000:
+                raise ResearchUnavailable('Capture markup/policy missing or too large')
+            try:
+                observed=datetime.fromisoformat(stamp)
+                if observed.tzinfo is None:raise ValueError()
+                age=(now-observed).total_seconds()
+                if not 0<=age<=max_age:raise ValueError()
+            except (TypeError,ValueError):
+                raise ResearchUnavailable('Browser capture must be timestamped within the last 15 minutes')
+            if not re.search(r'^user-agent\s*:',robots,re.I|re.M) or not RobotsPolicy(robots).can_fetch(USER_AGENT,url):
+                raise ResearchUnavailable('Capture URL lacks a permitting robots policy')
+            self.captures[(store,url)]=html
+            self.observed_at[(store,url)]=observed.isoformat()
+
+    def fetch(self,url,store):
+        if (store,url) not in self.captures:raise ResearchUnavailable('No browser capture supplied for this URL')
+        return self.captures[(store,url)],url
+
+    def close(self):pass
 
 
 def sources():
@@ -245,7 +344,20 @@ def research_catalog(items,postal_code,client=None):
         if not isinstance(item,dict) or not isinstance(item.get('item_id'),str) or item['item_id'] in seen or not isinstance(item.get('name'),str) or not 1<=len(item['name'].strip())<=500 or type(item.get('quantity')) is not int or not 1<=item['quantity']<=10000:
             raise ResearchUnavailable('Research items need unique IDs, a product query and positive integer quantity')
         seen.add(item['item_id'])
-    config=sources();owned=client is None;client=client or PublicCatalogClient()
+    config=sources();owned=client is None
+    if client is None and os.getenv('RESEARCH_BROWSER_CAPTURE_FILE'):
+        from pathlib import Path
+        path=Path(os.environ['RESEARCH_BROWSER_CAPTURE_FILE'])
+        try:
+            if path.stat().st_size>8_000_000:raise ResearchUnavailable('Capture file exceeds 8 MB')
+            client=BrowserCaptureClient(json.loads(path.read_text(encoding='utf-8')))
+        except OSError as exc:
+            raise ResearchUnavailable('Configured browser capture file cannot be read') from exc
+    client=client or PublicCatalogClient()
+    captured=isinstance(client,BrowserCaptureClient)
+    if captured:
+        config={}
+        for store,url in client.captures:config.setdefault(store,[]).append(url)
     result=[];diagnostics=[];parsed_pages={}
     try:
         for item in items:
@@ -260,14 +372,18 @@ def research_catalog(items,postal_code,client=None):
                             parsed_pages[key]=extract_products(html,final_url,store)
                         rows=matching_candidates(query,parsed_pages[key])
                         for row in rows:
-                            candidates.append({**row,'store':store})
+                            candidates.append({**row,'store':store,**({'observed_at':client.observed_at[key]} if captured else {})})
                         diagnostics.append({'store':store,'url':url,'status':'candidates' if rows else 'no_product_evidence','count':len(rows)})
                     except ResearchUnavailable as exc:
                         diagnostics.append({'store':store,'url':url,'status':'unavailable','reason':str(exc)})
-            result.append({'item_id':item['item_id'],'query':query,'quantity':item['quantity'],'candidates':sorted(candidates,key=lambda r:r['price'])[:6]})
+            unique={}
+            for row in candidates:
+                unique.setdefault((row['store'],row['source_url'],row['price']),row)
+            result.append({'item_id':item['item_id'],'query':query,'quantity':item['quantity'],'candidates':sorted(unique.values(),key=lambda r:r['price'])[:6]})
     finally:
         if owned:client.close()
     return {'verified':False,'requires_human_review':True,'postal_code':str(postal_code),
-            'source':'Public catalogue evidence (Beautiful Soup)','observed_at':datetime.now(timezone.utc).isoformat(),
+            'source':'Browser-assisted catalogue capture (Beautiful Soup)' if captured else 'Public catalogue evidence (Beautiful Soup)',
+            'transport':'browser_capture' if captured else 'http','observed_at':datetime.now(timezone.utc).isoformat(),
             'warnings':['Delivery postcode, stock, exact pack, checkout fees and promotions require human verification. Public prices are not a payable quote.'],
             'items':result,'diagnostics':diagnostics[:100]}

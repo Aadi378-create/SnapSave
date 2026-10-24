@@ -1,0 +1,322 @@
+[
+  {
+    "source_url": "https://www.bigbasket.com/pc/bakery-cakes-dairy/dairy/milk/",
+    "captured_at": "2026-10-24T22:10:50.912Z",
+    "product_count": 33,
+    "products": [
+      {
+        "name": "Amul Gold Full Cream Milk 500 ml - Pouch",
+        "price": 32.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.bigbasket.com/pd/40090893/amul-amul-gold-500-ml-pouch/",
+        "sku": "40090893",
+        "method": "bigbasket-rendered-card"
+      },
+      {
+        "name": "Amul Taaza Milk 500 ml",
+        "price": 27.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.bigbasket.com/pd/40090894/amul-taaza-500-ml-pouch/",
+        "sku": "40090894",
+        "method": "bigbasket-rendered-card"
+      },
+      {
+        "name": "Amul Cow Milk 500 ml - Pouch",
+        "price": 28.96,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.bigbasket.com/pd/40141614/amul-amul-cow-500-ml-pouch/",
+        "sku": "40141614",
+        "method": "bigbasket-rendered-card"
+      },
+      {
+        "name": "Amul Taaza Homogenised Toned Milk 1 L - Tetra Pak",
+        "price": 73.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.bigbasket.com/pd/306926/amul-homogenised-toned-milk-1-l-carton/",
+        "sku": "306926",
+        "method": "bigbasket-rendered-card"
+      },
+      {
+        "name": "Amul Buffalo Milk 500 ml - Pouch",
+        "price": 40.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.bigbasket.com/pd/40167828/amul-buffalo-milk-500-ml-pouch/",
+        "sku": "40167828",
+        "method": "bigbasket-rendered-card"
+      },
+      {
+        "name": "Nandini Shubham Milk 500 ml - Pouch",
+        "price": 27.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.bigbasket.com/pd/40149833/nandini-shubham-milk-500-ml-pouch/",
+        "sku": "40149833",
+        "method": "bigbasket-rendered-card"
+      },
+      {
+        "name": "Nandini Pasteurised Toned Milk 500 ml - Pouch",
+        "price": 24.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.bigbasket.com/pd/40149832/nandini-pasteurised-toned-milk-500-ml-pouch/",
+        "sku": "40149832",
+        "method": "bigbasket-rendered-card"
+      },
+      {
+        "name": "Heritage Daily Health Toned Milk 500 ml - Pouch",
+        "price": 33.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.bigbasket.com/pd/40147597/heritage-daily-health-toned-milk-500-ml-pouch/",
+        "sku": "40147597",
+        "method": "bigbasket-rendered-card"
+      },
+      {
+        "name": "Mother Dairy Cow Milk 1 L",
+        "price": 61.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.bigbasket.com/pd/40159658/mother-dairy-cow-milk-1-l/",
+        "sku": "40159658",
+        "method": "bigbasket-rendered-card"
+      },
+      {
+        "name": "Mother Dairy Full Cream Milk 1 L",
+        "price": 72.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.bigbasket.com/pd/40159657/mother-dairy-full-cream-milk-fcm-1-l/",
+        "sku": "40159657",
+        "method": "bigbasket-rendered-card"
+      },
+      {
+        "name": "Nandini GoodLife UHT Treated Toned Milk 1 L - Tetra Pak",
+        "price": 64.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.bigbasket.com/pd/100285703/nandini-goodlife-toned-milk-1-l-carton/",
+        "sku": "100285703",
+        "method": "bigbasket-rendered-card"
+      },
+      {
+        "name": "Amul Lactose Free Milk 250 ml - Tetra Pak",
+        "price": 26.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.bigbasket.com/pd/40049915/amul-lactose-free-milk-250-ml-tetra-pack/",
+        "sku": "40049915",
+        "method": "bigbasket-rendered-card"
+      },
+      {
+        "name": "Gokul Buffalo Milk 500 ml - Pouch",
+        "price": 39.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.bigbasket.com/pd/40141618/gokul-buffalo-milk-500-ml-pouch/",
+        "sku": "40141618",
+        "method": "bigbasket-rendered-card"
+      },
+      {
+        "name": "Mother Dairy Toned Milk 1 L - Pouch",
+        "price": 60.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.bigbasket.com/pd/40160355/mother-dairy-toned-milk-1-l-pouch/",
+        "sku": "40160355",
+        "method": "bigbasket-rendered-card"
+      },
+      {
+        "name": "Amul Gold Homogenised Standardised Milk 1 L - Tetra Pak",
+        "price": 83.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.bigbasket.com/pd/104707/amul-homogenised-standardised-milk-1-l-carton/",
+        "sku": "104707",
+        "method": "bigbasket-rendered-card"
+      },
+      {
+        "name": "Nandini GoodLife Toned Milk 500 ml - Pouch",
+        "price": 26.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.bigbasket.com/pd/242671/nandini-goodlife-toned-milk-500-ml-pouch/",
+        "sku": "242671",
+        "method": "bigbasket-rendered-card"
+      },
+      {
+        "name": "Amul Moti Homogenised Toned Milk 450 ml - Pouch",
+        "price": 32.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.bigbasket.com/pd/40005033/amul-moti-homogenised-toned-milk-450-ml-pouch/",
+        "sku": "40005033",
+        "method": "bigbasket-rendered-card"
+      },
+      {
+        "name": "Heritage Full Cream Milk 500 ml",
+        "price": 39.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.bigbasket.com/pd/40047739/heritage-full-cream-milk-500-ml/",
+        "sku": "40047739",
+        "method": "bigbasket-rendered-card"
+      },
+      {
+        "name": "Arokya Full Cream Milk 500 ml - Pouch",
+        "price": 40.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.bigbasket.com/pd/40148684/arokya-full-cream-milk-500-ml-pouch/",
+        "sku": "40148684",
+        "method": "bigbasket-rendered-card"
+      },
+      {
+        "name": "Arokya Toned Milk 500 ml",
+        "price": 27.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.bigbasket.com/pd/40148686/arokya-toned-milk-500-ml/",
+        "sku": "40148686",
+        "method": "bigbasket-rendered-card"
+      },
+      {
+        "name": "Nandini Homogenised Pasteurised Cow's Pure Milk 500 ml - Pouch",
+        "price": 26.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.bigbasket.com/pd/40149831/nandini-homogenised-cow-pure-500-ml-pouch/",
+        "sku": "40149831",
+        "method": "bigbasket-rendered-card"
+      },
+      {
+        "name": "Amul Shakti Milk 1 L",
+        "price": 63.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.bigbasket.com/pd/40215944/amul-shakti-milk-1-l/",
+        "sku": "40215944",
+        "method": "bigbasket-rendered-card"
+      },
+      {
+        "name": "Gokul Cow Milk 500 ml - Pouch",
+        "price": 30.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.bigbasket.com/pd/40141617/gokul-cow-milk-500-ml-pouch/",
+        "sku": "40141617",
+        "method": "bigbasket-rendered-card"
+      },
+      {
+        "name": "Heritage Special UHT Processed Homogenised Toned Milk 450 ml - Pouch",
+        "price": 29.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.bigbasket.com/pd/20005539/heritage-toned-milk-special-500-ml-pouch/",
+        "sku": "20005539",
+        "method": "bigbasket-rendered-card"
+      },
+      {
+        "name": "Akshayakalpa Amrutha A2 Pasteurised Milk - Organic 500 ml - Pouch",
+        "price": 50.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.bigbasket.com/pd/40148716/akshayakalpa-amrutha-a2-pasteurised-milk-organic-500-ml-pouch/",
+        "sku": "40148716",
+        "method": "bigbasket-rendered-card"
+      },
+      {
+        "name": "Aavin Delite Cow Milk 500 ml",
+        "price": 22.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.bigbasket.com/pd/40307439/aavin-pasteurised-cow-milk-500-ml-pouch/",
+        "sku": "40307439",
+        "method": "bigbasket-rendered-card"
+      },
+      {
+        "name": "Chitale Cow Milk 500 ml - Pouch",
+        "price": 32.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.bigbasket.com/pd/40141615/chitale-cow-milk-500-ml-pouch/",
+        "sku": "40141615",
+        "method": "bigbasket-rendered-card"
+      },
+      {
+        "name": "Aavin Pasteurised Full Cream Milk 500 ml - Pouch",
+        "price": 30.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.bigbasket.com/pd/40151384/aavin-pasteurised-full-cream-milk-500-ml-pouch/",
+        "sku": "40151384",
+        "method": "bigbasket-rendered-card"
+      },
+      {
+        "name": "Verka Pasteurised Standardised Milk - Green 500 ml",
+        "price": 33.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.bigbasket.com/pd/40215940/verka-standard-milk-green-500-ml-24/",
+        "sku": "40215940",
+        "method": "bigbasket-rendered-card"
+      },
+      {
+        "name": "Milma Pride Milk -  Homogenised Pasteursied Toned 500 ml",
+        "price": 30.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.bigbasket.com/pd/40219311/milma-pride-milk-homogenised-pasteursied-toned-520-ml/",
+        "sku": "40219311",
+        "method": "bigbasket-rendered-card"
+      },
+      {
+        "name": "Amul Slim N Trim 500 ml - Pouch",
+        "price": 27.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.bigbasket.com/pd/40147627/amul-slim-n-trim-500-ml-pouch/",
+        "sku": "40147627",
+        "method": "bigbasket-rendered-card"
+      },
+      {
+        "name": "Go Daily Double Tonned Milk 1 L - Tetra Pak",
+        "price": 73.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.bigbasket.com/pd/40005951/go-milk-double-toned-1-l-tetra-pouch/",
+        "sku": "40005951",
+        "method": "bigbasket-rendered-card"
+      },
+      {
+        "name": "Vijaya Toned Milk 500 ml - Pouch",
+        "price": 32.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.bigbasket.com/pd/40147606/vijaya-toned-milk-500-ml-pouch/",
+        "sku": "40147606",
+        "method": "bigbasket-rendered-card"
+      }
+    ]
+  },
+  {
+    "source_url": "https://www.bigbasket.com/pd/306926/amul-homogenised-toned-milk-1-l-carton/",
+    "captured_at": "2026-10-24T22:10:50.912Z",
+    "product_count": 1,
+    "products": [
+      {
+        "name": "Amul Taaza Homogenised Toned Milk, 1 L Tetra Pak",
+        "price": 73.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.bigbasket.com/pd/306926/amul-homogenised-toned-milk-1-l-carton/",
+        "sku": "306926",
+        "method": "bigbasket-rendered-product"
+      }
+    ]
+  }
+]

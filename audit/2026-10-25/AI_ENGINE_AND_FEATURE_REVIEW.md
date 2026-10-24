@@ -2,11 +2,13 @@
 
 25 October 2026. Inspection baseline: `a0935b5`; research implementation checkpoint: `cce1af9`.
 
+**Follow-up:** [Website scraping validation](WEBSITE_SCRAPING_VALIDATION.md) subsequently verified browser-assisted BigBasket extraction on actual rendered pages: 33 category products and a matching ₹73 / 1 L product result. Earlier HTTP failures below remain accurate; unattended fetching remains blocked.
+
 ## Assessment
 
 The customer-to-concierge order workflow is the project's strongest working foundation. Authenticated accounts, per-order conversations, explicit quotes, payment references, fulfillment, cancellations, refunds and support exist. Recent identity/session repairs have regression coverage. The best next step is to improve the clerk's evidence and the customer's control over their order, consistent with SnapSave's human-first, anti-cart philosophy.
 
-**The research engine can now extract and match structured product evidence, produce an auditable review draft and hand it to staff. It has not obtained a usable live retailer price in this environment.** Do not describe current store comparisons as live or postcode-verified. Beautiful Soup is an HTML parser, not a way around retailer access restrictions and not an AI model.
+**At this initial HTTP inspection, the research engine could extract and match structured evidence but had not obtained a usable retailer price. Subsequent browser-assisted validation did obtain real public prices; see the follow-up above.** Current multi-store comparisons are not postcode-verified. Beautiful Soup is an HTML parser, not a way around retailer access restrictions and not an AI model.
 
 This review combines inspection of customer/admin flows and API policies, parser/matcher/optimizer paths, provider/worker integration, legacy store adapters, configuration, the full automated suite and bounded live HTTP probes. It is not a certification of every manual screen, production capacity, real store checkout or bank settlement.
 

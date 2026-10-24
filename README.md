@@ -78,11 +78,26 @@ cd SnapSave-Backend
 ../.venv/Scripts/python.exe research_catalog.py --query "Amul milk 1 L" --postal-code 110001 --live --output research-diagnostic.json
 ```
 
-The postcode labels the requested delivery context; it is **not** a claim that the retailer has been set to that location. Search pages blocked by robots, HTTP 403/202 responses, missing structured product data, wrong packs and unavailable products produce diagnostics, not invented prices. This extractor does not execute JavaScript; dynamic sites still need an authorized feed or a separately validated browser adapter. Beautiful Soup can also parse HTML rendered by a browser, but cannot render a page itself.
+The postcode labels the requested delivery context; it is **not** a claim that the retailer has been set to that location. Search pages blocked by robots, HTTP 403/202 responses, missing product data, wrong packs and unavailable products produce diagnostics, not invented prices. Beautiful Soup parses HTML; it does not render JavaScript.
 
-To try the provider in the management workflow, configure `RESEARCH_PROVIDER=core.catalog_research:research_catalog` and `ENABLE_LIVE_RESEARCH=true`, restart the backend, enable the administrator's global AI switch, then select HYBRID on an eligible ticket. Current live checks did not yield usable prices from the default retailer sources, so unattended pricing remains unsuitable. This implementation pass did not enable research in the existing environment or turn on the global AI switch.
+To try the provider in the management workflow, configure `RESEARCH_PROVIDER=core.catalog_research:research_catalog` and `ENABLE_LIVE_RESEARCH=true`, restart the backend, enable the administrator's global AI switch, then select HYBRID on an eligible ticket. Unattended HTTP requests currently fail to obtain usable default retailer prices. Browser-assisted BigBasket extraction was validated on real pages (see below). This implementation pass did not enable research in the existing environment or turn on the global AI switch.
 
 Optional `RESEARCH_CATALOG_SOURCES` is a server-owned JSON mapping of supported store IDs to up to three HTTPS page URLs each. `{query}` is URL-encoded. Defaults include a Zepto milk category as a narrow initial catalogue source; this is not full grocery coverage. Do not configure private APIs or checkout URLs. `--live` explicitly permits public network requests; it does not place orders.
+
+### Browser-assisted catalogue evidence
+
+Normal Edge loaded BigBasket's public milk category and a product page during the 25 October inspection; an isolated headless browser received HTTP 403. The Beautiful Soup parser extracted **33 product cards** from the real rendered category and independently read **₹73 for Amul Taaza Homogenised Toned Milk, 1 L** from its product page. MRP ₹77 and the ₹7.30/100 ml comparison were excluded. This validates browser-assisted extraction, **not unattended fetching or postcode-specific availability**. Other retailers remain unverified.
+
+For repeatable captures, open a permitted public BigBasket `/pc/` category or `/pd/` product page in a normal browser. Inspect and manually run `SnapSave-Backend/tools/export_catalogue_capture.js` in its developer console. It reads the public product DOM and robots.txt, then downloads JSON. It exports no browser profile, cookies or login credentials. If robots.txt cannot be read, the exporter stops. It was tested in an isolated browser fixture; the real-page validation used DOM captures through the browser tool. Do not paste scripts from untrusted sources into your console.
+
+Import the downloaded JSON within 15 minutes:
+
+```powershell
+cd SnapSave-Backend
+../.venv/Scripts/python.exe research_catalog.py --query "Amul Taaza Homogenised Toned Milk 1 L" --postal-code 110001 --browser-capture "C:/private/snapsave-catalogue-capture.json" --output research-evidence.json
+```
+
+The CLI makes no network requests in capture mode. It validates source origin, permitting robots evidence, size, timestamp, SKU/pack and selling-price scope. Both transports produce review-only drafts. Captures are supplied evidence and are not independently authenticated retailer responses. A server administrator can set `RESEARCH_BROWSER_CAPTURE_FILE` to a local capture file to feed the same AI review workflow; expired captures fail rather than silently reuse old prices. `--live` explicitly selects HTTP even if that environment variable is configured. Keep captures outside the repository and hosting folder. The default BigBasket source is the permitted milk category, not its robots-disallowed search endpoint; grocery coverage is limited to the supplied pages.
 
 Legacy scraping adapters remain disabled. Configuring a research callable does not enable a functioning live scraper for `/deal` or `/optimize-cart`; they safely report unavailable/incomplete data. Provider integration and checkout require live integration validation.
 

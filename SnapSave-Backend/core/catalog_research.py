@@ -25,7 +25,8 @@ HOSTS={
 DEFAULT_SOURCES={
     'bigbasket':['https://www.bigbasket.com/pc/bakery-cakes-dairy/dairy/milk/'],
     'zepto':['https://www.zepto.com/category/dairy-bread-eggs/milk'],
-    'instamart':['https://www.swiggy.com/instamart/search?query={query}'],
+    'instamart':['https://www.swiggy.com/instamart/'],
+    'blinkit':['https://blinkit.com/cn/milk/cid/14/922'],
     'jiomart':['https://www.jiomart.com/'],
 }
 
@@ -116,7 +117,7 @@ def extract_products(html, url, store):
         raise ResearchUnavailable('Retailer returned a challenge or access-denied page')
     found=[]
 
-    def add(name, amount, currency, availability, link, sku=None, method='json-ld'):
+    def add(name, amount, currency, availability, link, sku=None, method='json-ld', pack_label=None):
         if not isinstance(name,str) or not name.strip() or str(currency).upper()!='INR':
             return
         try:
@@ -127,7 +128,8 @@ def extract_products(html, url, store):
         availability=str(availability or '').rsplit('/',1)[-1].lower()
         stock='in_stock' if availability=='instock' else 'out_of_stock' if availability in {'outofstock','discontinued','soldout'} else 'unknown'
         found.append({'name':name.strip()[:300],'price':amount,'currency':'INR','availability':stock,
-                      'source_url':link,'sku':str(sku)[:120] if sku is not None else None,'method':method})
+                      'source_url':link,'sku':str(sku)[:120] if sku is not None else None,'method':method,
+                      **({'pack_size':pack_label} if pack_label else {})})
 
     # Iterative traversal avoids recursive walks over large/untrusted graphs.
     for script in soup.select('script[type="application/ld+json"]')[:100]:
@@ -175,7 +177,34 @@ def extract_products(html, url, store):
             match=re.match(r'^/pd/(\d+)/',href)
             if not match:continue
             stock='OutOfStock' if re.search(r'\b(not available|out of stock)\b',card.get_text(' ',strip=True),re.I) else None
-            add(link.get_text(' ',strip=True)+' '+pack.get_text(' ',strip=True),prices[0].get_text(strip=True),'INR',stock,href,match[1],'bigbasket-rendered-card')
+            add(link.get_text(' ',strip=True)+' '+pack.get_text(' ',strip=True),prices[0].get_text(strip=True),'INR',stock,href,match[1],'bigbasket-rendered-card',pack.get_text(' ',strip=True))
+    if store=='zepto':
+        for card in soup.select('a[data-testid="product-card"][href*="/pvid/"]')[:200]:
+            name=card.select_one('[data-slot-id="ProductName"]');pack=card.select_one('[data-slot-id="PackSize"]')
+            amounts=card.select('[data-slot-id="EdlpPrice"] > span.cptQT7')
+            if not name or not pack or len(amounts)!=1:continue
+            # Some pages advertise alternative pack sizes in the same label.
+            if re.search(r'\bor\b|\d\s*[x×]\s*\d',pack.get_text(' ',strip=True),re.I):continue
+            stock=card.select_one('[data-is-out-of-stock="true"]')
+            href=card['href'].split('?')[0]
+            add(name.get_text(' ',strip=True)+' '+pack.get_text(' ',strip=True),amounts[0].get_text(strip=True),'INR','OutOfStock' if stock else None,href,href.rsplit('/',1)[-1],'zepto-rendered-card',pack.get_text(' ',strip=True))
+    if store=='instamart':
+        for card in soup.select('div._1fi7p')[:200]:
+            name=card.select_one('div._1iFYi');pack=card.select_one('div._3wq_F')
+            amounts=card.select('div._2enD- > div._2jn41:not(._3eAjW):not(._1VrXB)')
+            if not name or not pack or len(amounts)!=1:continue
+            add(name.get_text(' ',strip=True)+' '+pack.get_text(' ',strip=True),amounts[0].get_text(strip=True),'INR',None,url,None,'instamart-rendered-card',pack.get_text(' ',strip=True))
+    if store=='blinkit':
+        for card in soup.select('[role="button"][id]')[:200]:
+            sku=card.get('id','')
+            if not sku.isdigit():continue
+            name=card.select_one('.tw-line-clamp-2');pack=card.select_one('.tw-line-clamp-1')
+            amounts=[n for n in card.select('.tw-text-200.tw-font-semibold') if n.get_text(strip=True).startswith('₹')]
+            if not name or not pack or len(amounts)!=1:continue
+            if re.search(r'\d\s*[x×]\s*\d',pack.get_text(' ',strip=True),re.I):continue
+            # Numeric card ID is the observed product identifier; source remains
+            # the actual category page rather than inventing a product URL.
+            add(name.get_text(' ',strip=True)+' '+pack.get_text(' ',strip=True),amounts[0].get_text(strip=True),'INR',None,url,sku,'blinkit-rendered-card',pack.get_text(' ',strip=True))
     unique={}
     for row in found:
         unique.setdefault((row['name'],row['price'],row['source_url']),row)
@@ -270,7 +299,7 @@ class BrowserCaptureClient:
     def __init__(self, captures, max_age=900):
         if not isinstance(captures,list) or not 1<=len(captures)<=15:
             raise ResearchUnavailable('Supply 1–15 browser captures')
-        self.captures={};self.observed_at={}
+        self.captures={};self.observed_at={};self.locations={};self.contexts={}
         now=datetime.now(timezone.utc)
         for capture in captures:
             if not isinstance(capture,dict):raise ResearchUnavailable('Invalid browser capture')
@@ -290,6 +319,11 @@ class BrowserCaptureClient:
                 raise ResearchUnavailable('Capture URL lacks a permitting robots policy')
             self.captures[(store,url)]=html
             self.observed_at[(store,url)]=observed.isoformat()
+            context=capture.get('research_context') or {}
+            location=capture.get('location_context') or {}
+            if not isinstance(context,dict) or not isinstance(location,dict):raise ResearchUnavailable('Invalid capture location context')
+            self.contexts[(store,url)]=context
+            self.locations[(store,url)]=location
 
     def fetch(self,url,store):
         if (store,url) not in self.captures:raise ResearchUnavailable('No browser capture supplied for this URL')
@@ -327,10 +361,38 @@ def matching_candidates(query,products):
     for row in products:
         if row['availability']=='out_of_stock' or score_product(query,row['name'])<=0:
             continue
-        if pack(wanted) is not None and pack(parse_query(row['name']))!=pack(wanted):
+        label=row.get('pack_size') or row['name']
+        if re.search(r'\d\s*[x×]\s*\d|\b\d+\s*(?:ml|ltr|l|g|kg)\s+or\b',label,re.I):continue
+        if pack(wanted) is not None and pack(parse_query(label))!=pack(wanted):
             continue
         result.append(row)
     return sorted(result,key=lambda r:(r['price'],r['name']))[:4]
+
+
+def capture_location(context,postal_code):
+    """A supplied postcode/attestation is evidence, never proof of serviceability."""
+    selected=context.get('selected_postal_code')
+    if selected is not None and not re.fullmatch(r'[1-9][0-9]{5}',str(selected)):
+        raise ResearchUnavailable('Invalid retailer location postcode')
+    status='mismatch' if selected and str(selected)!=postal_code else 'postcode_observed' if selected else 'needs_location'
+    if not selected and context.get('staff_confirmed') is True and context.get('attested_postal_code')==postal_code:
+        status='staff_attested'
+    return {'requested_postal_code':postal_code,'selected_postal_code':str(selected) if selected else None,
+            'status':status,'serviceability_verified':False}
+
+
+def location_plan(order_id,revision,postal_code):
+    """Only order-bound postcode goes into research setup, never street/contact data."""
+    if not re.fullmatch(r'[1-9][0-9]{5}',str(postal_code)):
+        raise ResearchUnavailable('A six-digit Indian delivery postcode is required')
+    return {'order_id':order_id,'revision':revision,'postal_code':str(postal_code),
+            'stores':{store:urls[0] for store,urls in DEFAULT_SOURCES.items() if store in {'bigbasket','zepto','instamart','blinkit'}},
+            'steps':['Open the retailer in a separate research tab for this order.',
+                     'Use its location selector to enter this postcode and choose the matching area; never accept the previous browser location.',
+                     'If it requires an exact address or cannot confirm the area, stop and request location review.',
+                     'Wait for products to reload. If closed or unserviceable, record that state; do not claim stock.',
+                     'Export public product evidence with this order context, then import it into this ticket.',
+                     'Staff must verify availability and checkout fees before publishing any quote.']}
 
 
 def research_catalog(items,postal_code,client=None):
@@ -370,19 +432,25 @@ def research_catalog(items,postal_code,client=None):
                         if key not in parsed_pages:
                             html,final_url=client.fetch(url,store)
                             parsed_pages[key]=extract_products(html,final_url,store)
+                        location=capture_location(client.locations[key],str(postal_code)) if captured else capture_location({},str(postal_code))
+                        if captured and client.contexts[key].get('postal_code') not in {None,str(postal_code)}:
+                            raise ResearchUnavailable('Capture was prepared for a different customer postcode')
+                        if location['status']=='mismatch':
+                            raise ResearchUnavailable('Retailer location postcode does not match this order')
                         rows=matching_candidates(query,parsed_pages[key])
                         for row in rows:
-                            candidates.append({**row,'store':store,**({'observed_at':client.observed_at[key]} if captured else {})})
+                            candidates.append({**row,'store':store,'location_context':location,**({'observed_at':client.observed_at[key]} if captured else {})})
                         diagnostics.append({'store':store,'url':url,'status':'candidates' if rows else 'no_product_evidence','count':len(rows)})
                     except ResearchUnavailable as exc:
                         diagnostics.append({'store':store,'url':url,'status':'unavailable','reason':str(exc)})
             unique={}
             for row in candidates:
-                unique.setdefault((row['store'],row['source_url'],row['price']),row)
+                unique.setdefault((row['store'],row.get('sku') or row['name'],row['source_url'],row['price']),row)
             result.append({'item_id':item['item_id'],'query':query,'quantity':item['quantity'],'candidates':sorted(unique.values(),key=lambda r:r['price'])[:6]})
     finally:
         if owned:client.close()
     return {'verified':False,'requires_human_review':True,'postal_code':str(postal_code),
+            'research_contexts':[{k:context.get(k) for k in ('order_id','revision','postal_code')} for context in client.contexts.values() if context.get('order_id')] if captured else [],
             'source':'Browser-assisted catalogue capture (Beautiful Soup)' if captured else 'Public catalogue evidence (Beautiful Soup)',
             'transport':'browser_capture' if captured else 'http','observed_at':datetime.now(timezone.utc).isoformat(),
             'warnings':['Delivery postcode, stock, exact pack, checkout fees and promotions require human verification. Public prices are not a payable quote.'],

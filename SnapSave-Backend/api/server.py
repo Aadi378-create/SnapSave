@@ -203,6 +203,10 @@ class QuoteSubmission(StrictRequest):
 class QuoteConfirmation(StrictRequest):
     revision: int = Field(..., ge=0)
 
+class ResearchCaptureSubmission(StrictRequest):
+    revision: int = Field(..., ge=0)
+    captures: List[dict] = Field(..., min_length=1, max_length=15)
+
 class DeliveryConfig(StrictRequest):
     thresholds: dict[str,float]
 class AiTakeoverRequest(StrictRequest):
@@ -826,6 +830,43 @@ def preview_quote(order_id: str, data: ManualPricesEntry, current_user: models.U
     items=quote_items(row,data.items or [])
     result=preview_totals(items,delivery_thresholds(db))
     return {**result,"revision":row.revision,"order_id":row.id,"final_price":float(final_amount(result["subtotal"],result["delivery_fee"],result["platform_fee"],0,0,0))}
+
+
+@app.get("/api/moderator/orders/{order_id}/research-location")
+def research_location_plan(order_id: str, current_user: models.User = Depends(require_role(["ADMIN","MODERATOR"])), db: Session = Depends(get_db)):
+    from core.catalog_research import location_plan
+    row=load_order(db,order_id);staff_access(row,current_user)
+    require_state(row,{"pending_review","reviewing"})
+    return location_plan(row.id,row.revision,row.delivery_postal_code)
+
+
+@app.post("/api/moderator/orders/{order_id}/research-evidence")
+def import_research_evidence(order_id: str, data: ResearchCaptureSubmission, current_user: models.User = Depends(require_role(["ADMIN","MODERATOR"])), db: Session = Depends(get_db)):
+    from core.catalog_research import BrowserCaptureClient, research_catalog, ResearchUnavailable, capture_location
+    row=load_order(db,order_id);staff_access(row,current_user)
+    require_state(row,{"pending_review","reviewing"})
+    if row.revision!=data.revision:raise HTTPException(409,'Order changed. Copy a new research context and recapture.')
+    try:
+        client=BrowserCaptureClient(data.captures)
+        for context in client.contexts.values():
+            if context.get('order_id')!=row.id or context.get('revision')!=row.revision or context.get('postal_code')!=row.delivery_postal_code:
+                raise ResearchUnavailable('Evidence must be captured with this order ID, revision and postcode')
+        if any(capture_location(context,row.delivery_postal_code)['status']=='needs_location' for context in client.locations.values()):
+            raise ResearchUnavailable('Select the retailer location and confirm this customer postcode before importing')
+        draft=research_catalog([{'item_id':i.id,'name':i.name,'quantity':i.quantity} for i in row.items],row.delivery_postal_code,client)
+        if any(d.get('status')=='unavailable' for d in draft['diagnostics']):
+            raise ResearchUnavailable('Capture has a location mismatch or unavailable source. Check the retailer location and recapture.')
+    except (ValueError,TypeError) as exc:
+        raise HTTPException(422,str(exc)) from exc
+    try:existing=json.loads(row.manual_prices or '{}')
+    except ValueError:raise HTTPException(409,'Existing pricing draft is invalid; review it before importing evidence')
+    if not isinstance(existing,dict):raise HTTPException(409,'Existing pricing draft is invalid')
+    existing['research_draft']=draft
+    encoded=json.dumps(existing)
+    if len(encoded.encode())>200000:raise HTTPException(422,'Research evidence exceeds the supported size')
+    change_order(db,row,manual_prices=encoded,assigned_worker_type='HUMAN',ai_stopped_at=utcnow(),mode='HYBRID' if row.mode=='AI' else row.mode)
+    db.commit()
+    return serialize_order(row,current_user)
 
 
 @app.post("/api/moderator/orders/{order_id}/price")

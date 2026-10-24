@@ -1,0 +1,1296 @@
+[
+  {
+    "store": "zepto",
+    "source_url": "https://www.zepto.com/category/dairy-bread-eggs/milk",
+    "captured_at": "2026-10-24T22:24:09.756Z",
+    "product_count": 59,
+    "products": [
+      {
+        "name": "Nandini Goodlife Toned UHT Milk (Fino Pouch) 1 pack (500 ml)",
+        "price": 32.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/nandini-goodlife-toned-uht-milk-fino-pouch/pvid/b01c94d5-7fa9-4119-b157-5e401def1280",
+        "sku": "b01c94d5-7fa9-4119-b157-5e401def1280",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (500 ml)"
+      },
+      {
+        "name": "Nandini Goodlife Milk UHT (Pouch Brik) 1 pack (500 ml)",
+        "price": 36.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/nandini-goodlife-milk-uht-pouch-brik/pvid/7790e233-c829-422b-bf16-45eefe9b5bd5",
+        "sku": "7790e233-c829-422b-bf16-45eefe9b5bd5",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (500 ml)"
+      },
+      {
+        "name": "Amul Moti Toned Milk | 90 Days Shelf life 1 pack (450 ml)",
+        "price": 30.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/amul-moti-toned-milk-90-days-shelf-life/pvid/1638f685-befc-478e-95f8-2d92213866e7",
+        "sku": "1638f685-befc-478e-95f8-2d92213866e7",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (450 ml)"
+      },
+      {
+        "name": "Heritage Special Long Life Toned Milk (Pouch) 1 pack (450 ml)",
+        "price": 33.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/heritage-special-long-life-toned-milk-pouch/pvid/745ea592-6192-4dfc-8a18-c2396be123a2",
+        "sku": "745ea592-6192-4dfc-8a18-c2396be123a2",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (450 ml)"
+      },
+      {
+        "name": "Nandini Goodlife Toned Milk UHT (Tetra Pack Brick) 1 pack (1 L)",
+        "price": 70.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/nandini-goodlife-toned-milk-uht-tetra-pack-brick/pvid/b76a82b8-8c7d-4b3a-aa17-754fa3bfc0d4",
+        "sku": "b76a82b8-8c7d-4b3a-aa17-754fa3bfc0d4",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (1 L)"
+      },
+      {
+        "name": "Amul Taaza Homogenised Toned Milk (Tetra Pack) 1 pack (1 L)",
+        "price": 77.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/amul-taaza-homogenised-toned-milk-tetra-pack/pvid/84eae511-5edb-4a22-875e-5aa94976c2d6",
+        "sku": "84eae511-5edb-4a22-875e-5aa94976c2d6",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (1 L)"
+      },
+      {
+        "name": "Amul Slim Trim Skimmed Milk (Tetra Pack) 1 pack (1 L)",
+        "price": 85.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/amul-slim-trim-skimmed-milk-tetra-pack/pvid/11cca7b6-7d07-4e6e-a799-0fcf85f7b5da",
+        "sku": "11cca7b6-7d07-4e6e-a799-0fcf85f7b5da",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (1 L)"
+      },
+      {
+        "name": "Amul Gold Homogenised Standardised Milk (Tetra Pack) 1 pack (1 L)",
+        "price": 83.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/amul-gold-homogenised-standardised-milk-tetra-pack/pvid/ff393466-31a4-4aba-a51b-a787c39ef57e",
+        "sku": "ff393466-31a4-4aba-a51b-a787c39ef57e",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (1 L)"
+      },
+      {
+        "name": "Amul Calci+ High Calcium Milk 1 pack (1 L)",
+        "price": 98.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/amul-calci-high-calcium-milk/pvid/502db7d9-8407-418d-aeda-ceb511125a8a",
+        "sku": "502db7d9-8407-418d-aeda-ceb511125a8a",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (1 L)"
+      },
+      {
+        "name": "Nestle A+ Toned Milk 1 pack (1 L)",
+        "price": 112.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/nestle-a-toned-milk/pvid/5c2e3787-ba94-4ed5-afc9-ee56f41db09a",
+        "sku": "5c2e3787-ba94-4ed5-afc9-ee56f41db09a",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (1 L)"
+      },
+      {
+        "name": "Nandini Goodlife Slim Skimmed Milk UHT (Tetra Pack Brik) 1 pack (1 L)",
+        "price": 73.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/nandini-goodlife-slim-skimmed-milk-uht-tetra-pack-brik/pvid/053a43dd-d1bd-48cc-bcb5-754a270c53f2",
+        "sku": "053a43dd-d1bd-48cc-bcb5-754a270c53f2",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (1 L)"
+      },
+      {
+        "name": "Nestle A+ Slim Milk (Tetra Pack) 1 pack (1 L)",
+        "price": 99.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/nestle-a-slim-milk-tetra-pack/pvid/4359adde-02dd-4c22-8960-36958913e8fd",
+        "sku": "4359adde-02dd-4c22-8960-36958913e8fd",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (1 L)"
+      },
+      {
+        "name": "Heritage Farm Fresh Toned Tetra pack Milk 1 pack (1 L)",
+        "price": 72.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/heritage-farm-fresh-toned-tetra-pack-milk/pvid/a46ee3f6-6822-455b-8f54-a771880c35cb",
+        "sku": "a46ee3f6-6822-455b-8f54-a771880c35cb",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (1 L)"
+      },
+      {
+        "name": "Go Daily Double Tonned Milk Tetra Pack 1 pc (1 L)",
+        "price": 73.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/go-daily-double-tonned-milk-tetra-pack/pvid/713177eb-8784-4890-8b5d-a3274e2e5058",
+        "sku": "713177eb-8784-4890-8b5d-a3274e2e5058",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pc (1 L)"
+      },
+      {
+        "name": "Amul Taaza Homogenised Toned Milk (Tetra Pack) 1 pack (200 ml)",
+        "price": 17.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/amul-taaza-homogenised-toned-milk-tetra-pack/pvid/2a231315-2b07-4de0-af4a-3a4f9c48ad0c",
+        "sku": "2a231315-2b07-4de0-af4a-3a4f9c48ad0c",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (200 ml)"
+      },
+      {
+        "name": "Nandini Good Life Toned UHT Milk (Fino Pouch) 1 pack (180 ml)",
+        "price": 15.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/nandini-good-life-toned-uht-milk-fino-pouch/pvid/17ce1910-171f-4aac-8fcb-86d96d679487",
+        "sku": "17ce1910-171f-4aac-8fcb-86d96d679487",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (180 ml)"
+      },
+      {
+        "name": "Amul Lactose Free Milk (Tetra Pack) 1 pack (250 ml)",
+        "price": 26.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/amul-lactose-free-milk-tetra-pack/pvid/23037033-b0ab-4109-82b6-30f3a2a2cf84",
+        "sku": "23037033-b0ab-4109-82b6-30f3a2a2cf84",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (250 ml)"
+      },
+      {
+        "name": "Akshayakalpa Organic Cow Milk - Uht 1 pack (1 L)",
+        "price": 142.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/akshayakalpa-organic-cow-milk-uht/pvid/cfc168c0-bb8d-4614-bcb4-bd1f115c048e",
+        "sku": "cfc168c0-bb8d-4614-bcb4-bd1f115c048e",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (1 L)"
+      },
+      {
+        "name": "Akshayakalpa Organic Slim Milk - Uht 1 pack (1 L)",
+        "price": 147.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/akshayakalpa-organic-slim-milk-uht/pvid/94a31e8d-e828-4a4e-9d59-be4fa4da3346",
+        "sku": "94a31e8d-e828-4a4e-9d59-be4fa4da3346",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (1 L)"
+      },
+      {
+        "name": "Milky Mist Lactose Free Milk 1 pack (250 ml)",
+        "price": 34.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/milky-mist-lactose-free-milk/pvid/556c3d3e-f376-4dc4-b98a-e452d14f81d8",
+        "sku": "556c3d3e-f376-4dc4-b98a-e452d14f81d8",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (250 ml)"
+      },
+      {
+        "name": "Nandini Goodlife Slim Skimmed Milk UHT (Tetra Pack) 1 pack (500 ml)",
+        "price": 37.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/nandini-goodlife-slim-skimmed-milk-uht-tetra-pack/pvid/205272e0-ba4c-4b0b-9165-a57fe603a9b5",
+        "sku": "205272e0-ba4c-4b0b-9165-a57fe603a9b5",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (500 ml)"
+      },
+      {
+        "name": "Amul Buffalo A2 Milk (Tetra Pack) 1 pc (1 L)",
+        "price": 90.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/amul-buffalo-a2-milk-tetra-pack/pvid/b3533188-8fc9-473b-8acf-cfb0accf5538",
+        "sku": "b3533188-8fc9-473b-8acf-cfb0accf5538",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pc (1 L)"
+      },
+      {
+        "name": "Go Supremo Cow's Milk 1 L",
+        "price": 80.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/go-supremo-cows-milk/pvid/2f2871f7-ce0f-40ec-866b-7b50506264b3",
+        "sku": "2f2871f7-ce0f-40ec-866b-7b50506264b3",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 L"
+      },
+      {
+        "name": "Amul Cow Milk Tetra Pack 1 L",
+        "price": 78.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/amul-cow-milk-tetra-pack/pvid/4906208b-d8b3-45c5-b2b3-5d3f50914e2c",
+        "sku": "4906208b-d8b3-45c5-b2b3-5d3f50914e2c",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 L"
+      },
+      {
+        "name": "Amul Calci+ High Calcium Milk 1 pc (250 ml)",
+        "price": 26.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/amul-calci-high-calcium-milk/pvid/9d360401-f028-4fe7-9f33-78b83d6fbc4a",
+        "sku": "9d360401-f028-4fe7-9f33-78b83d6fbc4a",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pc (250 ml)"
+      },
+      {
+        "name": "Akshayakalpa Organic Pasteurized Cow Fresh Milk | Pouch 1 pack (500 ml)",
+        "price": 48.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/akshayakalpa-organic-pasteurized-cow-fresh-milk-pouch/pvid/9cd6367f-6ae0-45f4-b529-625ad8b01069",
+        "sku": "9cd6367f-6ae0-45f4-b529-625ad8b01069",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (500 ml)"
+      },
+      {
+        "name": "Akshayakalpa - Organic Farm Fresh Milk | Pouch 1 pc (500 ml)",
+        "price": 41.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/akshayakalpa-organic-farm-fresh-milk-pouch/pvid/7f4ab241-5791-483b-9901-c42a2f781b4e",
+        "sku": "7f4ab241-5791-483b-9901-c42a2f781b4e",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pc (500 ml)"
+      },
+      {
+        "name": "Sid's Farm Tested Cow Milk (No Antibiotics . No Hormones . No Preservatives) 1 pack (500 ml)",
+        "price": 46.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/sids-farm-tested-cow-milk-no-antibiotics-no-hormones-no-preservatives/pvid/1a9e1f6e-3d3c-49b2-bdf0-d34fa11c2054",
+        "sku": "1a9e1f6e-3d3c-49b2-bdf0-d34fa11c2054",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (500 ml)"
+      },
+      {
+        "name": "Sid's Farm Tested Toned Milk (No Antibiotics . No Hormones . No Preservatives) 1 pc (500 ml)",
+        "price": 38.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/sids-farm-tested-toned-milk-no-antibiotics-no-hormones-no-preservatives/pvid/a79f8c06-08d8-4b4f-834b-17205aefa4b7",
+        "sku": "a79f8c06-08d8-4b4f-834b-17205aefa4b7",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pc (500 ml)"
+      },
+      {
+        "name": "Sid's Farm Tested Skim Milk (No Antibiotics . No Hormones . No Preservatives) 1 pack (500 ml)",
+        "price": 33.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/sids-farm-tested-skim-milk-no-antibiotics-no-hormones-no-preservatives/pvid/8e686c99-3292-4ee3-b45e-c8a0cb1e6884",
+        "sku": "8e686c99-3292-4ee3-b45e-c8a0cb1e6884",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (500 ml)"
+      },
+      {
+        "name": "Akshayakalpa Organic High Protein Cow Fresh Milk | 25g Protein | Gable Top Pack 1 pack (250 ml)",
+        "price": 95.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/akshayakalpa-organic-high-protein-cow-fresh-milk-25g-protein-gable-top-pack/pvid/691c5bc0-1333-4821-b3f7-cbb0a5777fde",
+        "sku": "691c5bc0-1333-4821-b3f7-cbb0a5777fde",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (250 ml)"
+      },
+      {
+        "name": "Akshayakalpa Organic High Protein Cow Fresh Milk | Elaichi | 25g Protein | Gable Top Pack 1 pack (250 ml)",
+        "price": 95.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/akshayakalpa-organic-high-protein-cow-fresh-milk-elaichi-25g-protein-gable-top-pack/pvid/5637033d-9465-4643-b74c-bbcc8c3a2a26",
+        "sku": "5637033d-9465-4643-b74c-bbcc8c3a2a26",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (250 ml)"
+      },
+      {
+        "name": "Nandini Standardized Fresh Milk | Pouch 1 pack (500 ml)",
+        "price": 27.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/nandini-standardized-fresh-milk-pouch/pvid/0cfdcd21-abb4-4151-bd80-f833942fa524",
+        "sku": "0cfdcd21-abb4-4151-bd80-f833942fa524",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (500 ml)"
+      },
+      {
+        "name": "Akshayakalpa Amrutha A2 Pasteurized Organic Fresh Milk | Pouch 1 pack (500 ml)",
+        "price": 50.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/akshayakalpa-amrutha-a2-pasteurized-organic-fresh-milk-pouch/pvid/d3db9200-f330-4c52-996c-e231fcceaed0",
+        "sku": "d3db9200-f330-4c52-996c-e231fcceaed0",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (500 ml)"
+      },
+      {
+        "name": "Nandini Samrudhi Pasteurised Full Cream Fresh Milk | Pouch 1 pack (500 ml)",
+        "price": 28.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/nandini-samrudhi-pasteurised-full-cream-fresh-milk-pouch/pvid/07a789cc-1980-4f2d-af40-e20075768cf6",
+        "sku": "07a789cc-1980-4f2d-af40-e20075768cf6",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (500 ml)"
+      },
+      {
+        "name": "Arokya Standardized Fresh Milk | Pouch 1 pack (500 ml)",
+        "price": 33.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/arokya-standardized-fresh-milk-pouch/pvid/df9f14b1-156c-4b88-abdd-438419ddc4cf",
+        "sku": "df9f14b1-156c-4b88-abdd-438419ddc4cf",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (500 ml)"
+      },
+      {
+        "name": "Country Delight Natural Fresh Cow Milk | 25g Protein | Pouch 1 pack (450 ml)",
+        "price": 57.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/country-delight-natural-fresh-cow-milk-25g-protein-pouch/pvid/f1f1d95f-ada9-48f7-ab10-f094bb40337b",
+        "sku": "f1f1d95f-ada9-48f7-ab10-f094bb40337b",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (450 ml)"
+      },
+      {
+        "name": "Country Delight Cow Fresh Milk | Pouch 1 pack (450 ml)",
+        "price": 47.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/country-delight-cow-fresh-milk-pouch/pvid/ed495088-935c-44a9-919b-b667fde1ac87",
+        "sku": "ed495088-935c-44a9-919b-b667fde1ac87",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (450 ml)"
+      },
+      {
+        "name": "Heritage Organic Cow Fresh Milk | Pouch 1 pack (500 ml)",
+        "price": 40.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/heritage-organic-cow-fresh-milk-pouch/pvid/0dc7f9e5-79a3-4327-b317-7e4a522940fc",
+        "sku": "0dc7f9e5-79a3-4327-b317-7e4a522940fc",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (500 ml)"
+      },
+      {
+        "name": "Nandini Pasteurised Cow Fresh Milk (Green/White) 1 pack (500 ml)",
+        "price": 26.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/nandini-pasteurised-cow-fresh-milk-greenwhite/pvid/6393d026-ec90-4241-9d81-b3b14900db9c",
+        "sku": "6393d026-ec90-4241-9d81-b3b14900db9c",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (500 ml)"
+      },
+      {
+        "name": "Akshayakalpa Amrutha - A2 Farm Organic Cow Fresh Milk | Pouch 1 pack (500 ml)",
+        "price": 56.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/akshayakalpa-amrutha-a2-farm-organic-cow-fresh-milk-pouch/pvid/0d2d70a4-1469-45a3-b1c4-4ffe692f86ae",
+        "sku": "0d2d70a4-1469-45a3-b1c4-4ffe692f86ae",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (500 ml)"
+      },
+      {
+        "name": "Arokya Full Cream Fresh Milk | Pouch 1 pack (500 ml)",
+        "price": 40.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/arokya-full-cream-fresh-milk-pouch/pvid/6ce2d5e9-61a8-42f1-aa7b-d9deb8fbbf76",
+        "sku": "6ce2d5e9-61a8-42f1-aa7b-d9deb8fbbf76",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (500 ml)"
+      },
+      {
+        "name": "Nandini Standardized Fresh Milk | Pouch 1 pack (1 L)",
+        "price": 52.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/nandini-standardized-fresh-milk-pouch/pvid/d5b5de34-86b1-4b15-aa27-b8e52893cc53",
+        "sku": "d5b5de34-86b1-4b15-aa27-b8e52893cc53",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (1 L)"
+      },
+      {
+        "name": "Heritage Toned Fresh Milk | Pouch 1 pack (500 ml)",
+        "price": 28.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/heritage-toned-fresh-milk-pouch/pvid/fdf82a8b-a576-417f-b6df-a40d37e25634",
+        "sku": "fdf82a8b-a576-417f-b6df-a40d37e25634",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (500 ml)"
+      },
+      {
+        "name": "Nandini Toned Fresh Milk | Pouch 1 pack (1 L)",
+        "price": 46.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/nandini-toned-fresh-milk-pouch/pvid/bc55e919-e7a5-4a6b-ad5e-6e6711869715",
+        "sku": "bc55e919-e7a5-4a6b-ad5e-6e6711869715",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (1 L)"
+      },
+      {
+        "name": "Amul Gold Full Cream Fresh Milk | Pouch 1 pack (500 ml)",
+        "price": 34.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/amul-gold-full-cream-fresh-milk-pouch/pvid/51d55eac-ca29-4532-9b32-9b7d317f346a",
+        "sku": "51d55eac-ca29-4532-9b32-9b7d317f346a",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (500 ml)"
+      },
+      {
+        "name": "Arokya Toned Fresh Milk | Pouch 1 pack (500 ml)",
+        "price": 27.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/arokya-toned-fresh-milk-pouch/pvid/edc180a1-cb0b-4824-b10e-1c306f1aacae",
+        "sku": "edc180a1-cb0b-4824-b10e-1c306f1aacae",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (500 ml)"
+      },
+      {
+        "name": "Amul Taaza Toned Fresh Milk | Pouch 1 pack (500 ml)",
+        "price": 29.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/amul-taaza-toned-fresh-milk-pouch/pvid/9d447ba5-1d35-46e1-bc64-e932135d026f",
+        "sku": "9d447ba5-1d35-46e1-bc64-e932135d026f",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (500 ml)"
+      },
+      {
+        "name": "Akshayakalpa Lactose Free Fresh Milk 1 pack (500 ml)",
+        "price": 78.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/akshayakalpa-lactose-free-fresh-milk/pvid/55070be7-392e-422c-a917-8e9038885cbc",
+        "sku": "55070be7-392e-422c-a917-8e9038885cbc",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (500 ml)"
+      },
+      {
+        "name": "Nandini Toned Fresh Milk | Pouch 1 pack (500 ml)",
+        "price": 24.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/nandini-toned-fresh-milk-pouch/pvid/25eb526c-9c26-48cd-95a3-8e4058910f8a",
+        "sku": "25eb526c-9c26-48cd-95a3-8e4058910f8a",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (500 ml)"
+      },
+      {
+        "name": "Sid's Farm High Protein Fresh Milk | 25g Protein | Cabup Can Pack 1 pc (250 ml)",
+        "price": 89.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/sids-farm-high-protein-fresh-milk-25g-protein-cabup-can-pack/pvid/e351e965-f1c4-4e25-b9a4-06e125a22be3",
+        "sku": "e351e965-f1c4-4e25-b9a4-06e125a22be3",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pc (250 ml)"
+      },
+      {
+        "name": "Nandini Promilk | Protein Rich Fresh Milk | Pouch 1 pack (500 ml)",
+        "price": 27.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/nandini-promilk-protein-rich-fresh-milk-pouch/pvid/1940c2c5-f1d1-4e52-b744-3dd97face7e1",
+        "sku": "1940c2c5-f1d1-4e52-b744-3dd97face7e1",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (500 ml)"
+      },
+      {
+        "name": "Amulya Dairy Whitener (Pouch) 1 pack (500 g)",
+        "price": 255.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/amulya-dairy-whitener-pouch/pvid/d5456749-53e0-4045-92c4-1d17472dc94a",
+        "sku": "d5456749-53e0-4045-92c4-1d17472dc94a",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (500 g)"
+      },
+      {
+        "name": "Amulya Dairy Whitener (Box) 1 pack (200 g)",
+        "price": 104.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/amulya-dairy-whitener-box/pvid/461599fa-46ae-47a8-adcd-8f45050f6d5c",
+        "sku": "461599fa-46ae-47a8-adcd-8f45050f6d5c",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (200 g)"
+      },
+      {
+        "name": "Amul Gold Premium Full Cream Fresh Milk | Bottle 1 pc (1 L)",
+        "price": 90.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/amul-gold-premium-full-cream-fresh-milk-bottle/pvid/3503237c-6beb-4eff-9d9f-72ca917b8814",
+        "sku": "3503237c-6beb-4eff-9d9f-72ca917b8814",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pc (1 L)"
+      },
+      {
+        "name": "Amulya Dairy Whitener 1 pack (100 g)",
+        "price": 52.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/amulya-dairy-whitener/pvid/3ae8be39-1b47-4005-af5e-bcf822135cc0",
+        "sku": "3ae8be39-1b47-4005-af5e-bcf822135cc0",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (100 g)"
+      },
+      {
+        "name": "Amul Camel Milk Pet Bottle 1 pack (200 ml)",
+        "price": 25.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/amul-camel-milk-pet-bottle/pvid/52177137-9dec-4bfe-baa6-dfda66b8d932",
+        "sku": "52177137-9dec-4bfe-baa6-dfda66b8d932",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (200 ml)"
+      },
+      {
+        "name": "Amulya Dairy Whitener (Pouch) 1 pack (200 g)",
+        "price": 104.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/amulya-dairy-whitener-pouch/pvid/a34bbf26-15d8-4980-b171-137569ff9402",
+        "sku": "a34bbf26-15d8-4980-b171-137569ff9402",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (200 g)"
+      },
+      {
+        "name": "Nandini Goodlife - Toned Milk Combo 500 ml X 3",
+        "price": 96.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/nandini-goodlife-toned-milk-combo/pvid/2de7b841-26fc-49bd-a726-f494c4d64b7b",
+        "sku": "2de7b841-26fc-49bd-a726-f494c4d64b7b",
+        "method": "zepto-rendered-card",
+        "pack_size": "500 ml X 3"
+      }
+    ]
+  },
+  {
+    "store": "instamart",
+    "source_url": "https://www.swiggy.com/instamart/",
+    "captured_at": "2026-10-24T22:24:09.756Z",
+    "product_count": 40,
+    "products": [
+      {
+        "name": "Epigamia High Protein Paneer 200 g",
+        "price": 150.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.swiggy.com/instamart/",
+        "sku": null,
+        "method": "instamart-rendered-card",
+        "pack_size": "200 g"
+      },
+      {
+        "name": "Britannia Winkin Cow Vanillicious Thick Milkshake Pet Bottle 180 ml",
+        "price": 32.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.swiggy.com/instamart/",
+        "sku": null,
+        "method": "instamart-rendered-card",
+        "pack_size": "180 ml"
+      },
+      {
+        "name": "Britannia Winkin Cow Strawbericious Thick Milkshake Pet Bottle 180 ml",
+        "price": 32.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.swiggy.com/instamart/",
+        "sku": null,
+        "method": "instamart-rendered-card",
+        "pack_size": "180 ml"
+      },
+      {
+        "name": "Cavin's Chocolate Milkshake Thick & Creamy 1 ltr",
+        "price": 120.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.swiggy.com/instamart/",
+        "sku": null,
+        "method": "instamart-rendered-card",
+        "pack_size": "1 ltr"
+      },
+      {
+        "name": "Heritage Vanilla Milkshake 180 ml",
+        "price": 32.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.swiggy.com/instamart/",
+        "sku": null,
+        "method": "instamart-rendered-card",
+        "pack_size": "180 ml"
+      },
+      {
+        "name": "Milky Mist Briyas Tofu Soya Paneer 200 g",
+        "price": 54.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.swiggy.com/instamart/",
+        "sku": null,
+        "method": "instamart-rendered-card",
+        "pack_size": "200 g"
+      },
+      {
+        "name": "D'lecta Cheese Spread 150 g",
+        "price": 80.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.swiggy.com/instamart/",
+        "sku": null,
+        "method": "instamart-rendered-card",
+        "pack_size": "150 g"
+      },
+      {
+        "name": "Cavin'S Masala Chaasa 1 ltr",
+        "price": 63.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.swiggy.com/instamart/",
+        "sku": null,
+        "method": "instamart-rendered-card",
+        "pack_size": "1 ltr"
+      },
+      {
+        "name": "Foodstrong 25g High Protein Milkshake Coffee 250 ml",
+        "price": 74.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.swiggy.com/instamart/",
+        "sku": null,
+        "method": "instamart-rendered-card",
+        "pack_size": "250 ml"
+      },
+      {
+        "name": "Cavin's Vanilla Milkshake Thick & Creamy 1 ltr",
+        "price": 120.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.swiggy.com/instamart/",
+        "sku": null,
+        "method": "instamart-rendered-card",
+        "pack_size": "1 ltr"
+      },
+      {
+        "name": "Britannia Laughing Cow Cheese Triangles 120 g",
+        "price": 105.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.swiggy.com/instamart/",
+        "sku": null,
+        "method": "instamart-rendered-card",
+        "pack_size": "120 g"
+      },
+      {
+        "name": "Cavin'S Latte Cold Coffee 170 ml",
+        "price": 44.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.swiggy.com/instamart/",
+        "sku": null,
+        "method": "instamart-rendered-card",
+        "pack_size": "170 ml"
+      },
+      {
+        "name": "D'lecta Cheese Slices 200 g",
+        "price": 108.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.swiggy.com/instamart/",
+        "sku": null,
+        "method": "instamart-rendered-card",
+        "pack_size": "200 g"
+      },
+      {
+        "name": "Oatey Barista Unsweetened Oat Drink 200 ml",
+        "price": 63.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.swiggy.com/instamart/",
+        "sku": null,
+        "method": "instamart-rendered-card",
+        "pack_size": "200 ml"
+      },
+      {
+        "name": "Yoga Bar 31g Protein Shake Double Chocolate, No Added Sugar, Rich In Calcium, Low Fat 250 ml",
+        "price": 140.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.swiggy.com/instamart/",
+        "sku": null,
+        "method": "instamart-rendered-card",
+        "pack_size": "250 ml"
+      },
+      {
+        "name": "Milky Mist Uht Cream 250 ml",
+        "price": 80.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.swiggy.com/instamart/",
+        "sku": null,
+        "method": "instamart-rendered-card",
+        "pack_size": "250 ml"
+      },
+      {
+        "name": "Britannia Italian Herb Cheese Slices 90 g",
+        "price": 69.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.swiggy.com/instamart/",
+        "sku": null,
+        "method": "instamart-rendered-card",
+        "pack_size": "90 g"
+      },
+      {
+        "name": "Britannia Korean Chilli Cheese Slices 90 g",
+        "price": 69.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.swiggy.com/instamart/",
+        "sku": null,
+        "method": "instamart-rendered-card",
+        "pack_size": "90 g"
+      },
+      {
+        "name": "Oatey Millet Plant Based Drink 200 ml",
+        "price": 60.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.swiggy.com/instamart/",
+        "sku": null,
+        "method": "instamart-rendered-card",
+        "pack_size": "200 ml"
+      },
+      {
+        "name": "Cavin's Cold Coffee Chilled Latte Thick & Creamy 180 ml",
+        "price": 38.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.swiggy.com/instamart/",
+        "sku": null,
+        "method": "instamart-rendered-card",
+        "pack_size": "180 ml"
+      },
+      {
+        "name": "Potato (Aloo Gadde) 1 kg",
+        "price": 31.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.swiggy.com/instamart/",
+        "sku": null,
+        "method": "instamart-rendered-card",
+        "pack_size": "1 kg"
+      },
+      {
+        "name": "Mixed Marigold Flowers 100 g",
+        "price": 21.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.swiggy.com/instamart/",
+        "sku": null,
+        "method": "instamart-rendered-card",
+        "pack_size": "100 g"
+      },
+      {
+        "name": "Robusta Banana (Baalehannu) 4 Pieces",
+        "price": 39.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.swiggy.com/instamart/",
+        "sku": null,
+        "method": "instamart-rendered-card",
+        "pack_size": "4 Pieces"
+      },
+      {
+        "name": "Tender Coconut (Elaneer) 1 Piece",
+        "price": 78.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.swiggy.com/instamart/",
+        "sku": null,
+        "method": "instamart-rendered-card",
+        "pack_size": "1 Piece"
+      },
+      {
+        "name": "Yelakki Banana (Baalehannu) 7 Pieces",
+        "price": 77.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.swiggy.com/instamart/",
+        "sku": null,
+        "method": "instamart-rendered-card",
+        "pack_size": "7 Pieces"
+      },
+      {
+        "name": "Mixed Marigold Garland (1.7 - 2 ft) 1 String",
+        "price": 40.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.swiggy.com/instamart/",
+        "sku": null,
+        "method": "instamart-rendered-card",
+        "pack_size": "1 String"
+      },
+      {
+        "name": "Ooty Carrot 250 g",
+        "price": 24.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.swiggy.com/instamart/",
+        "sku": null,
+        "method": "instamart-rendered-card",
+        "pack_size": "250 g"
+      },
+      {
+        "name": "Durva (Doop) Grass 1 Bunch",
+        "price": 16.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.swiggy.com/instamart/",
+        "sku": null,
+        "method": "instamart-rendered-card",
+        "pack_size": "1 Bunch"
+      },
+      {
+        "name": "Green Capsicum (Dappa Menasinakaayi) 2 Pieces",
+        "price": 26.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.swiggy.com/instamart/",
+        "sku": null,
+        "method": "instamart-rendered-card",
+        "pack_size": "2 Pieces"
+      },
+      {
+        "name": "Premium Thai Guava (Seebe Hannu) 1 Piece",
+        "price": 59.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.swiggy.com/instamart/",
+        "sku": null,
+        "method": "instamart-rendered-card",
+        "pack_size": "1 Piece"
+      },
+      {
+        "name": "Carrot 500 g",
+        "price": 32.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.swiggy.com/instamart/",
+        "sku": null,
+        "method": "instamart-rendered-card",
+        "pack_size": "500 g"
+      },
+      {
+        "name": "Cauliflower (Hoo Kosu) 1 Piece",
+        "price": 50.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.swiggy.com/instamart/",
+        "sku": null,
+        "method": "instamart-rendered-card",
+        "pack_size": "1 Piece"
+      },
+      {
+        "name": "Daily Pomegranate (Dalimbe) 3 Pieces",
+        "price": 134.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.swiggy.com/instamart/",
+        "sku": null,
+        "method": "instamart-rendered-card",
+        "pack_size": "3 Pieces"
+      },
+      {
+        "name": "Kinnaur Apple Large (Sebu) 2 Pieces",
+        "price": 95.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.swiggy.com/instamart/",
+        "sku": null,
+        "method": "instamart-rendered-card",
+        "pack_size": "2 Pieces"
+      },
+      {
+        "name": "Coccinia (Tondekaayi) 250 g",
+        "price": 10.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.swiggy.com/instamart/",
+        "sku": null,
+        "method": "instamart-rendered-card",
+        "pack_size": "250 g"
+      },
+      {
+        "name": "Beetroot 500 g",
+        "price": 28.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.swiggy.com/instamart/",
+        "sku": null,
+        "method": "instamart-rendered-card",
+        "pack_size": "500 g"
+      },
+      {
+        "name": "Garlic (Bellulli) 100 g",
+        "price": 41.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.swiggy.com/instamart/",
+        "sku": null,
+        "method": "instamart-rendered-card",
+        "pack_size": "100 g"
+      },
+      {
+        "name": "Haricot Beans (Hurulikayi) 250 g",
+        "price": 27.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.swiggy.com/instamart/",
+        "sku": null,
+        "method": "instamart-rendered-card",
+        "pack_size": "250 g"
+      },
+      {
+        "name": "Daily Juice Sweet Lime (Mosambi) 500 g",
+        "price": 41.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.swiggy.com/instamart/",
+        "sku": null,
+        "method": "instamart-rendered-card",
+        "pack_size": "500 g"
+      },
+      {
+        "name": "Daily Apple (Sebu) 2 Pieces",
+        "price": 93.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.swiggy.com/instamart/",
+        "sku": null,
+        "method": "instamart-rendered-card",
+        "pack_size": "2 Pieces"
+      }
+    ]
+  },
+  {
+    "store": "blinkit",
+    "source_url": "https://blinkit.com/cn/milk/cid/14/922",
+    "captured_at": "2026-10-24T22:24:09.756Z",
+    "product_count": 28,
+    "products": [
+      {
+        "name": "Amul Taaza Toned Milk 1 ltr",
+        "price": 59.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://blinkit.com/cn/milk/cid/14/922",
+        "sku": "561270",
+        "method": "blinkit-rendered-card",
+        "pack_size": "1 ltr"
+      },
+      {
+        "name": "Amul Gold Full Cream Milk 500 ml",
+        "price": 36.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://blinkit.com/cn/milk/cid/14/922",
+        "sku": "12872",
+        "method": "blinkit-rendered-card",
+        "pack_size": "500 ml"
+      },
+      {
+        "name": "Amul Cow Milk 500 ml",
+        "price": 31.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://blinkit.com/cn/milk/cid/14/922",
+        "sku": "160704",
+        "method": "blinkit-rendered-card",
+        "pack_size": "500 ml"
+      },
+      {
+        "name": "Amul Taaza Homogenised Toned Milk 1 ltr",
+        "price": 77.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://blinkit.com/cn/milk/cid/14/922",
+        "sku": "176",
+        "method": "blinkit-rendered-card",
+        "pack_size": "1 ltr"
+      },
+      {
+        "name": "Amul Lactose Free Milk 250 ml",
+        "price": 26.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://blinkit.com/cn/milk/cid/14/922",
+        "sku": "206314",
+        "method": "blinkit-rendered-card",
+        "pack_size": "250 ml"
+      },
+      {
+        "name": "Country Delight Cow Milk 450 ml",
+        "price": 47.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://blinkit.com/cn/milk/cid/14/922",
+        "sku": "637875",
+        "method": "blinkit-rendered-card",
+        "pack_size": "450 ml"
+      },
+      {
+        "name": "Mother Dairy Toned Milk 500 ml",
+        "price": 30.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://blinkit.com/cn/milk/cid/14/922",
+        "sku": "19925",
+        "method": "blinkit-rendered-card",
+        "pack_size": "500 ml"
+      },
+      {
+        "name": "Amul Buffalo A2 Milk 500 ml",
+        "price": 40.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://blinkit.com/cn/milk/cid/14/922",
+        "sku": "522807",
+        "method": "blinkit-rendered-card",
+        "pack_size": "500 ml"
+      },
+      {
+        "name": "Amul Moti Toned Milk (90 Days Shelf Life) 450 ml",
+        "price": 33.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://blinkit.com/cn/milk/cid/14/922",
+        "sku": "34778",
+        "method": "blinkit-rendered-card",
+        "pack_size": "450 ml"
+      },
+      {
+        "name": "Mother Dairy Full Cream Milk 500 ml",
+        "price": 36.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://blinkit.com/cn/milk/cid/14/922",
+        "sku": "19924",
+        "method": "blinkit-rendered-card",
+        "pack_size": "500 ml"
+      },
+      {
+        "name": "Amul Taaza Toned Milk 200 ml",
+        "price": 17.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://blinkit.com/cn/milk/cid/14/922",
+        "sku": "113945",
+        "method": "blinkit-rendered-card",
+        "pack_size": "200 ml"
+      },
+      {
+        "name": "Mother Dairy Cow Milk 500 ml",
+        "price": 31.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://blinkit.com/cn/milk/cid/14/922",
+        "sku": "339309",
+        "method": "blinkit-rendered-card",
+        "pack_size": "500 ml"
+      },
+      {
+        "name": "Amul Gold Milk 1 ltr",
+        "price": 83.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://blinkit.com/cn/milk/cid/14/922",
+        "sku": "179",
+        "method": "blinkit-rendered-card",
+        "pack_size": "1 ltr"
+      },
+      {
+        "name": "Country Delight Buffalo Fresh Milk 450 ml",
+        "price": 59.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://blinkit.com/cn/milk/cid/14/922",
+        "sku": "637879",
+        "method": "blinkit-rendered-card",
+        "pack_size": "450 ml"
+      },
+      {
+        "name": "Pride of Cows Farm Cow Milk 500 ml",
+        "price": 85.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://blinkit.com/cn/milk/cid/14/922",
+        "sku": "485463",
+        "method": "blinkit-rendered-card",
+        "pack_size": "500 ml"
+      },
+      {
+        "name": "Humpy Farms A2 Cow Milk 500 ml",
+        "price": 46.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://blinkit.com/cn/milk/cid/14/922",
+        "sku": "505525",
+        "method": "blinkit-rendered-card",
+        "pack_size": "500 ml"
+      },
+      {
+        "name": "Mother Dairy FIT Life Homogenized Double Toned Milk (450 ml) 400 ml",
+        "price": 32.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://blinkit.com/cn/milk/cid/14/922",
+        "sku": "207766",
+        "method": "blinkit-rendered-card",
+        "pack_size": "400 ml"
+      },
+      {
+        "name": "Country Delight 25 g High Protein Milk 450 ml",
+        "price": 57.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://blinkit.com/cn/milk/cid/14/922",
+        "sku": "735586",
+        "method": "blinkit-rendered-card",
+        "pack_size": "450 ml"
+      },
+      {
+        "name": "Amul Slim 'n' Trim Skimmed Milk (Zero Cholesterol) 1 ltr",
+        "price": 85.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://blinkit.com/cn/milk/cid/14/922",
+        "sku": "177181",
+        "method": "blinkit-rendered-card",
+        "pack_size": "1 ltr"
+      },
+      {
+        "name": "Amul A2 Gir Cow Milk 1 ltr",
+        "price": 85.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://blinkit.com/cn/milk/cid/14/922",
+        "sku": "559097",
+        "method": "blinkit-rendered-card",
+        "pack_size": "1 ltr"
+      },
+      {
+        "name": "Nestle a+ Toned Milk 1 ltr",
+        "price": 112.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://blinkit.com/cn/milk/cid/14/922",
+        "sku": "138836",
+        "method": "blinkit-rendered-card",
+        "pack_size": "1 ltr"
+      },
+      {
+        "name": "Mother Dairy Toned Milk 1 ltr",
+        "price": 77.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://blinkit.com/cn/milk/cid/14/922",
+        "sku": "32685",
+        "method": "blinkit-rendered-card",
+        "pack_size": "1 ltr"
+      },
+      {
+        "name": "Amul Cow Milk 1 ltr",
+        "price": 61.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://blinkit.com/cn/milk/cid/14/922",
+        "sku": "561264",
+        "method": "blinkit-rendered-card",
+        "pack_size": "1 ltr"
+      },
+      {
+        "name": "Amul Cow Milk 1 ltr",
+        "price": 78.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://blinkit.com/cn/milk/cid/14/922",
+        "sku": "547184",
+        "method": "blinkit-rendered-card",
+        "pack_size": "1 ltr"
+      },
+      {
+        "name": "Mother Dairy Pro Milk 500 ml",
+        "price": 36.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://blinkit.com/cn/milk/cid/14/922",
+        "sku": "632855",
+        "method": "blinkit-rendered-card",
+        "pack_size": "500 ml"
+      },
+      {
+        "name": "Mother Dairy FIT Life Homogenized Double Toned Milk 115 ml",
+        "price": 10.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://blinkit.com/cn/milk/cid/14/922",
+        "sku": "313420",
+        "method": "blinkit-rendered-card",
+        "pack_size": "115 ml"
+      },
+      {
+        "name": "Amul Buffalo A2 Milk 1 ltr",
+        "price": 90.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://blinkit.com/cn/milk/cid/14/922",
+        "sku": "547185",
+        "method": "blinkit-rendered-card",
+        "pack_size": "1 ltr"
+      },
+      {
+        "name": "Amul Calci+ Calcium Rich High Protein Milk 250 ml",
+        "price": 26.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://blinkit.com/cn/milk/cid/14/922",
+        "sku": "547189",
+        "method": "blinkit-rendered-card",
+        "pack_size": "250 ml"
+      }
+    ]
+  }
+]

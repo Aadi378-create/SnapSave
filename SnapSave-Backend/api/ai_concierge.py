@@ -45,6 +45,9 @@ class AI_CONCIERGE_PROVIDER:
         try:
             quote=AI_CONCIERGE_PROVIDER.research(items,location)
             if isinstance(quote,dict) and quote.get("requires_human_review") is True and quote.get("verified") is False:
+                contexts=quote.get('research_contexts',[])
+                if not isinstance(contexts,list) or any(not isinstance(context,dict) or context.get('order_id')!=order_id or context.get('revision')!=version or context.get('postal_code')!=location for context in contexts):
+                    raise ValueError('Browser evidence belongs to a different order or research revision')
                 if quote.get("postal_code")!=location or not isinstance(quote.get("items"),list):
                     raise ValueError("Research draft does not match the requested delivery context")
                 expected={i["item_id"] for i in items}

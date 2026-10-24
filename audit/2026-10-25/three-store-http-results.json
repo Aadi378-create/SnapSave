@@ -1,0 +1,39 @@
+{
+  "verified": false,
+  "requires_human_review": true,
+  "postal_code": "110001",
+  "source": "Public catalogue evidence (Beautiful Soup)",
+  "transport": "http",
+  "observed_at": "2026-10-24T22:30:46.619968+00:00",
+  "warnings": [
+    "Delivery postcode, stock, exact pack, checkout fees and promotions require human verification. Public prices are not a payable quote."
+  ],
+  "items": [
+    {
+      "item_id": "probe",
+      "query": "Amul Taaza milk 1 L",
+      "quantity": 1,
+      "candidates": []
+    }
+  ],
+  "diagnostics": [
+    {
+      "store": "zepto",
+      "url": "https://www.zepto.com/category/dairy-bread-eggs/milk",
+      "status": "unavailable",
+      "reason": "HTTP 202; no catalogue data accepted"
+    },
+    {
+      "store": "instamart",
+      "url": "https://www.swiggy.com/instamart/",
+      "status": "unavailable",
+      "reason": "HTTP 202; no catalogue data accepted"
+    },
+    {
+      "store": "blinkit",
+      "url": "https://blinkit.com/cn/milk/cid/14/922",
+      "status": "unavailable",
+      "reason": "HTTP 403; no catalogue data accepted"
+    }
+  ]
+}

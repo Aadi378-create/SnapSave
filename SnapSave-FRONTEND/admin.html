@@ -3145,6 +3145,36 @@
         let panel=document.getElementById('research-evidence-panel');
         if(!panel){panel=document.createElement('div');panel.id='research-evidence-panel';panel.className='detail-card';document.getElementById('ticket-detail-panel').prepend(panel);}
         panel.replaceChildren();panel.hidden=true;
+        const eligible=['pending_review','reviewing'].includes(order.status) && (currentUser.role==='ADMIN'||order.assigned_moderator_id===currentUser.id);
+        if(eligible) {
+          panel.hidden=false;
+          const locationTitle=document.createElement('h4');locationTitle.textContent='Research delivery location';panel.append(locationTitle);
+          const instructions=document.createElement('p');instructions.style.cssText='font-size:12px;line-height:1.5;margin:10px 0;';
+          instructions.textContent='Customer postcode: '+String(order.delivery_postal_code||'missing')+'. Set this location on each retailer and wait for products to reload. Existing browser locations must be checked. Closed stores and unknown coverage require review.';panel.append(instructions);
+          const feedback=document.createElement('p');feedback.setAttribute('role','status');feedback.style.fontSize='12px';
+          const copy=document.createElement('button');copy.type='button';copy.className='btn btn-secondary';copy.textContent='Copy research context';
+          copy.onclick=async()=>{const version=session.version;try{
+            const plan=await apiRequest('/api/moderator/orders/'+encodeURIComponent(order.id)+'/research-location');
+            session.assert(version);if(selectedOrder?.id!==order.id)return;
+            await navigator.clipboard.writeText(JSON.stringify({order_id:plan.order_id,revision:plan.revision,postal_code:plan.postal_code}));
+            session.assert(version);feedback.textContent='Context copied. Use it with the retailer capture script after selecting this postcode.';
+          }catch(error){if(session.current(version))feedback.textContent=error.message;}};panel.append(copy);
+          const stores=document.createElement('p');stores.style.cssText='display:flex;flex-wrap:wrap;gap:12px;margin:10px 0;font-size:12px;';
+          for(const [name,url] of [['Instamart','https://www.swiggy.com/instamart/'],['Zepto','https://www.zepto.com/category/dairy-bread-eggs/milk'],['Blinkit','https://blinkit.com/cn/milk/cid/14/922'],['BigBasket','https://www.bigbasket.com/pc/bakery-cakes-dairy/dairy/milk/']]) {
+            const link=document.createElement('a');link.textContent='Open '+name;link.href=url;link.target='_blank';link.rel='noopener noreferrer';stores.append(link);
+          }panel.append(stores);
+          const label=document.createElement('label');label.textContent='Import retailer capture JSON';label.style.cssText='display:block;font-size:12px;';
+          const file=document.createElement('input');file.type='file';file.accept='.json,application/json';file.setAttribute('aria-label','Import retailer capture JSON');label.append(file);panel.append(label,feedback);
+          file.onchange=async()=>{const version=session.version;const revision=order.revision;const selected=file.files?.[0];if(!selected)return;
+            file.disabled=true;try{
+              if(selected.size>60000)throw new Error('Capture exceeds 60 KB. Export fewer product cards and retry.');
+              const captures=JSON.parse(await selected.text());session.assert(version);if(selectedOrder?.id!==order.id)return;
+              const updated=await apiRequest('/api/moderator/orders/'+encodeURIComponent(order.id)+'/research-evidence','POST',{revision,captures});
+              session.assert(version);if(selectedOrder?.id!==order.id)return;selectedOrder={...selectedOrder,...updated};renderTicketDetails();
+            }catch(error){if(session.current(version))feedback.textContent=error.message;}
+            finally{if(session.current(version))file.disabled=false;}
+          };
+        }
         let draft;
         try {draft=JSON.parse(order.manual_prices||'{}').research_draft;} catch(error){return;}
         if(!draft || !Array.isArray(draft.items))return;
@@ -3165,6 +3195,7 @@
             const amount=Number(candidate.price);if(!Number.isFinite(amount)||amount<=0)continue;
             const line=document.createElement('p');line.style.cssText='font-size:12px;line-height:1.5;margin:8px 0;';
             line.textContent=String(candidate.store||'Store')+' · '+String(candidate.name||'Product')+' · ₹'+amount.toFixed(2)+' per listed pack · stock: '+String(candidate.availability||'unknown')+' ';
+            if(candidate.location_context){const states={needs_location:'select customer location',postcode_observed:'postcode matches page',staff_attested:'staff confirmed postcode',mismatch:'postcode mismatch'};line.textContent+='· location: '+(states[candidate.location_context.status]||'needs review')+' (coverage unverified) ';}
             try {
               const url=new URL(candidate.source_url);
               if(url.protocol==='https:' && allowed.has(url.hostname) && !url.username && !url.password && (!url.port||url.port==='443')) {

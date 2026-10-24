@@ -109,6 +109,177 @@ def test_configured_capture_is_consumed_by_provider(monkeypatch,tmp_path):
     assert result['transport']=='browser_capture' and result['items'][0]['candidates'][0]['price']==73
 
 
+def zepto_card(pack='1 pack (1 L)',stock='false'):
+    return f'''<a data-testid="product-card" href="/pn/amul/pvid/variant-one"><div data-is-out-of-stock="{stock}">
+    <div data-slot-id="ProductName">Amul Taaza Homogenised Toned Milk</div><div data-slot-id="PackSize">{pack}</div>
+    <div data-slot-id="EdlpPrice"><span class="cptQT7">₹<!-- -->77</span><span>₹90</span></div></div></a>'''
+
+
+def instamart_card(name='Epigamia High Protein Paneer',pack='200 g',amount='150'):
+    return f'''<div class="_1fi7p"><div class="_1iFYi">{name}</div><div class="_3wq_F">{pack}</div>
+    <div data-testid="offer-text">40% OFF</div><div class="_2enD-"><div class="_2jn41">{amount}</div>
+    <div class="_2jn41 _3eAjW _1VrXB">250</div></div></div>'''
+
+
+def blinkit_card(name='Amul Taaza Homogenised Toned Milk',pack='1 ltr'):
+    return f'''<div role="button" id="176"><div class="tw-line-clamp-2">{name}</div><div class="tw-line-clamp-1">{pack}</div>
+    <div class="tw-text-200 tw-font-semibold">₹77</div><span class="tw-line-through">₹90</span></div>'''
+
+
+@pytest.mark.parametrize('store,url,markup,amount',[
+    ('zepto','https://www.zepto.com/category/milk',zepto_card(),77),
+    ('instamart','https://www.swiggy.com/instamart/',instamart_card(),150),
+    ('blinkit','https://blinkit.com/cn/milk/cid/14/922',blinkit_card(),77),
+])
+def test_three_store_rendered_prices_exclude_mrp_and_discount(store,url,markup,amount):
+    rows=extract_products(markup,url,store)
+    assert len(rows)==1 and rows[0]['price']==amount and rows[0]['availability']=='unknown'
+    assert rows[0]['pack_size']
+
+
+def test_zepto_rejects_ambiguous_packs_and_excludes_unavailable():
+    url='https://www.zepto.com/category/milk'
+    assert extract_products(zepto_card('475 ml or 500 ml'),url,'zepto')==[]
+    rows=extract_products(zepto_card(stock='true'),url,'zepto')
+    assert rows[0]['availability']=='out_of_stock'
+    assert matching_candidates('Amul milk 1 L',rows)==[]
+
+
+def test_selected_pack_overrides_protein_claim_and_size_in_product_name():
+    rows=extract_products(instamart_card('Foodstrong 25g High Protein Milkshake','250 ml','74'),'https://www.swiggy.com/instamart/','instamart')
+    assert matching_candidates('Foodstrong High Protein Milkshake 250 ml',rows)
+    rows=extract_products(blinkit_card('Mother Dairy FIT Life Milk (450 ml)','400 ml'),'https://blinkit.com/cn/milk/cid/14/922','blinkit')
+    assert matching_candidates('Mother Dairy FIT Life Milk 400 ml',rows)
+    assert not matching_candidates('Mother Dairy FIT Life Milk 450 ml',rows)
+
+
+def test_different_instamart_products_at_same_price_are_not_collapsed():
+    url='https://www.swiggy.com/instamart/'
+    client=BrowserCaptureClient([capture(store='instamart',url=url,html=instamart_card('Epigamia Paneer','200 g')+instamart_card('Epigamia Paneer Premium','200 g'))])
+    result=research_catalog([{'item_id':'p','name':'Epigamia Paneer 200 g','quantity':1}],'110001',client)
+    assert len(result['items'][0]['candidates'])==2
+
+
+@pytest.mark.parametrize('context,status',[
+    ({},'needs_location'),({'selected_postal_code':'110001'},'postcode_observed'),
+    ({'selected_postal_code':'560001'},'mismatch'),
+    ({'staff_confirmed':True,'attested_postal_code':'110001'},'staff_attested'),
+])
+def test_customer_location_state_never_claims_serviceability(context,status):
+    from core.catalog_research import capture_location
+    result=capture_location(context,'110001')
+    assert result['status']==status and result['serviceability_verified'] is False
+
+
+def test_mismatched_retailer_location_cannot_produce_candidates():
+    client=BrowserCaptureClient([capture(location_context={'selected_postal_code':'560001'})])
+    result=research_catalog([{'item_id':'a','name':'Amul Taaza Homogenised Toned Milk 1 L','quantity':1}],'110001',client)
+    assert result['items'][0]['candidates']==[] and 'postcode' in result['diagnostics'][0]['reason']
+
+
+def test_staff_import_is_order_bound_and_preserves_existing_prices(client,actors,order,db):
+    row=db.get(models.Order,order['id'])
+    row.manual_prices=json.dumps({'items':[{'retained':'manual draft'}]});db.commit()
+    headers=actors['admin']['headers'];base=f"/api/moderator/orders/{row.id}"
+    plan=client.get(base+'/research-location',headers=headers).json()
+    assert plan['postal_code']==row.delivery_postal_code and 'street' not in json.dumps(plan)
+    context={k:plan[k] for k in ('order_id','revision','postal_code')}
+    entry=capture(research_context=context,location_context={'staff_confirmed':True,'attested_postal_code':plan['postal_code']})
+    body={'revision':plan['revision'],'captures':[entry]}
+    assert client.post(base+'/research-evidence',headers=actors['customer']['headers'],json=body).status_code==403
+    bad={**entry,'research_context':{**context,'order_id':'another-order'}}
+    assert client.post(base+'/research-evidence',headers=headers,json={**body,'captures':[bad]}).status_code==422
+    response=client.post(base+'/research-evidence',headers=headers,json=body)
+    assert response.status_code==200,response.text
+    db.expire_all();row=db.get(models.Order,row.id)
+    draft=json.loads(row.manual_prices)
+    assert draft['items']==[{'retained':'manual draft'}] and draft['research_draft']['verified'] is False
+    assert float(row.final_price)==0 and row.status=='pending_review'
+    assert client.post(base+'/research-evidence',headers=headers,json=body).status_code==409
+
+
+def test_staff_import_requires_location_and_blocks_other_moderators(client,actors,order):
+    headers=actors['admin']['headers'];base=f"/api/moderator/orders/{order['id']}"
+    plan=client.get(base+'/research-location',headers=headers).json()
+    context={k:plan[k] for k in ('order_id','revision','postal_code')}
+    body={'revision':plan['revision'],'captures':[capture(research_context=context)]}
+    assert client.get(base+'/research-location',headers=actors['moderator']['headers']).status_code==403
+    assert client.post(base+'/research-evidence',headers=headers,json=body).status_code==422
+    body['captures'][0]['location_context']={'selected_postal_code':'560001'}
+    assert client.post(base+'/research-evidence',headers=headers,json=body).status_code==422
+
+
+def test_ai_worker_rejects_browser_context_from_another_order(monkeypatch,client,actors,order,db):
+    monkeypatch.setenv('ENABLE_LIVE_RESEARCH','true')
+    provider=lambda *_:{'verified':False,'requires_human_review':True,'postal_code':'110001',
+        'research_contexts':[{'order_id':'another-order','revision':0,'postal_code':'110001'}],
+        'items':[{'item_id':i['id'],'candidates':[]} for i in order['items']]}
+    monkeypatch.setattr('settings.research_provider',lambda:provider)
+    monkeypatch.setattr(AI,'research',staticmethod(provider))
+    db.get(models.SystemSetting,'ai_enabled').value='true'
+    row=db.get(models.Order,order['id']);row.mode='AI';row.assigned_worker_type='AI';db.commit()
+    AI.process_ticket(row.id,db);db.refresh(row)
+    assert row.manual_prices is None and row.mode=='HUMAN' and 'different order' in row.ai_error
+
+
+@pytest.mark.parametrize('store,url,markup,amount',[
+    ('zepto','https://www.zepto.com/category/milk',zepto_card(),77),
+    ('instamart','https://www.swiggy.com/instamart/',instamart_card(),150),
+    ('blinkit','https://blinkit.com/cn/milk/cid/14/922',blinkit_card(),77),
+])
+def test_three_store_export_download_roundtrip(browser,tmp_path,store,url,markup,amount):
+    from pathlib import Path
+    page=browser.new_page()
+    context={'order_id':'test-order','revision':1,'postal_code':'110001'}
+    page.on('dialog',lambda dialog:dialog.accept(json.dumps(context)) if dialog.type=='prompt' else dialog.accept())
+    try:
+        page.route('**/*',lambda route:route.fulfill(status=200,content_type='text/html; charset=utf-8',body='User-agent: *\nAllow: /' if route.request.url.endswith('/robots.txt') else markup))
+        page.goto(url)
+        script=(Path(__file__).resolve().parents[1]/'tools/export_catalogue_capture.js').read_text(encoding='utf-8')
+        with page.expect_download() as pending:page.evaluate(script)
+        path=tmp_path/'capture.json';pending.value.save_as(str(path))
+        capture_rows=json.loads(path.read_text(encoding='utf-8'));entry=capture_rows[0]
+        assert entry['store']==store and entry['research_context']==context
+        assert entry['location_context']['staff_confirmed'] is True
+        client=BrowserCaptureClient(capture_rows)
+        rows=extract_products(*client.fetch(url,store),store)
+        assert rows[0]['price']==amount
+    finally:page.close()
+
+
+def test_admin_location_controls_and_capture_import(browser,client,actors,order,db):
+    headers=actors['admin']['headers'];plan=client.get(f"/api/moderator/orders/{order['id']}/research-location",headers=headers).json()
+    entry=capture(research_context={k:plan[k] for k in ('order_id','revision','postal_code')},location_context={'staff_confirmed':True,'attested_postal_code':plan['postal_code']})
+    page,errors=open_app(browser,client,actors['admin'],db,'admin.html')
+    try:
+        page.locator('#queue-list .queue-card').first.click()
+        panel=page.locator('#research-evidence-panel')
+        assert 'Customer postcode: '+plan['postal_code'] in panel.inner_text()
+        assert panel.get_by_role('link',name='Open Instamart').count()==1
+        page.get_by_label('Import retailer capture JSON').set_input_files({'name':'capture.json','mimeType':'application/json','buffer':json.dumps([entry]).encode()})
+        page.wait_for_function("document.querySelector('#research-evidence-panel').textContent.includes('staff confirmed postcode')")
+        assert panel.locator('a',has_text='View source').count()>=1
+        assert all(value=='' for value in page.locator('.pi-price').evaluate_all('(nodes)=>nodes.map(n=>n.value)'))
+        assert not errors,errors
+    finally:page.close()
+
+
+def test_export_stops_if_location_hydrates_during_capture(browser):
+    from pathlib import Path
+    page=browser.new_page()
+    context={'order_id':'test-order','revision':1,'postal_code':'110001'}
+    page.on('dialog',lambda dialog:dialog.accept(json.dumps(context)) if dialog.type=='prompt' else dialog.accept())
+    markup=zepto_card()+'''<header>Select location</header><script>
+    window.fetch=async()=>{document.querySelector('header').textContent='Other area 560001';
+        return new Response('User-agent: *\\nAllow: /',{status:200});};</script>'''
+    try:
+        page.route('**/*',lambda route:route.fulfill(status=200,content_type='text/html; charset=utf-8',body=markup))
+        page.goto('https://www.zepto.com/category/milk')
+        script=(Path(__file__).resolve().parents[1]/'tools/export_catalogue_capture.js').read_text(encoding='utf-8')
+        with pytest.raises(Exception,match='location changed'):page.evaluate(script)
+    finally:page.close()
+
+
 def product(name='Amul milk 1 L',amount='72.50',currency='INR',stock='InStock'):
     return {'@type':'Product','name':name,'sku':'milk-1','url':URL,'offers':{'@type':'Offer','price':amount,'priceCurrency':currency,'availability':'https://schema.org/'+stock}}
 
@@ -246,7 +417,9 @@ def test_admin_evidence_is_readable_safe_and_does_not_fill_prices(browser,client
         panel=page.locator('#research-evidence-panel');panel.wait_for(state='visible')
         assert 'needs verification' in panel.inner_text()
         assert '72.50' in panel.inner_text() and payload in panel.inner_text()
-        assert panel.locator('a').count()==1 and panel.locator('a').get_attribute('href')==URL
+        sources=panel.get_by_role('link',name='View source',exact=True)
+        assert sources.count()==1 and sources.get_attribute('href')==URL
+        assert panel.locator('a[href^="javascript:"]').count()==0
         assert panel.locator('img').count()==0 and page.evaluate('window.auditInjected') is None
         assert all(value=='' for value in page.locator('.pi-price').evaluate_all('(nodes)=>nodes.map(n=>n.value)'))
         assert not errors,errors

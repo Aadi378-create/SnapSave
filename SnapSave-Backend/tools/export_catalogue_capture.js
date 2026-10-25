@@ -10,6 +10,7 @@
     const permitted = {bigbasket:/^\/(pd|pc)\//,zepto:/^\/(category|pn|cn)\//,blinkit:/^\/(cn|prn|dc)\//,instamart:/^\/instamart(?:\/|$)/};
     if (!permitted[store].test(source.pathname)) throw new Error('Only public product/category captures are supported.');
     const input = prompt('Paste the research context copied from the SnapSave ticket. Leave blank for a standalone CLI capture.');
+    if (input === null) throw new Error('Capture cancelled.');
     let context = {};
     if (input?.trim()) {
         context = JSON.parse(input);
@@ -22,10 +23,10 @@
     if (selected && context.postal_code && selected !== context.postal_code) throw new Error('Retailer postcode differs from this order. Change its location and retry.');
     const confirmed = !!context.postal_code && confirm('Have you selected the retailer delivery area for customer postcode '+context.postal_code+' and waited for products to reload? Confirm only if checked. Stock and fees still need review.');
     if (context.postal_code && !confirmed) throw new Error('Select the customer location before exporting.');
-    const response = await fetch('/robots.txt', { credentials: 'omit' });
-    if (!response.ok) throw new Error('Cannot read retailer robots policy. No capture exported.');
+    const response = await fetch('/robots.txt', { credentials: 'omit', redirect:'error', signal:AbortSignal.timeout(10000) });
+    if (response.status !== 200) throw new Error('Cannot read retailer robots policy (HTTP '+response.status+'). No capture exported.');
     const robots = await response.text();
-    if (robots.length > 512000 || !/^user-agent\s*:/im.test(robots)) throw new Error('Invalid robots policy.');
+    if (new TextEncoder().encode(robots).length > 512000 || !/^user-agent\s*:/im.test(robots)) throw new Error('Invalid robots policy.');
     const selectors = {zepto:'a[data-testid="product-card"][href*="/pvid/"]',instamart:'div._1fi7p',blinkit:'[role="button"][id]',bigbasket:'[class*="SKUDeck___StyledDiv"]'};
     let nodes = store === 'bigbasket' && source.pathname.startsWith('/pd/')
         ? [document.querySelector('h1')?.closest('section')].filter(Boolean)

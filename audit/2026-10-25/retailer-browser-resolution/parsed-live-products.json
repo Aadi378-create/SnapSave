@@ -1,0 +1,58 @@
+[
+  {
+    "store": "zepto",
+    "observed_at": "2026-10-25T08:49:24+00:00",
+    "products": [
+      {
+        "name": "Amul Taaza Homogenised Toned Milk (Tetra Pack) 1 pack (1 L)",
+        "price": 77.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/amul-taaza-homogenised-toned-milk-tetra-pack/pvid/84eae511-5edb-4a22-875e-5aa94976c2d6",
+        "sku": "84eae511-5edb-4a22-875e-5aa94976c2d6",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (1 L)"
+      }
+    ],
+    "location_context": {},
+    "serviceability_verified": false
+  },
+  {
+    "store": "instamart",
+    "observed_at": "2026-10-25T08:49:24+00:00",
+    "products": [
+      {
+        "name": "Epigamia High Protein Paneer 200 g",
+        "price": 150.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.swiggy.com/instamart/",
+        "sku": null,
+        "method": "instamart-rendered-card",
+        "pack_size": "200 g"
+      }
+    ],
+    "location_context": {},
+    "serviceability_verified": false
+  },
+  {
+    "store": "blinkit",
+    "observed_at": "2026-10-25T08:49:24+00:00",
+    "products": [
+      {
+        "name": "Amul Taaza Homogenised Toned Milk 1 ltr",
+        "price": 77.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://blinkit.com/cn/milk/cid/14/922",
+        "sku": "176",
+        "method": "blinkit-rendered-card",
+        "pack_size": "1 ltr"
+      }
+    ],
+    "location_context": {
+      "selected_postal_code": "122018"
+    },
+    "serviceability_verified": false
+  }
+]

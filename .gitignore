@@ -43,6 +43,7 @@ cookies.json
 .firebase/
 .firebase/hosting..cache/
 SnapSave-FRONTEND/dist/
+SnapSave-Backend/tools/retailer-capture-extension/dist/
 
 # OS / editors
 .DS_Store

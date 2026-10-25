@@ -43,6 +43,7 @@ def test_single_variant_card_uses_non_button_pack_selector():
 def test_capture_exporter_downloads_only_public_product_markup(browser,tmp_path):
     from pathlib import Path
     page=browser.new_page()
+    page.on('dialog',lambda dialog:dialog.accept('') if dialog.type=='prompt' else dialog.dismiss())
     try:
         page.route('https://www.bigbasket.com/**',lambda route:route.fulfill(
             status=200,content_type='text/plain; charset=utf-8' if route.request.url.endswith('/robots.txt') else 'text/html; charset=utf-8',

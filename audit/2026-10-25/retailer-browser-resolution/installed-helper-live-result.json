@@ -1,0 +1,119 @@
+[
+  {
+    "store": "zepto",
+    "source_url": "https://www.zepto.com/category/dairy-bread-eggs/milk",
+    "captured_at": "2026-10-25T09:02:36.319Z",
+    "bytes": 21934,
+    "parsed_products": 30,
+    "samples": [
+      {
+        "name": "Amul Taaza Homogenised Toned Milk (Tetra Pack) 1 pack (1 L)",
+        "price": 77.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/amul-taaza-homogenised-toned-milk-tetra-pack/pvid/84eae511-5edb-4a22-875e-5aa94976c2d6",
+        "sku": "84eae511-5edb-4a22-875e-5aa94976c2d6",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (1 L)"
+      },
+      {
+        "name": "Amul Taaza Homogenised Toned Milk (Tetra Pack) 1 pack (200 ml)",
+        "price": 17.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.zepto.com/pn/amul-taaza-homogenised-toned-milk-tetra-pack/pvid/2a231315-2b07-4de0-af4a-3a4f9c48ad0c",
+        "sku": "2a231315-2b07-4de0-af4a-3a4f9c48ad0c",
+        "method": "zepto-rendered-card",
+        "pack_size": "1 pack (200 ml)"
+      }
+    ],
+    "research_context": {},
+    "location_context": {
+      "selected_postal_code": null,
+      "staff_confirmed": false,
+      "attested_postal_code": null
+    },
+    "research_locality": null,
+    "locality_selected_in_browser": false,
+    "postcode_verified_by_retailer": false,
+    "serviceability_verified": false
+  },
+  {
+    "store": "instamart",
+    "source_url": "https://www.swiggy.com/instamart/",
+    "captured_at": "2026-10-25T09:08:30.138Z",
+    "bytes": 25088,
+    "parsed_products": 30,
+    "samples": [
+      {
+        "name": "Epigamia High Protein Paneer 200 g",
+        "price": 150.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.swiggy.com/instamart/",
+        "sku": null,
+        "method": "instamart-rendered-card",
+        "pack_size": "200 g"
+      },
+      {
+        "name": "Indian Tomato 500 g",
+        "price": 24.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://www.swiggy.com/instamart/",
+        "sku": null,
+        "method": "instamart-rendered-card",
+        "pack_size": "500 g"
+      }
+    ],
+    "research_context": {},
+    "location_context": {
+      "selected_postal_code": null,
+      "staff_confirmed": false,
+      "attested_postal_code": null
+    },
+    "research_locality": "Kudasan",
+    "locality_selected_in_browser": true,
+    "postcode_verified_by_retailer": false,
+    "serviceability_verified": false
+  },
+  {
+    "store": "blinkit",
+    "source_url": "https://blinkit.com/cn/milk/cid/14/922",
+    "captured_at": "2026-10-25T09:08:30.060Z",
+    "bytes": 37611,
+    "parsed_products": 20,
+    "samples": [
+      {
+        "name": "Amul Gold Full Cream Milk 500 ml",
+        "price": 35.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://blinkit.com/cn/milk/cid/14/922",
+        "sku": "12872",
+        "method": "blinkit-rendered-card",
+        "pack_size": "500 ml"
+      },
+      {
+        "name": "Amul Taaza Homogenised Toned Milk 1 ltr",
+        "price": 77.0,
+        "currency": "INR",
+        "availability": "unknown",
+        "source_url": "https://blinkit.com/cn/milk/cid/14/922",
+        "sku": "176",
+        "method": "blinkit-rendered-card",
+        "pack_size": "1 ltr"
+      }
+    ],
+    "research_context": {},
+    "location_context": {
+      "selected_postal_code": null,
+      "staff_confirmed": false,
+      "attested_postal_code": null
+    },
+    "research_locality": "Kudasan",
+    "locality_selected_in_browser": true,
+    "postcode_verified_by_retailer": false,
+    "serviceability_verified": false
+  }
+]

@@ -3165,7 +3165,7 @@
             const plan=await apiRequest('/api/moderator/orders/'+encodeURIComponent(order.id)+'/research-location');
             session.assert(version);if(selectedOrder?.id!==order.id)return;
             await navigator.clipboard.writeText(JSON.stringify({order_id:plan.order_id,revision:plan.revision,postal_code:plan.postal_code}));
-            session.assert(version);feedback.textContent='Context copied. Use it with the retailer capture script after selecting this postcode.';
+            session.assert(version);feedback.textContent='Context copied. After selecting the retailer location, click the SnapSave Retailer Capture toolbar helper and paste this context. Import its JSON here within 15 minutes.';
           }catch(error){if(session.current(version))feedback.textContent=error.message;}};panel.append(copy);
           const stores=document.createElement('p');stores.style.cssText='display:flex;flex-wrap:wrap;gap:12px;margin:10px 0;font-size:12px;';
           for(const [name,url] of [['Instamart','https://www.swiggy.com/instamart/'],['Zepto','https://www.zepto.com/category/dairy-bread-eggs/milk'],['Blinkit','https://blinkit.com/cn/milk/cid/14/922'],['BigBasket','https://www.bigbasket.com/pc/bakery-cakes-dairy/dairy/milk/']]) {

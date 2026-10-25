@@ -1,0 +1,163 @@
+{
+  "verified": false,
+  "requires_human_review": true,
+  "postal_code": "382421",
+  "research_contexts": [],
+  "source": "Browser-assisted catalogue capture (Beautiful Soup)",
+  "transport": "browser_capture",
+  "observed_at": "2026-10-25T09:10:40.093188+00:00",
+  "warnings": [
+    "Delivery postcode, stock, exact pack, checkout fees and promotions require human verification. Public prices are not a payable quote."
+  ],
+  "items": [
+    {
+      "item_id": "milk",
+      "query": "Amul Taaza Homogenised Toned Milk 1 L",
+      "quantity": 1,
+      "candidates": [
+        {
+          "name": "Amul Taaza Homogenised Toned Milk (Tetra Pack) 1 pack (1 L)",
+          "price": 77.0,
+          "currency": "INR",
+          "availability": "unknown",
+          "source_url": "https://www.zepto.com/pn/amul-taaza-homogenised-toned-milk-tetra-pack/pvid/84eae511-5edb-4a22-875e-5aa94976c2d6",
+          "sku": "84eae511-5edb-4a22-875e-5aa94976c2d6",
+          "method": "zepto-rendered-card",
+          "pack_size": "1 pack (1 L)",
+          "store": "zepto",
+          "location_context": {
+            "requested_postal_code": "382421",
+            "selected_postal_code": null,
+            "status": "needs_location",
+            "serviceability_verified": false
+          },
+          "observed_at": "2026-10-25T09:02:36.319000+00:00"
+        },
+        {
+          "name": "Amul Taaza Homogenised Toned Milk 1 ltr",
+          "price": 77.0,
+          "currency": "INR",
+          "availability": "unknown",
+          "source_url": "https://blinkit.com/cn/milk/cid/14/922",
+          "sku": "176",
+          "method": "blinkit-rendered-card",
+          "pack_size": "1 ltr",
+          "store": "blinkit",
+          "location_context": {
+            "requested_postal_code": "382421",
+            "selected_postal_code": null,
+            "status": "needs_location",
+            "serviceability_verified": false
+          },
+          "observed_at": "2026-10-25T09:08:30.060000+00:00"
+        }
+      ]
+    },
+    {
+      "item_id": "paneer",
+      "query": "Epigamia High Protein Paneer 200 g",
+      "quantity": 1,
+      "candidates": [
+        {
+          "name": "Epigamia High Protein Paneer 200 g",
+          "price": 150.0,
+          "currency": "INR",
+          "availability": "unknown",
+          "source_url": "https://www.swiggy.com/instamart/",
+          "sku": null,
+          "method": "instamart-rendered-card",
+          "pack_size": "200 g",
+          "store": "instamart",
+          "location_context": {
+            "requested_postal_code": "382421",
+            "selected_postal_code": null,
+            "status": "needs_location",
+            "serviceability_verified": false
+          },
+          "observed_at": "2026-10-25T09:08:30.138000+00:00"
+        }
+      ]
+    },
+    {
+      "item_id": "tomato",
+      "query": "Indian Tomato 500 g",
+      "quantity": 1,
+      "candidates": [
+        {
+          "name": "Indian Tomato 500 g",
+          "price": 24.0,
+          "currency": "INR",
+          "availability": "unknown",
+          "source_url": "https://www.swiggy.com/instamart/",
+          "sku": null,
+          "method": "instamart-rendered-card",
+          "pack_size": "500 g",
+          "store": "instamart",
+          "location_context": {
+            "requested_postal_code": "382421",
+            "selected_postal_code": null,
+            "status": "needs_location",
+            "serviceability_verified": false
+          },
+          "observed_at": "2026-10-25T09:08:30.138000+00:00"
+        }
+      ]
+    }
+  ],
+  "diagnostics": [
+    {
+      "store": "zepto",
+      "url": "https://www.zepto.com/category/dairy-bread-eggs/milk",
+      "status": "candidates",
+      "count": 1
+    },
+    {
+      "store": "instamart",
+      "url": "https://www.swiggy.com/instamart/",
+      "status": "no_product_evidence",
+      "count": 0
+    },
+    {
+      "store": "blinkit",
+      "url": "https://blinkit.com/cn/milk/cid/14/922",
+      "status": "candidates",
+      "count": 1
+    },
+    {
+      "store": "zepto",
+      "url": "https://www.zepto.com/category/dairy-bread-eggs/milk",
+      "status": "no_product_evidence",
+      "count": 0
+    },
+    {
+      "store": "instamart",
+      "url": "https://www.swiggy.com/instamart/",
+      "status": "candidates",
+      "count": 1
+    },
+    {
+      "store": "blinkit",
+      "url": "https://blinkit.com/cn/milk/cid/14/922",
+      "status": "no_product_evidence",
+      "count": 0
+    },
+    {
+      "store": "zepto",
+      "url": "https://www.zepto.com/category/dairy-bread-eggs/milk",
+      "status": "no_product_evidence",
+      "count": 0
+    },
+    {
+      "store": "instamart",
+      "url": "https://www.swiggy.com/instamart/",
+      "status": "candidates",
+      "count": 1
+    },
+    {
+      "store": "blinkit",
+      "url": "https://blinkit.com/cn/milk/cid/14/922",
+      "status": "no_product_evidence",
+      "count": 0
+    }
+  ]
+}

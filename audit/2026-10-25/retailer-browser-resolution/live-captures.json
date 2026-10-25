@@ -1,0 +1,29 @@
+[
+  {
+    "store": "zepto",
+    "url": "https://www.zepto.com/category/dairy-bread-eggs/milk",
+    "captured_at": "2026-10-25T08:49:24+00:00",
+    "html": "<a class=\"B4vNQ oikWp\" data-testid=\"product-card\" href=\"/pn/amul-taaza-homogenised-toned-milk-tetra-pack/pvid/84eae511-5edb-4a22-875e-5aa94976c2d6\"><div class=\"cslgId cTH4Df\" data-is-out-of-stock=\"false\"><div data-slot-id=\"ProductImageWrapper\" class=\"cCMsku c8rmYa\"><div class=\"c8QQnr cCX8Kb c6xSKo\"><button class=\"ciE0m4 ceUl7T cuPUm6 cnCei3\">ADD</button></div></div><div class=\"czJRzd cdn80O\" data-slot-id=\"EdlpPrice\"><span class=\"cptQT7\">₹<!-- -->77</span></div><div data-slot-id=\"ProductName\" class=\"cQAjo6 ch5GgP\"><span>Amul Taaza Homogenised Toned Milk (Tetra Pack)</span></div><div data-slot-id=\"PackSize\" class=\"cyNbxx c0ZFba\"><span>1 pack (1 L)</span></div></div></a>",
+    "robots": "User-Agent: *\nAllow: /\nDisallow: /account*\nDisallow: /Deeplink*\nDisallow: /api/\nDisallow: /cart/\nDisallow: /location/\nDisallow: /location-information/\nDisallow: /order/\nDisallow: /ProcessOrder/\nDisallow: /search\nDisallow: /*?z_*\nDisallow: /*&z_*\nDisallow: /buy/*\n\nSitemap: https://www.zepto.com/sitemap.xml",
+    "research_context": {},
+    "location_context": {}
+  },
+  {
+    "store": "instamart",
+    "url": "https://www.swiggy.com/instamart/",
+    "captured_at": "2026-10-25T08:49:24+00:00",
+    "html": "<div class=\"_1fi7p\"><div class=\"_3v-cX\" data-testid=\"ITEM_CAROUSEL_ITEM_WIDGET_IMAGE_CONTAINER\"><div class=\"_1r-gK\"><div class=\"_2fz9L _39H2t\" role=\"button\" data-testid=\"buttonpair-add\"></div></div></div><div><div class=\"_2zIRo _3CyJz\"><div class=\"sc-gEvEer ePxHTM GOJ8s _1y_Uf\">7 MINS</div></div><div class=\"sc-gEvEer bvSpbA _1iFYi\">Epigamia High Protein Paneer</div></div><div class=\"STkVs\"><div class=\"_30iun\"><div class=\"sc-gEvEer bCqPoH _3wq_F\">200 g</div></div><div class=\"sc-gEvEer fJqAlq R-2Yy\" data-testid=\"offer-text\">40% OFF <span class=\"_1xPWO\" data-testid=\"line\"></span></div><div class=\"_1ZUAV\"><div class=\"_2enD-\"><div class=\"sc-gEvEer iQcBUp _2jn41\">150</div><div class=\"sc-gEvEer dTWhKm _3eAjW _2jn41 _1VrXB\">250</div></div></div></div></div>",
+    "robots": "User-agent: *\nAllow: /\nDisallow: /product\nDisallow: /product-category\nDisallow: /?attachment_id=*\nDisallow: /wp-admin\nDisallow: /wp-includes\nDisallow: /wp-content/plugins/\nDisallow: /category/*\nDisallow: /track-order/*\nDisallow: /order-track/*\nDisallow: /ofo/track/*\nDisallow: /auth*\nDisallow: /web-payments\nDisallow: /invoice/*\nDisallow: /home\nDisallow: /cart\nDisallow: /payment\nDisallow: /checkout\nDisallow: /my-account\nDisallow: /rate\nSitemap: https://www.swiggy.com/sitemap.xml.gz\nSitemap: https://www.swiggy.com/scenes/sitemap/sitemap.xml.gz\n",
+    "research_context": {},
+    "location_context": {}
+  },
+  {
+    "store": "blinkit",
+    "url": "https://blinkit.com/cn/milk/cid/14/922",
+    "captured_at": "2026-10-25T08:49:24+00:00",
+    "html": "<div role=\"button\" class=\"tw-relative tw-flex tw-h-full tw-flex-col tw-items-start tw-gap-0.5 tw-pb-3 tw-bg-indigo-050 tw-border-[0.5px] tw-border-grey-200\" id=\"176\"><div class=\"tw-relative tw-w-full tw-overflow-hidden\"><div class=\"tw-overflow-hidden tw-flex tw-flex-col\"></div></div><div class=\"tw-w-full tw-px-3\"><div class=\"tw-flex tw-w-full tw-flex-wrap tw-gap-1\"><div class=\"tw-bg-grey-100 tw-text-black-100\"><div class=\"tw-flex tw-items-center tw-gap-0.5\"><div class=\"tw-w-2.5\"><div class=\"tw-overflow-hidden tw-flex tw-flex-col\"></div></div><div class=\"tw-text-050 tw-font-bold tw-uppercase\">11 mins</div></div></div></div><div class=\"tw-flex tw-w-full tw-flex-col\"><div class=\"tw-mb-2 tw-flex tw-flex-col tw-text-400\"><div class=\"tw-mb-1.5\"><div class=\"tw-text-300 tw-font-semibold tw-line-clamp-2\">Amul Taaza Homogenised Toned Milk</div></div><div class=\"tw-flex tw-items-center\"><div class=\"tw-text-200 tw-font-medium tw-line-clamp-1\">1 ltr</div></div></div><div class=\"tw-flex tw-items-center tw-justify-between\"><div><div class=\"tw-text-200 tw-font-semibold\">₹77</div></div><div class=\"tw-rounded-md tw-font-okra tw-flex tw-items-center tw-justify-center tw-flex-col tw-font-semibold tw-overflow-hidden tw-text-300 tw-px-0 tw-gap-0.5 tw-min-w-[66px] tw-min-h-[32px] tw-bg-green-050 tw-border tw-border-base-green tw-text-base-green\" role=\"button\"><div class=\"\">ADD</div></div></div></div></div></div>",
+    "robots": "User-agent: *\nDisallow: /compliance\nDisallow: /account\nDisallow: /checkout\nDisallow: /browser-not-supported\nDisallow: /community-shopping\nDisallow: /society-groups\nDisallow: /cart\nDisallow: /cln/*\nDisallow: /s/*\nDisallow: /brand/*/?cid=\nDisallow: /bct/*\nAllow: /sitemap/*\nDisallow: /sitemap/cn/*.xml\nDisallow: /sitemap/products/sitemap-specials-freebie.xml\nDisallow: /sitemap/products/sitemap-specials-free-store.xml \nDisallow: /sitemap/products/sitemap-specials-bill-breaker.xml\nDisallow: /tab-layouts\nDisallow: /brand/Zomato\n\nSitemap: https://blinkit.com/sitemap.xml\n\n",
+    "research_context": {},
+    "location_context": {"selected_postal_code": "122018"}
+  }
+]

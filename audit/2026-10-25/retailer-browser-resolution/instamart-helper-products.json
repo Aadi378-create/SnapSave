@@ -1,0 +1,302 @@
+[
+  {
+    "name": "Cavin's Chocolate Milkshake Thick & Creamy 1 ltr",
+    "price": 120.0,
+    "currency": "INR",
+    "availability": "unknown",
+    "source_url": "https://www.swiggy.com/instamart/",
+    "sku": null,
+    "method": "instamart-rendered-card",
+    "pack_size": "1 ltr"
+  },
+  {
+    "name": "Britannia Laughing Cow Cheese Slices 360 g",
+    "price": 265.0,
+    "currency": "INR",
+    "availability": "unknown",
+    "source_url": "https://www.swiggy.com/instamart/",
+    "sku": null,
+    "method": "instamart-rendered-card",
+    "pack_size": "360 g"
+  },
+  {
+    "name": "Epigamia High Protein Paneer 200 g",
+    "price": 150.0,
+    "currency": "INR",
+    "availability": "unknown",
+    "source_url": "https://www.swiggy.com/instamart/",
+    "sku": null,
+    "method": "instamart-rendered-card",
+    "pack_size": "200 g"
+  },
+  {
+    "name": "Go Cheese Processed Angles Plain 160 g",
+    "price": 109.0,
+    "currency": "INR",
+    "availability": "unknown",
+    "source_url": "https://www.swiggy.com/instamart/",
+    "sku": null,
+    "method": "instamart-rendered-card",
+    "pack_size": "160 g"
+  },
+  {
+    "name": "D'lecta Cheese Spread 150 g",
+    "price": 80.0,
+    "currency": "INR",
+    "availability": "unknown",
+    "source_url": "https://www.swiggy.com/instamart/",
+    "sku": null,
+    "method": "instamart-rendered-card",
+    "pack_size": "150 g"
+  },
+  {
+    "name": "Yogabar Almond Milk, Plant Based, Lactose Free, No added Sugar, with Added Vitamins 1 ltr",
+    "price": 207.0,
+    "currency": "INR",
+    "availability": "unknown",
+    "source_url": "https://www.swiggy.com/instamart/",
+    "sku": null,
+    "method": "instamart-rendered-card",
+    "pack_size": "1 ltr"
+  },
+  {
+    "name": "Yoga Bar 31g Protein Shake Double Chocolate, No Added Sugar, Rich In Calcium, Low Fat 250 ml",
+    "price": 140.0,
+    "currency": "INR",
+    "availability": "unknown",
+    "source_url": "https://www.swiggy.com/instamart/",
+    "sku": null,
+    "method": "instamart-rendered-card",
+    "pack_size": "250 ml"
+  },
+  {
+    "name": "D'lecta 100% Mozzarella Cheese Block 200 g",
+    "price": 120.0,
+    "currency": "INR",
+    "availability": "unknown",
+    "source_url": "https://www.swiggy.com/instamart/",
+    "sku": null,
+    "method": "instamart-rendered-card",
+    "pack_size": "200 g"
+  },
+  {
+    "name": "Go Cheese Pizza Cheese Mozzarella Cheddar Diced 200 g",
+    "price": 124.0,
+    "currency": "INR",
+    "availability": "unknown",
+    "source_url": "https://www.swiggy.com/instamart/",
+    "sku": null,
+    "method": "instamart-rendered-card",
+    "pack_size": "200 g"
+  },
+  {
+    "name": "NOICE Fresh Malai Paneer (Handmade Daily) 200 g",
+    "price": 99.0,
+    "currency": "INR",
+    "availability": "unknown",
+    "source_url": "https://www.swiggy.com/instamart/",
+    "sku": null,
+    "method": "instamart-rendered-card",
+    "pack_size": "200 g"
+  },
+  {
+    "name": "D'lecta Cheese Cubes 200 g",
+    "price": 134.0,
+    "currency": "INR",
+    "availability": "unknown",
+    "source_url": "https://www.swiggy.com/instamart/",
+    "sku": null,
+    "method": "instamart-rendered-card",
+    "pack_size": "200 g"
+  },
+  {
+    "name": "Go Cheese Slice 100 g",
+    "price": 74.0,
+    "currency": "INR",
+    "availability": "unknown",
+    "source_url": "https://www.swiggy.com/instamart/",
+    "sku": null,
+    "method": "instamart-rendered-card",
+    "pack_size": "100 g"
+  },
+  {
+    "name": "Grabenord Plant Based Buttery Spread - Unsalted | Vegan Butter | Dairy-Free | Cashew Based | Cholesterol-Free | Baking Butter 200 g",
+    "price": 220.0,
+    "currency": "INR",
+    "availability": "unknown",
+    "source_url": "https://www.swiggy.com/instamart/",
+    "sku": null,
+    "method": "instamart-rendered-card",
+    "pack_size": "200 g"
+  },
+  {
+    "name": "Go Pizza Cheese 200 g",
+    "price": 120.0,
+    "currency": "INR",
+    "availability": "unknown",
+    "source_url": "https://www.swiggy.com/instamart/",
+    "sku": null,
+    "method": "instamart-rendered-card",
+    "pack_size": "200 g"
+  },
+  {
+    "name": "Go Cheese Slices 200 g",
+    "price": 125.0,
+    "currency": "INR",
+    "availability": "unknown",
+    "source_url": "https://www.swiggy.com/instamart/",
+    "sku": null,
+    "method": "instamart-rendered-card",
+    "pack_size": "200 g"
+  },
+  {
+    "name": "Blue Tokai Classic Cold Coffee Can 220 ml",
+    "price": 140.0,
+    "currency": "INR",
+    "availability": "unknown",
+    "source_url": "https://www.swiggy.com/instamart/",
+    "sku": null,
+    "method": "instamart-rendered-card",
+    "pack_size": "220 ml"
+  },
+  {
+    "name": "Blue Tokai Mocha Cold Coffee Can 220 ml",
+    "price": 140.0,
+    "currency": "INR",
+    "availability": "unknown",
+    "source_url": "https://www.swiggy.com/instamart/",
+    "sku": null,
+    "method": "instamart-rendered-card",
+    "pack_size": "220 ml"
+  },
+  {
+    "name": "Sleepy Owl Vietnamese Cold Coffee | Made With Espresso And Fresh Milk 230 ml",
+    "price": 86.0,
+    "currency": "INR",
+    "availability": "unknown",
+    "source_url": "https://www.swiggy.com/instamart/",
+    "sku": null,
+    "method": "instamart-rendered-card",
+    "pack_size": "230 ml"
+  },
+  {
+    "name": "D'lecta Shredded Mozzarella Cheese 140 g",
+    "price": 95.0,
+    "currency": "INR",
+    "availability": "unknown",
+    "source_url": "https://www.swiggy.com/instamart/",
+    "sku": null,
+    "method": "instamart-rendered-card",
+    "pack_size": "140 g"
+  },
+  {
+    "name": "Britannia Winkin Cow Strawbericious Thick Milkshake Pet Bottle 180 ml",
+    "price": 32.0,
+    "currency": "INR",
+    "availability": "unknown",
+    "source_url": "https://www.swiggy.com/instamart/",
+    "sku": null,
+    "method": "instamart-rendered-card",
+    "pack_size": "180 ml"
+  },
+  {
+    "name": "Indian Tomato 500 g",
+    "price": 24.0,
+    "currency": "INR",
+    "availability": "unknown",
+    "source_url": "https://www.swiggy.com/instamart/",
+    "sku": null,
+    "method": "instamart-rendered-card",
+    "pack_size": "500 g"
+  },
+  {
+    "name": "Onion (Pyaaz) 1 kg",
+    "price": 75.0,
+    "currency": "INR",
+    "availability": "unknown",
+    "source_url": "https://www.swiggy.com/instamart/",
+    "sku": null,
+    "method": "instamart-rendered-card",
+    "pack_size": "1 kg"
+  },
+  {
+    "name": "Potato 1 kg",
+    "price": 35.0,
+    "currency": "INR",
+    "availability": "unknown",
+    "source_url": "https://www.swiggy.com/instamart/",
+    "sku": null,
+    "method": "instamart-rendered-card",
+    "pack_size": "1 kg"
+  },
+  {
+    "name": "Lady's Finger (Bhindi) 250 g",
+    "price": 21.0,
+    "currency": "INR",
+    "availability": "unknown",
+    "source_url": "https://www.swiggy.com/instamart/",
+    "sku": null,
+    "method": "instamart-rendered-card",
+    "pack_size": "250 g"
+  },
+  {
+    "name": "Robusta Banana (Kela) 4 Pieces",
+    "price": 42.0,
+    "currency": "INR",
+    "availability": "unknown",
+    "source_url": "https://www.swiggy.com/instamart/",
+    "sku": null,
+    "method": "instamart-rendered-card",
+    "pack_size": "4 Pieces"
+  },
+  {
+    "name": "Tender Coconut (Lilu Nariyal) 1 Piece",
+    "price": 95.0,
+    "currency": "INR",
+    "availability": "unknown",
+    "source_url": "https://www.swiggy.com/instamart/",
+    "sku": null,
+    "method": "instamart-rendered-card",
+    "pack_size": "1 Piece"
+  },
+  {
+    "name": "Hybrid Tomato 500 g",
+    "price": 22.0,
+    "currency": "INR",
+    "availability": "unknown",
+    "source_url": "https://www.swiggy.com/instamart/",
+    "sku": null,
+    "method": "instamart-rendered-card",
+    "pack_size": "500 g"
+  },
+  {
+    "name": "Cucumber 2 Pieces",
+    "price": 32.0,
+    "currency": "INR",
+    "availability": "unknown",
+    "source_url": "https://www.swiggy.com/instamart/",
+    "sku": null,
+    "method": "instamart-rendered-card",
+    "pack_size": "2 Pieces"
+  },
+  {
+    "name": "Green Capsicum (Shimla Mirch) 2 Pieces",
+    "price": 33.0,
+    "currency": "INR",
+    "availability": "unknown",
+    "source_url": "https://www.swiggy.com/instamart/",
+    "sku": null,
+    "method": "instamart-rendered-card",
+    "pack_size": "2 Pieces"
+  },
+  {
+    "name": "Premium Thai Guava (Jamfad) 1 Piece",
+    "price": 69.0,
+    "currency": "INR",
+    "availability": "unknown",
+    "source_url": "https://www.swiggy.com/instamart/",
+    "sku": null,
+    "method": "instamart-rendered-card",
+    "pack_size": "1 Piece"
+  }
+]

@@ -1,0 +1,61 @@
+{
+  "checked_at": "2026-10-25T18:08:44.965578+00:00",
+  "checks": [
+    {
+      "name": "api_status",
+      "status": 200,
+      "expected": 200,
+      "passed": true
+    },
+    {
+      "name": "development_auth_disabled",
+      "passed": true
+    },
+    {
+      "name": "security_headers",
+      "passed": true
+    },
+    {
+      "name": "unauthenticated_orders",
+      "status": 401,
+      "expected": 401,
+      "passed": true
+    },
+    {
+      "name": "unauthenticated_admin",
+      "status": 401,
+      "expected": 401,
+      "passed": true
+    },
+    {
+      "name": "private_environment",
+      "status": 404,
+      "expected": 404,
+      "passed": true
+    },
+    {
+      "name": "backend_database",
+      "status": 404,
+      "expected": 404,
+      "passed": true
+    },
+    {
+      "name": "frontend_python",
+      "status": 404,
+      "expected": 404,
+      "passed": true
+    },
+    {
+      "name": "untrusted_host",
+      "status": 400,
+      "expected": 400,
+      "passed": true
+    },
+    {
+      "name": "untrusted_cors",
+      "status": 400,
+      "passed": true
+    }
+  ],
+  "passed": true
+}

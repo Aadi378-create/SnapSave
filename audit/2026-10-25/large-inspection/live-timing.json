@@ -1,0 +1,81 @@
+{
+  "checked_at": "2026-10-25T18:08:44.966861+00:00",
+  "scope": "Live Firebase sessions; route-template handler-to-headers timing, includes authentication and concurrent local tests. Sample window starts at backend restart. No tokens, IDs or query strings saved.",
+  "routes": {
+    "/api/status": {
+      "samples": 20,
+      "median_ms": 2.55,
+      "max_ms": 67.27
+    },
+    "/api/admin/help/summary": {
+      "samples": 26,
+      "median_ms": 334.37,
+      "max_ms": 1161.4
+    },
+    "/api/auth/me": {
+      "samples": 3,
+      "median_ms": 351.41,
+      "max_ms": 375.39
+    },
+    "/api/addresses": {
+      "samples": 1,
+      "median_ms": 380.28,
+      "max_ms": 380.28
+    },
+    "/api/orders": {
+      "samples": 18,
+      "median_ms": 351.33,
+      "max_ms": 1284.63
+    },
+    "/api/orders/{order_id}": {
+      "samples": 1,
+      "median_ms": 330.2,
+      "max_ms": 330.2
+    },
+    "/api/chat/{customer_id}/messages": {
+      "samples": 17,
+      "median_ms": 322.16,
+      "max_ms": 377.98
+    },
+    "/api/admin/settings/orders": {
+      "samples": 2,
+      "median_ms": 335.73,
+      "max_ms": 346.77
+    },
+    "/api/admin/settings/maintenance": {
+      "samples": 2,
+      "median_ms": 328.86,
+      "max_ms": 336.3
+    },
+    "/api/admin/delivery-config": {
+      "samples": 2,
+      "median_ms": 378.96,
+      "max_ms": 431.84
+    },
+    "/api/admin/settings/ai-status": {
+      "samples": 2,
+      "median_ms": 6.1,
+      "max_ms": 9.49
+    },
+    "/api/admin/moderators": {
+      "samples": 2,
+      "median_ms": 334.84,
+      "max_ms": 344.49
+    },
+    "/api/admin/customers": {
+      "samples": 2,
+      "median_ms": 394.5,
+      "max_ms": 452.34
+    },
+    "/api/admin/dashboard/metrics": {
+      "samples": 2,
+      "median_ms": 364.89,
+      "max_ms": 385.88
+    },
+    "/api/moderator/queue": {
+      "samples": 13,
+      "median_ms": 341.3,
+      "max_ms": 2246.64
+    }
+  }
+}

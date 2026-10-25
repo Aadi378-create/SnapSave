@@ -144,7 +144,7 @@ def test_customer_and_staff_see_research_progress_safely(browser,client,actors,o
     staff,errors=open_app(browser,client,actors['admin'],db,'admin.html')
     try:
         staff.locator('#queue-list .queue-card').filter(has_text=created['id'][:8]).click()
-        staff.wait_for_function("document.querySelector('#research-evidence-panel').textContent.includes('0 of 2 items')")
+        staff.wait_for_function("document.querySelector('#research-evidence-panel')?.textContent.includes('0 of 2 items')")
         assert '0 of 2 items' in staff.locator('#research-evidence-panel').inner_text()
         assert staff.get_by_role('button',name='Copy item query').count()==2
         assert not errors,errors

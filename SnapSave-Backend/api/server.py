@@ -599,11 +599,17 @@ def create_order(order_data: OrderCreate, current_user: models.User = Depends(ge
 
 
 @app.get("/api/orders")
-def get_order_history(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db), limit: int = Query(50,ge=1,le=100), offset: int = Query(0,ge=0), active_only: bool = False):
-    query = db.query(models.Order).filter_by(user_id=current_user.id).options(selectinload(models.Order.items))
+def get_order_history(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db), limit: int = Query(50,ge=1,le=100), offset: int = Query(0,ge=0), active_only: bool = False, summary_only: bool = False):
+    query = db.query(models.Order).filter_by(user_id=current_user.id)
+    if summary_only:
+        query=query.options(load_only(*[getattr(models.Order,key) for key in ('id','status','revision','created_at','final_price','savings')]))
+    else:
+        query=query.options(selectinload(models.Order.items))
     if active_only:
         query = query.filter(models.Order.status.in_(ACTIVE_STATUSES))
     rows = query.order_by(models.Order.created_at.desc(),models.Order.id.desc()).offset(offset).limit(limit).all()
+    if summary_only:
+        return [{'id':o.id,'status':o.status,'revision':o.revision,'created_at':o.created_at.isoformat()+'Z','final_price':float(o.final_price or 0),'savings':float(o.savings or 0),'summary_only':True} for o in rows]
     return [serialize_order(o,current_user) for o in rows]
 
 
@@ -1249,66 +1255,29 @@ def update_delivery_config(data: DeliveryConfig, current_user: models.User = Dep
 def get_dashboard_metrics(current_user: models.User = Depends(require_role(["ADMIN", "MODERATOR"])), db: Session = Depends(get_db)):
     today_start = datetime.now(ZoneInfo("Asia/Kolkata")).replace(hour=0, minute=0, second=0, microsecond=0).astimezone(ZoneInfo("UTC")).replace(tzinfo=None)
 
-    orders_today = db.query(models.Order).filter(models.Order.created_at >= today_start).count()
-
-    revenue_today = db.query(func.sum(models.Order.customer_paid)).filter(
-        models.Order.status.in_(["placed", "delivered", "completed"]),
-        models.Order.payment_verified_at >= today_start
-    ).scalar() or 0.0
-
-    profit_today = db.query(func.sum(models.Order.profit)).filter(
-        models.Order.status.in_(["placed", "delivered", "completed"]),
-        models.Order.payment_verified_at >= today_start
-    ).scalar() or 0.0
-
-    total_customers = db.query(models.User).filter(models.User.role == "CUSTOMER").count()
-
-    total_savings = db.query(func.sum(models.Order.savings)).filter(models.Order.status.in_(["delivered","completed"])).scalar() or 0.0
-
-    # Task 6: Operational Dashboard counts
-    orders_pending_review = db.query(models.Order).filter(models.Order.status == "pending_review").count()
-    orders_awaiting_customer = db.query(models.Order).filter(models.Order.status == "awaiting_customer").count()
-    orders_confirmed = db.query(models.Order).filter(models.Order.status.in_(["confirmed", "awaiting_payment"])).count()
-    orders_delivered = db.query(models.Order).filter(models.Order.status == "delivered").count()
-
-    total_revenue = db.query(func.sum(models.Order.customer_paid)).filter(
-        models.Order.status.in_(["placed", "delivered", "completed"])
-    ).scalar() or 0.0
-
-    total_profit = db.query(func.sum(models.Order.profit)).filter(
-        models.Order.status.in_(["placed", "delivered", "completed"])
-    ).scalar() or 0.0
-
-    # Task 3: Moderator Dashboard metrics
-    from sqlalchemy.orm import joinedload
-    active_statuses = list(ACTIVE_STATUSES)
-    active=db.query(models.Order).filter(models.Order.status.in_(active_statuses))
-    if current_user.role=="MODERATOR":
-        active=active.filter(or_(models.Order.assigned_moderator_id==None,models.Order.assigned_moderator_id==current_user.id))
-    active_tickets=active.count()
-    claimed_tickets=active.filter(models.Order.assigned_moderator_id!=None).count()
-    pending_tickets=active_tickets-claimed_tickets
-
-    avg_response_time = average_seconds(db,models.Order.first_response_at)
-
-    return {
-        "orders_today": int(orders_today),
-        "orders_pending_review": int(orders_pending_review),
-        "orders_awaiting_customer": int(orders_awaiting_customer),
-        "orders_confirmed": int(orders_confirmed),
-        "orders_delivered": int(orders_delivered),
-        "revenue_today": float(revenue_today),
-        "profit_today": float(profit_today),
-        "revenue": float(total_revenue),
-        "profit": float(total_profit),
-        "total_customers": int(total_customers),
-        "total_savings_delivered": float(total_savings),
-
-        "active_tickets": int(active_tickets),
-        "claimed_tickets": int(claimed_tickets),
-        "pending_tickets": int(pending_tickets),
-        "avg_response_time": float(avg_response_time)
-    }
+    order=models.Order
+    active=order.status.in_(list(ACTIVE_STATUSES))
+    paid=order.status.in_(['placed','delivered','completed'])
+    def total(predicate,value=1):return func.coalesce(func.sum(case((predicate,value),else_=0)),0)
+    delta=((func.julianday(order.first_response_at)-func.julianday(order.created_at))*86400 if db.bind.dialect.name=='sqlite' else func.extract('epoch',order.first_response_at-order.created_at))
+    if current_user.role=='MODERATOR':
+        visible=or_(order.assigned_moderator_id==current_user.id,(order.assigned_moderator_id==None)&active)
+        row=db.query(total(active).label('active'),total(active&(order.assigned_moderator_id!=None)).label('claimed'),total(order.created_at>=today_start).label('today'),func.avg(delta).label('response')).filter(visible).one()
+        return {'orders_today':int(row.today),'active_tickets':int(row.active),'claimed_tickets':int(row.claimed),'pending_tickets':int(row.active-row.claimed),'avg_response_time':float(row.response or 0)}
+    row=db.query(
+        total(order.created_at>=today_start).label('today'),
+        total(order.status=='pending_review').label('pending'),
+        total(order.status=='awaiting_customer').label('awaiting'),
+        total(order.status.in_(['confirmed','awaiting_payment'])).label('confirmed'),
+        total(order.status=='delivered').label('delivered'),
+        total(paid&(order.payment_verified_at>=today_start),order.customer_paid).label('revenue_today'),
+        total(paid&(order.payment_verified_at>=today_start),order.profit).label('profit_today'),
+        total(paid,order.customer_paid).label('revenue'),total(paid,order.profit).label('profit'),
+        total(order.status.in_(['delivered','completed']),order.savings).label('savings'),
+        total(active).label('active'),total(active&(order.assigned_moderator_id!=None)).label('claimed'),func.avg(delta).label('response')
+    ).one()
+    customers=db.query(func.count(models.User.id)).filter(models.User.role=='CUSTOMER').scalar()
+    return {'orders_today':int(row.today),'orders_pending_review':int(row.pending),'orders_awaiting_customer':int(row.awaiting),'orders_confirmed':int(row.confirmed),'orders_delivered':int(row.delivered),'revenue_today':float(row.revenue_today),'profit_today':float(row.profit_today),'revenue':float(row.revenue),'profit':float(row.profit),'total_customers':int(customers),'total_savings_delivered':float(row.savings),'active_tickets':int(row.active),'claimed_tickets':int(row.claimed),'pending_tickets':int(row.active-row.claimed),'avg_response_time':float(row.response or 0)}
 
 
 @app.put("/api/admin/orders/{order_id}/financials")
@@ -1341,37 +1310,15 @@ def update_profile(data: ProfileUpdate, current_user: models.User = Depends(get_
 
 @app.get("/api/admin/dashboard/beta-metrics")
 def get_beta_metrics(current_user: models.User = Depends(require_role(["ADMIN", "MODERATOR"])), db: Session = Depends(get_db)):
-    total_beta_users = db.query(models.User).filter(models.User.role == "CUSTOMER").count()
-    orders_submitted = db.query(models.Order).count()
-    orders_completed = db.query(models.Order).filter(models.Order.status.in_(["delivered", "completed"])).count()
-
-    avg_first_response_time=average_seconds(db,models.Order.first_response_at)
-    avg_confirm_time=average_seconds(db,models.Order.confirmed_at)
-
-    # Completed/placed order aggregates using SQL
-    completed_orders_count = db.query(models.Order).filter(models.Order.status.in_(["placed", "delivered", "completed"])).count()
-    profit_sum = db.query(func.sum(models.Order.profit)).filter(
-        models.Order.status.in_(["placed", "delivered", "completed"])
-    ).scalar() or 0.0
-    avg_profit = float(profit_sum) / completed_orders_count if completed_orders_count > 0 else 0.0
-
-    savings_sum = db.query(func.sum(models.Order.savings)).filter(
-        models.Order.status.in_(["delivered", "completed"])
-    ).scalar() or 0.0
-    avg_savings = float(savings_sum) / orders_completed if orders_completed > 0 else 0.0
-
-    active_moderators = db.query(models.User).filter(models.User.role.in_(["MODERATOR", "ADMIN"])).count()
-
-    return {
-        "total_beta_users": total_beta_users,
-        "orders_submitted": orders_submitted,
-        "orders_completed": orders_completed,
-        "avg_first_response_time": avg_first_response_time,
-        "avg_confirm_time": avg_confirm_time,
-        "avg_profit_per_order": avg_profit,
-        "avg_savings_delivered": avg_savings,
-        "active_moderators": active_moderators
-    }
+    order=models.Order
+    done=order.status.in_(['delivered','completed']);paid=order.status.in_(['placed','delivered','completed'])
+    def total(predicate,value=1):return func.coalesce(func.sum(case((predicate,value),else_=0)),0)
+    def delta(column):
+        return (func.julianday(column)-func.julianday(order.created_at))*86400 if db.bind.dialect.name=='sqlite' else func.extract('epoch',column-order.created_at)
+    row=db.query(func.count(order.id).label('submitted'),total(done).label('completed'),total(paid).label('paid'),total(paid,order.profit).label('profit'),total(done,order.savings).label('savings'),func.avg(delta(order.first_response_at)).label('response'),func.avg(delta(order.confirmed_at)).label('confirm')).one()
+    users=db.query(total(models.User.role=='CUSTOMER').label('customers'),total(models.User.role.in_(['MODERATOR','ADMIN'])).label('staff')).one()
+    admin=current_user.role=='ADMIN'
+    return {'total_beta_users':int(users.customers),'orders_submitted':int(row.submitted),'orders_completed':int(row.completed),'avg_first_response_time':float(row.response or 0),'avg_confirm_time':float(row.confirm or 0),'avg_profit_per_order':(float(row.profit)/row.paid if row.paid else 0) if admin else None,'avg_savings_delivered':(float(row.savings)/row.completed if row.completed else 0) if admin else None,'active_moderators':int(users.staff)}
 
 
 @app.post("/api/feedback", status_code=status.HTTP_201_CREATED)

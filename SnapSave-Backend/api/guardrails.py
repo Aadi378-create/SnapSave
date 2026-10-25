@@ -1,5 +1,8 @@
 """Bound request size and write rates without storing customer content."""
 import time
+import os
+import json
+import logging
 import threading
 import asyncio
 from collections import defaultdict, deque
@@ -13,6 +16,7 @@ class RequestLimits(BaseHTTPMiddleware):
         self.lock = threading.Lock()
 
     async def dispatch(self, request, call_next):
+        started=time.perf_counter()
         def reject(detail,status):
             response=JSONResponse({'detail':detail},status_code=status)
             if status==429:response.headers['Retry-After']='60'
@@ -23,6 +27,11 @@ class RequestLimits(BaseHTTPMiddleware):
             response.headers['X-Frame-Options']='DENY'
             response.headers['Referrer-Policy']='no-referrer'
             response.headers['Cache-Control']='no-store'
+            if os.getenv('ENABLE_REQUEST_TIMING','false').lower()=='true':
+                elapsed=round((time.perf_counter()-started)*1000,2)
+                response.headers['Server-Timing']=f'app;dur={elapsed}'
+                route=getattr(request.scope.get('route'),'path','<unmatched>')
+                logging.getLogger('uvicorn.error').info('SNAPSAVE_TIMING %s',json.dumps({'method':request.method,'route':route,'status':response.status_code,'duration_ms':elapsed}))
             return response
 
         # Limit before reading the body or running authentication/database work.

@@ -1,0 +1,33 @@
+{
+  "checked_at": "2026-10-25T18:08:44.9997751Z",
+  "firewall": [
+    {
+      "Name": "Domain",
+      "Enabled": 1
+    },
+    {
+      "Name": "Private",
+      "Enabled": 1
+    },
+    {
+      "Name": "Public",
+      "Enabled": 1
+    }
+  ],
+  "defender": {
+    "AntivirusEnabled": true,
+    "RealTimeProtectionEnabled": true,
+    "BehaviorMonitorEnabled": true,
+    "IoavProtectionEnabled": true
+  },
+  "listeners": [
+    {
+      "LocalAddress": "127.0.0.1",
+      "LocalPort": 8000
+    },
+    {
+      "LocalAddress": "127.0.0.1",
+      "LocalPort": 3000
+    }
+  ]
+}

@@ -2150,7 +2150,7 @@
         document.body.classList.remove("admin-shell","staff-ready");
         localStorage.removeItem(STORAGE_KEY);
         if(betaMetricsInterval)betaMetricsInterval();
-        staffChatCache=[]; staffChatSignature=""; staffChatOrder=null; activeOrders=[];
+        staffChatCache=[]; staffChatSignature=""; staffChatOrder=null; activeOrders=[];configurationStatus.hidden=true;configurationStatus.textContent="";configurationRequest++;queueStatus.hidden=true;queueStatus.textContent="";
         document.getElementById("beta-program-view").style.display="none";
         moderatorsList=[];customersList=[];helpPage=0;helpListRequest++;
         _lastQueueSignature="";queuePage=0;lastQueueFilter="";
@@ -2226,7 +2226,7 @@
             if (nr) nr.style.display = "flex";
           }
           showAdminSection("tickets");
-          await loadAdminConfigurations();
+          void loadAdminConfigurations();
           if(!session.current(version))return;
         } else {
           showAdminSection("tickets");
@@ -2242,7 +2242,7 @@
         if(backgroundPolling)backgroundPolling();
         backgroundPolling=singleFlightPolling(async()=>{
           if(!session.current(version))return;
-          if(currentAdminSection==="tickets")await Promise.all([loadQueue(),pollChat()]);if(!session.current(version))return;
+          if(currentAdminSection==="tickets") {const results=await Promise.all([loadQueue(),pollChat()]);if(results[0]===false)throw new Error("Queue refresh unavailable");}if(!session.current(version))return;
           if(isAdmin && session.current(version)) {
             await updateHelpBadge();if(!session.current(version))return;
             if(currentAdminSection==="help") {await loadHelpInbox();if(session.current(version)&&currentHelpThread)await openHelpThread(currentHelpThread);}
@@ -2257,48 +2257,34 @@
         });
       }
 
+      let configurationRequest=0;
+      const configurationStatus=document.createElement("span");configurationStatus.id="configuration-status";configurationStatus.setAttribute("role","status");configurationStatus.hidden=true;document.getElementById("dashboard-header").append(configurationStatus);
       async function loadAdminConfigurations() {
+        const request=++configurationRequest,version=session.version;
+        const controls=["order-global-switch","order-global-switch-2","maintenance-switch","ai-global-switch"];
+        controls.forEach(id=>document.getElementById(id).disabled=true);
+        ["ai","hybrid"].forEach(mode=>{const button=document.getElementById("mode-btn-"+mode);if(button)button.disabled=true;});
         try {
-          // Load Orders Global status
-          const orderSettings = await apiRequest("/api/admin/settings/orders");
-          setSwitches(
-            ["order-global-switch", "order-global-switch-2"],
-            orderSettings.orders_enabled,
-          );
-
-          // Load Maintenance status
-          const maint = await apiRequest("/api/admin/settings/maintenance");
-          setSwitches(["maintenance-switch"], maint.maintenance_mode);
-
-          // Load Delivery Config
-          try {
-            const deliveryConfig = await apiRequest("/api/admin/delivery-config");
-            if (deliveryConfig) {
-              if(deliveryConfig.zepto !== undefined) document.getElementById("config-zepto").value = deliveryConfig.zepto;
-              if(deliveryConfig.blinkit !== undefined) document.getElementById("config-blinkit").value = deliveryConfig.blinkit;
-              if(deliveryConfig.instamart !== undefined) document.getElementById("config-instamart").value = deliveryConfig.instamart;
-              if(deliveryConfig.bigbasket !== undefined) document.getElementById("config-bigbasket").value = deliveryConfig.bigbasket;
-            }
-          } catch(e) {
-          }
-
-          // Load AI Global status
-          try {
-            const aiStatus = await apiRequest("/api/admin/settings/ai-status");
-            setSwitches(["ai-global-switch"], aiStatus.ai_enabled);
-            document.getElementById("ai-global-switch").disabled=!aiStatus.research_available;
-            ["ai","hybrid"].forEach(m=>{const b=document.getElementById("mode-btn-"+m);if(b)b.disabled=!aiStatus.research_available;});
-          } catch (e) {}
-
-          // Load assignments dropdown options
-          moderatorsList = await apiRequest("/api/admin/moderators");
-          await loadAdminAssignments();
-        } catch (e) {
+          const [orders,maintenance,delivery,ai,moderators,customers]=await Promise.all([
+            apiRequest("/api/admin/settings/orders"),apiRequest("/api/admin/settings/maintenance"),
+            apiRequest("/api/admin/delivery-config"),apiRequest("/api/admin/settings/ai-status"),
+            apiRequest("/api/admin/moderators"),apiRequest("/api/admin/customers")
+          ]);
+          if(!session.current(version)||request!==configurationRequest)return;
+          setSwitches(["order-global-switch","order-global-switch-2"],orders.orders_enabled);
+          setSwitches(["maintenance-switch"],maintenance.maintenance_mode);
+          for(const store of ["zepto","blinkit","instamart","bigbasket"])if(delivery[store]!==undefined)document.getElementById("config-"+store).value=delivery[store];
+          setSwitches(["ai-global-switch"],ai.ai_enabled);
+          controls.forEach(id=>document.getElementById(id).disabled=false);
+          document.getElementById("ai-global-switch").disabled=!ai.research_available;
+          ["ai","hybrid"].forEach(mode=>{const button=document.getElementById("mode-btn-"+mode);if(button)button.disabled=!ai.research_available;});
+          moderatorsList=moderators;customersList=customers;pollAdminAssignments();
+          configurationStatus.hidden=true;configurationStatus.textContent="";
+        } catch(error) {
+          if(!session.current(version)||request!==configurationRequest)return;
+          configurationStatus.hidden=false;configurationStatus.textContent="Settings unavailable. Open Settings to retry.";
         }
       }
-
-
-
 
       async function loadAdminAssignments() {
         try {
@@ -2448,6 +2434,7 @@
         }
 
         // Load data based on section
+        if (name === "settings") void loadAdminConfigurations();
         if (name === "customers") loadCustomersAdmin();
         if (name === "help") loadHelpInbox();
         if (name === "roles") loadRolesAdmin();
@@ -2974,6 +2961,7 @@
         }
       }
 
+      const queueStatus=document.createElement("span");queueStatus.id="queue-status";queueStatus.setAttribute("role","status");queueStatus.hidden=true;queueStatus.style.cssText="font-size:12px;color:var(--accent-orange);max-width:260px;line-height:1.5;";document.getElementById("dashboard-header").append(queueStatus);
       let _lastQueueSignature = "";
       window.loadQueue = async function () {
         if(queueBusy) {queuePending=true;return;} queueBusy=true;
@@ -2986,6 +2974,7 @@
           );
           if(!currentUser || page!==queuePage || filter!==document.getElementById("queue-filter").value){queuePending=!!currentUser;return;}
 
+          queueStatus.hidden=true;queueStatus.textContent="";
           document.getElementById("queue-previous").disabled=page===0;
           document.getElementById("queue-next").disabled=queue.length<=50;
           queue=queue.slice(0,50);
@@ -3017,6 +3006,8 @@
             if(selectedOrder.order_id===latest.id && selectedOrder.revision!==latest.revision){selectedOrder={...latest,order_id:latest.id,customer_id:latest.user_id,customer_phone:selectedOrder.customer_phone};renderTicketDetails();}
           }
         } catch (e) {
+          queueStatus.hidden=false;queueStatus.textContent="Unable to refresh orders. Showing the last loaded queue; retrying automatically.";
+          return false;
         } finally {queueBusy=false;if(queuePending){queuePending=false;if(currentUser)await loadQueue();}}
       };
 
@@ -3193,9 +3184,10 @@
           return;
         }
 
+        const fragment=document.createDocumentFragment();
         msgs.forEach((m) => {
-          const event=conversationEvent(m,utcDate(m.created_at).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}));
-          if(event){chat.appendChild(event);return;}
+          const event=conversationEvent(m,formatConversationTime(m.created_at));
+          if(event){fragment.appendChild(event);return;}
           const bubble = document.createElement("div");
           let senderClass = "system";
           let senderName = "System";
@@ -3218,10 +3210,11 @@
           bubble.innerHTML = `
                     <div class="chat-sender">${senderName}</div>
                     <div style="white-space: pre-wrap;">${escapeHTML(m.message)}</div>
-                    <div class="chat-timestamp">${utcDate(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>
+                    <div class="chat-timestamp">${formatConversationTime(m.created_at)}</div>
                 `;
-          chat.appendChild(bubble);
+          fragment.appendChild(bubble);
         });
+        chat.appendChild(fragment);
 
         if(nearBottom)chat.scrollTop = chat.scrollHeight;
       }
@@ -3867,9 +3860,9 @@
             formatSeconds(confSecs);
 
           document.getElementById("beta-metric-avg-profit").innerText =
-            `₹${parseFloat(m.avg_profit_per_order).toFixed(2)}`;
+            m.avg_profit_per_order==null ? "Admin only" : `₹${parseFloat(m.avg_profit_per_order).toFixed(2)}`;
           document.getElementById("beta-metric-avg-savings").innerText =
-            `₹${parseFloat(m.avg_savings_delivered).toFixed(2)}`;
+            m.avg_savings_delivered==null ? "Admin only" : `₹${parseFloat(m.avg_savings_delivered).toFixed(2)}`;
 
           // 2. Load Incidents Logs
           const incidents = await apiRequest("/api/admin/incidents");

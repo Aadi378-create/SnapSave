@@ -53,3 +53,7 @@ window.SnapSaveAuth = {
   async verify(code) { const result=await this.confirmation.confirm(code); return result.user.getIdToken(); },
   async logout() { if(this.auth) await this.api.signOut(this.auth); }
 };
+
+// Reuse ICU formatting instead of constructing a formatter per chat bubble.
+const conversationClock = new Intl.DateTimeFormat(undefined,{hour:"2-digit",minute:"2-digit"});
+function formatConversationTime(value) { const date=utcDate(value);return Number.isNaN(date.getTime()) ? "" : conversationClock.format(date); }

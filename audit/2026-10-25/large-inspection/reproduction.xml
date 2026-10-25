@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="2" skipped="0" tests="2" time="1.014" timestamp="2026-10-25T23:21:40.880254+05:30" hostname="DESKTOP-41IMKUB"><testcase classname="tests.test_large_inspection" name="test_moderator_metrics_do_not_disclose_global_financial_totals" time="0.579"><failure message="AssertionError: assert not ({'profit', 'profit_today', 'revenue', 'revenue_today', 'total_customers', 'total_savings_delivered'} &amp; dict_keys(['orders_today', 'orders_pending_review', 'orders_awaiting_customer', 'orders_confirmed', 'orders_delivered'...al_customers', 'total_savings_delivered', 'active_tickets', 'claimed_tickets', 'pending_tickets', 'avg_response_time']))&#10; +  where dict_keys(['orders_today', 'orders_pending_review', 'orders_awaiting_customer', 'orders_confirmed', 'orders_delivered'...al_customers', 'total_savings_delivered', 'active_tickets', 'claimed_tickets', 'pending_tickets', 'avg_response_time']) = &lt;built-in method keys of dict object at 0x00000227624D7400&gt;()&#10; +    where &lt;built-in method keys of dict object at 0x00000227624D7400&gt; = {'orders_today': 1, 'orders_pending_review': 0, 'orders_awaiting_customer': 0, 'orders_confirmed': 0, ...}.keys&#10; +      where {'orders_today': 1, 'orders_pending_review': 0, 'orders_awaiting_customer': 0, 'orders_confirmed': 0, ...} = json()&#10; +        where json = &lt;Response [200 OK]&gt;.json">client = &lt;starlette.testclient.TestClient object at 0x00000227613F4050&gt;
+actors = {'customer': {'id': 'fixture_1', 'headers': {'Authorization': 'Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6InRlc3Rfa2lkIiwidHlw...TzlL5noPWzS-rl1HQI54Y3q6RfjYcuyeS1RT8UwpDbgU1BVcOjnWZA_Vntcoqd-XIbXDct8XfKUzGfA6gSpQ'}, 'phone': '+911234567804'}, ...}
+order = {'id': '7de22bdf-a489-418d-8be8-ef14c3066bfb', 'user_id': 'fixture_1', 'address_id': '305cce01-3481-47e4-ab68-8b35f312c0c1', 'store': 'pending', ...}
+db = &lt;sqlalchemy.orm.session.Session object at 0x0000022761408B90&gt;
+
+    def test_moderator_metrics_do_not_disclose_global_financial_totals(client,actors,order,db):
+        row=db.get(models.Order,order['id']);row.status='delivered';row.assigned_moderator_id=actors['unassigned']['id'];row.customer_paid=100000;row.profit=50000;db.commit()
+        response=client.get('/api/admin/dashboard/metrics',headers=actors['moderator']['headers'])
+        assert response.status_code==200
+&gt;       assert not {'revenue','profit','revenue_today','profit_today','total_customers','total_savings_delivered'} &amp; response.json().keys()
+E       AssertionError: assert not ({'profit', 'profit_today', 'revenue', 'revenue_today', 'total_customers', 'total_savings_delivered'} &amp; dict_keys(['orders_today', 'orders_pending_review', 'orders_awaiting_customer', 'orders_confirmed', 'orders_delivered'...al_customers', 'total_savings_delivered', 'active_tickets', 'claimed_tickets', 'pending_tickets', 'avg_response_time']))
+E        +  where dict_keys(['orders_today', 'orders_pending_review', 'orders_awaiting_customer', 'orders_confirmed', 'orders_delivered'...al_customers', 'total_savings_delivered', 'active_tickets', 'claimed_tickets', 'pending_tickets', 'avg_response_time']) = &lt;built-in method keys of dict object at 0x00000227624D7400&gt;()
+E        +    where &lt;built-in method keys of dict object at 0x00000227624D7400&gt; = {'orders_today': 1, 'orders_pending_review': 0, 'orders_awaiting_customer': 0, 'orders_confirmed': 0, ...}.keys
+E        +      where {'orders_today': 1, 'orders_pending_review': 0, 'orders_awaiting_customer': 0, 'orders_confirmed': 0, ...} = json()
+E        +        where json = &lt;Response [200 OK]&gt;.json
+
+SnapSave-Backend\tests\test_large_inspection.py:76: AssertionError</failure></testcase><testcase classname="tests.test_large_inspection" name="test_summary_history_does_not_load_item_arrays_or_internal_drafts" time="0.235"><failure message="assert False&#10; +  where False = all(&lt;generator object test_summary_history_does_not_load_item_arrays_or_internal_drafts.&lt;locals&gt;.&lt;genexpr&gt; at 0x000002276241DFF0&gt;)">client = &lt;starlette.testclient.TestClient object at 0x000002276125F390&gt;
+actors = {'customer': {'id': 'fixture_1', 'headers': {'Authorization': 'Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6InRlc3Rfa2lkIiwidHlw...TzlL5noPWzS-rl1HQI54Y3q6RfjYcuyeS1RT8UwpDbgU1BVcOjnWZA_Vntcoqd-XIbXDct8XfKUzGfA6gSpQ'}, 'phone': '+911234567804'}, ...}
+order = {'id': 'cf626e0d-70c8-4cb7-9caa-e199b203c7f1', 'user_id': 'fixture_1', 'address_id': 'fa319816-ac31-4aca-9764-e2ae731dee09', 'store': 'pending', ...}
+
+    def test_summary_history_does_not_load_item_arrays_or_internal_drafts(client,actors,order):
+        response=client.get('/api/orders?summary_only=true',headers=actors['customer']['headers'])
+        assert response.status_code==200
+&gt;       assert all('items' not in row and 'manual_prices' not in row and row['summary_only'] for row in response.json())
+E       assert False
+E        +  where False = all(&lt;generator object test_summary_history_does_not_load_item_arrays_or_internal_drafts.&lt;locals&gt;.&lt;genexpr&gt; at 0x000002276241DFF0&gt;)
+
+SnapSave-Backend\tests\test_large_inspection.py:82: AssertionError</failure></testcase></testsuite></testsuites>

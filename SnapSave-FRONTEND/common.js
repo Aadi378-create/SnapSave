@@ -69,11 +69,11 @@ const conversationClock = new Intl.DateTimeFormat(undefined,{hour:"2-digit",minu
 function formatConversationTime(value) { const date=utcDate(value);return Number.isNaN(date.getTime()) ? "" : conversationClock.format(date); }
 
 // Coalesce simultaneous, explicitly allowlisted GETs; never cache identity or response data.
-const batchedReadPaths=new Set(['/api/addresses','/api/orders','/api/moderator/queue','/api/admin/dashboard/metrics','/api/admin/settings/orders','/api/admin/settings/maintenance','/api/admin/delivery-config','/api/admin/settings/ai-status','/api/admin/moderators','/api/admin/customers']);
+const batchedReadPaths=new Set(['/api/addresses','/api/orders','/api/moderator/queue','/api/admin/dashboard/metrics','/api/admin/settings/orders','/api/admin/settings/maintenance','/api/admin/delivery-config','/api/admin/settings/ai-status','/api/admin/moderators','/api/admin/customers','/api/admin/help/summary']);
 let pendingReads=[],readFlush=null;
 function readFetch(base,endpoint,options) {
   const url=new URL(endpoint,base),path=url.pathname;
-  if(!batchedReadPaths.has(path))return fetch(base+endpoint,options);
+  if(!batchedReadPaths.has(path)&&!/^\/api\/chat\/[A-Za-z0-9_-]{1,128}\/messages$/.test(path)&&!/^\/api\/orders\/[A-Za-z0-9_-]{1,36}$/.test(path))return fetch(base+endpoint,options);
   return new Promise((resolve,reject)=>{
     if(options.signal?.aborted){reject(options.signal.reason);return;}
     const entry={base,endpoint,options,resolve,reject};pendingReads.push(entry);

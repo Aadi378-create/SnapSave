@@ -89,7 +89,7 @@ def test_customer_history_switch_blocks_sending_and_can_be_cancelled(browser,cli
     page,errors=open_app(browser,client,actors['customer'],db,'index.html')
     try:
         page.wait_for_function("document.querySelector('#active-order-container').textContent.includes('pending review')")
-        page.evaluate("""()=>{const original=window.fetch;window.fetch=async(url,options)=>{if(String(url).includes('active_only=true'))await new Promise(resolve=>window.releaseHistory=resolve);return original(url,options);};void window.viewHistoryOrder('archived-order');}""")
+        page.evaluate("""()=>{const original=window.fetch;window.fetch=async(url,options)=>{if(String(url).includes('/api/customer/workspace'))await new Promise(resolve=>window.releaseHistory=resolve);return original(url,options);};void window.viewHistoryOrder('archived-order');}""")
         page.wait_for_function('!!window.releaseHistory')
         assert page.locator('#chat-textarea').is_disabled() and page.locator('#btn-send-chat').is_disabled()
         page.locator('[onclick="startNewOrder()"]').click()

@@ -1,0 +1,20 @@
+{
+  "checks": [
+    {
+      "name": "workspace_without_auth",
+      "status": 401,
+      "passed": true
+    },
+    {
+      "name": "order_without_auth",
+      "status": 401,
+      "passed": true
+    },
+    {
+      "name": "batch_without_auth",
+      "status": 401,
+      "passed": true
+    }
+  ],
+  "passed": true
+}

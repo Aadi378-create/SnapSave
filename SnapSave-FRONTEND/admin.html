@@ -2114,6 +2114,7 @@
       let staffChatCache=[];
       let staffChatSignature="";
       let staffChatOrder=null;
+      let staffChatCursor=null;
       let queueBusy=false;
       let queuePending=false;
       let queuePage=0;
@@ -2144,7 +2145,7 @@
         document.body.classList.remove("admin-shell","staff-ready");
         localStorage.removeItem(STORAGE_KEY);
         if(betaMetricsInterval)betaMetricsInterval();
-        staffChatCache=[]; staffChatSignature=""; staffChatOrder=null; activeOrders=[];configurationStatus.hidden=true;configurationStatus.textContent="";configurationRequest++;queueStatus.hidden=true;queueStatus.textContent="";
+        staffChatCache=[]; staffChatSignature=""; staffChatOrder=null;staffChatCursor=null; activeOrders=[];configurationStatus.hidden=true;configurationStatus.textContent="";configurationRequest++;queueStatus.hidden=true;queueStatus.textContent="";
         document.getElementById("beta-program-view").style.display="none";
         moderatorsList=[];customersList=[];helpPage=0;helpListRequest++;
         _lastQueueSignature="";queuePage=0;queueCursors=[null];queueNextCursor=null;lastQueueFilter="";
@@ -2236,9 +2237,10 @@
         if(backgroundPolling)backgroundPolling();
         backgroundPolling=singleFlightPolling(async()=>{
           if(!session.current(version))return;
-          if(currentAdminSection==="tickets") {const results=await Promise.all([loadQueue(),pollChat()]);if(results[0]===false)throw new Error("Queue refresh unavailable");}if(!session.current(version))return;
+          if(currentAdminSection==="tickets") {const results=await Promise.all([loadQueue(),pollChat(),isAdmin?updateHelpBadge():Promise.resolve()]);if(results[0]===false)throw new Error("Queue refresh unavailable");}
+          else if(isAdmin)await updateHelpBadge();
+          if(!session.current(version))return;
           if(isAdmin && session.current(version)) {
-            await updateHelpBadge();if(!session.current(version))return;
             if(currentAdminSection==="help") {await loadHelpInbox();if(session.current(version)&&currentHelpThread)await openHelpThread(currentHelpThread);}
           }
         },10000);
@@ -3125,9 +3127,11 @@
         document.getElementById("quote-preview-block").style.display="none";
         document.getElementById("composer-text").disabled=true;
         document.getElementById("btn-send-message").disabled=true;
+        let initialMessages=null;
         if(order.summary_only && !order.requires_claim) {
           try {
-            const details=await apiRequest(`/api/orders/${order.order_id}`);
+            const [details,messages]=await Promise.all([apiRequest(`/api/orders/${order.order_id}`),(currentUser.role==='ADMIN'||order.assigned_moderator_id===currentUser.id)?apiRequest(`/api/chat/${encodeURIComponent(order.customer_id)}/messages?order_id=${encodeURIComponent(order.order_id)}`):Promise.resolve(null)]);
+            initialMessages=messages;
             if(!session.current(version) || selection!==ticketSelection || selectedOrder?.order_id!==order.order_id)return;
             order={...order,...details,summary_only:false};selectedOrder=order;
           } catch(error) {
@@ -3137,7 +3141,7 @@
         }
         document.getElementById("composer-text").value=staffDrafts.get(order.order_id)||"";
         conversationFeedback("staff-chat-feedback");
-        staffChatCache=[];staffChatSignature="";staffChatOrder=order.order_id;
+        staffChatCache=[];staffChatSignature="";staffChatOrder=order.order_id;staffChatCursor=null;
         document.getElementById("chat-messages").textContent="";
         renderQueue();
 
@@ -3146,23 +3150,24 @@
           order.requires_claim ? 'Claim ticket to contact customer' : `Chat: ${order.customer_phone || order.customer_name || 'Customer'}`;
         document.getElementById("composer-text").disabled = !canStaffChat(order);
         document.getElementById("btn-send-message").disabled = !canStaffChat(order) || staffSending;
-        await pollChat();
-
+        await pollChat(initialMessages);
+        if(!session.current(version)||selection!==ticketSelection||selectedOrder?.order_id!==order.order_id)return;
         renderTicketDetails();
         switchOrdersTab('ticket');
       }
 
-      async function pollChat() {
+      async function pollChat(preloaded=null) {
         if(!selectedOrder || !currentUser) return;
         if(currentUser.role!=="ADMIN" && selectedOrder.assigned_moderator_id!==currentUser.id) return;
         const order=selectedOrder.order_id;
         const customer=selectedOrder.customer_id;
-        if(staffChatOrder!==order) {staffChatOrder=order;staffChatCache=[];staffChatSignature="";}
+        if(staffChatOrder!==order) {staffChatOrder=order;staffChatCache=[];staffChatSignature="";staffChatCursor=null;}
         const params=new URLSearchParams({order_id:order});
-        if(staffChatCache.length) params.set("after_id",staffChatCache.at(-1).id);
-        const messages=await apiRequest(`/api/chat/${encodeURIComponent(customer)}/messages?${params}`);
+        if(staffChatCursor)params.set("after_id",staffChatCursor);
+        const messages=preloaded===null?await apiRequest(`/api/chat/${encodeURIComponent(customer)}/messages?${params}`):preloaded;
         if(!selectedOrder || selectedOrder.order_id!==order)return;
         staffChatCache=mergeConversation(staffChatCache,messages);
+        if(messages.length)staffChatCursor=messages.at(-1).id;
         const sig=JSON.stringify([order,staffChatCache]);
         if(sig===staffChatSignature)return;
         staffChatSignature=sig;renderMessages(staffChatCache);
@@ -3229,12 +3234,12 @@
           const previous=staffRequests.get(order.order_id);
           const request=previous?.text===text?previous:{text,id:crypto.randomUUID()};
           staffRequests.set(order.order_id,request);
-          await apiRequest(`/api/chat/${encodeURIComponent(order.customer_id)}/send`,"POST",{message:text,order_id:order.order_id,request_id:request.id});
+          const sent=await apiRequest(`/api/chat/${encodeURIComponent(order.customer_id)}/send`,"POST",{message:text,order_id:order.order_id,request_id:request.id});
           staffRequests.delete(order.order_id);
+          if(sent.message_data&&selectedOrder?.order_id===order.order_id){staffChatCache=mergeConversation(staffChatCache,[sent.message_data]);staffChatSignature=JSON.stringify([order.order_id,staffChatCache]);renderMessages(staffChatCache);}
           if(staffDrafts.get(order.order_id)?.trim()===text)staffDrafts.delete(order.order_id);
           if(selectedOrder?.order_id===order.order_id && input.value.trim()===text)input.value="";
           if(selectedOrder?.order_id===order.order_id)conversationFeedback("staff-chat-feedback","Sent");
-          try { await pollChat(); } catch(e) { if(selectedOrder?.order_id===order.order_id)conversationFeedback("staff-chat-feedback","Sent. Conversation will refresh when the connection returns."); }
         } catch(e){if(selectedOrder?.order_id===order.order_id)conversationFeedback("staff-chat-feedback","Could not send. Your draft is saved. "+e.message,true);}
         finally {staffSending=false;setLoading("btn-send-message",false);document.getElementById("btn-send-message").disabled=!canStaffChat(selectedOrder);}
       };

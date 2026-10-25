@@ -14,7 +14,7 @@ def test_created_order_refresh_failure_and_history_retry(browser,client,actors,o
               window.__cursors.push(new URL(path).searchParams.get('before'));
               if(window.__failHistory){window.__failHistory=false;throw Error('History offline');}
             }
-            if(window.__created&&(path.includes('active_only=true')||(path.endsWith('/api/read-batch')&&String(options?.body).includes('\"active_only\":true'))))throw Error('Refresh offline');
+            if(window.__created&&(path.includes('/api/customer/workspace')||(path.endsWith('/api/read-batch')&&String(options?.body).includes('\"active_only\":true'))))throw Error('Refresh offline');
             const response=await original(url,options);
             if(path.endsWith('/api/orders')&&options?.method==='POST')window.__created=true;
             return response;

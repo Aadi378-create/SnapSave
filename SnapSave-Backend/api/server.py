@@ -1101,6 +1101,9 @@ def cancel_order(order_id: str, current_user: models.User = Depends(require_role
     return {**serialize_order(row,current_user),"order_id":row.id}
 
 
+def serialize_message(message,customer_id):
+    return {'id':message.id,'sender_id':message.sender_id,'sender_role':'CUSTOMER' if message.sender_id==customer_id and message.sender_role in {'ADMIN','MODERATOR'} and message.kind=='text' else message.sender_role,'message':message.message,'order_id':message.order_id,'kind':message.kind,'created_at':message.created_at}
+
 @app.get("/api/chat/{customer_id}/messages")
 def get_chat_messages(customer_id: str, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db), order_id: Optional[str] = None, after_id: Optional[str] = None, limit: int = Query(100,ge=1,le=200)):
     authorize_chat(db,customer_id,order_id,current_user)
@@ -1116,7 +1119,7 @@ def get_chat_messages(customer_id: str, current_user: models.User = Depends(get_
         rows=list(reversed(query.order_by(models.Message.created_at.desc(),models.Message.id.desc()).limit(limit).all()))
     # Conversation participation is distinct from an account's management role.
     # Normalize historical own-thread messages without rewriting stored records.
-    return [{"id":m.id,"sender_id":m.sender_id,"sender_role":"CUSTOMER" if m.sender_id==customer_id and m.sender_role in {"ADMIN","MODERATOR"} and m.kind=="text" else m.sender_role,"message":m.message,"order_id":m.order_id,"kind":m.kind,"created_at":m.created_at} for m in rows]
+    return [serialize_message(m,customer_id) for m in rows]
 
 
 @app.put("/api/admin/orders/{order_id}/mode")
@@ -1208,7 +1211,7 @@ def send_chat_message(customer_id: str, data: SendMessageRequest, current_user: 
         if existing:
             if (existing.user_id,existing.order_id,existing.sender_id,existing.message)!=(customer_id,data.order_id,current_user.id,data.message.strip()):
                 raise HTTPException(409,"Message request already used for different content")
-            return {"message":"Message sent","id":existing.id}
+            return {"message":"Message sent","id":existing.id,"message_data":serialize_message(existing,customer_id)}
     previous=replay()
     if previous:
         return previous
@@ -1233,7 +1236,7 @@ def send_chat_message(customer_id: str, data: SendMessageRequest, current_user: 
         if previous:
             return previous
         raise
-    return {"message":"Message sent","id":msg.id}
+    return {"message":"Message sent","id":msg.id,"message_data":serialize_message(msg,customer_id)}
 
 
 
@@ -1678,10 +1681,12 @@ class ReadOptions(StrictRequest):
     status_filter: Optional[str] = Field(None,max_length=50)
     before: Optional[str] = Field(None,max_length=512)
     after: Optional[str] = Field(None,max_length=512)
+    order_id: Optional[str] = Field(None,max_length=36)
+    after_id: Optional[str] = Field(None,max_length=36)
 
 class ReadOperation(StrictRequest):
     model_config=ConfigDict(extra='forbid')
-    path: str = Field(...,max_length=100)
+    path: str = Field(...,max_length=200)
     options: ReadOptions = Field(default_factory=ReadOptions)
 
 class ReadBatch(StrictRequest):
@@ -1702,18 +1707,46 @@ def read_batch(data: ReadBatch,current_user: models.User=Depends(get_current_use
         '/api/admin/settings/ai-status':(lambda current_user,db:get_global_ai_status(db),['ADMIN','MODERATOR'],()),
         '/api/admin/moderators':(list_moderators,['ADMIN','MODERATOR'],()),
         '/api/admin/customers':(list_customers,['ADMIN'],()),
+        '/api/admin/help/summary':(get_help_summary,['ADMIN'],()),
     }
     results=[]
     for operation in data.reads:
         try:
             route=routes.get(operation.path)
+            chat=re.fullmatch(r'/api/chat/([A-Za-z0-9_-]{1,128})/messages',operation.path)
+            detail=re.fullmatch(r'/api/orders/([A-Za-z0-9_-]{1,36})',operation.path)
+            if chat:route=(lambda current_user,db,**values:get_chat_messages(chat.group(1),current_user,db,**values),None,('order_id','after_id','limit'))
+            elif detail:route=(lambda current_user,db:get_order_detail(detail.group(1),current_user,db),None,())
             if route is None:raise HTTPException(422,'Unsupported read operation')
             handler,roles,fields=route
             if roles:require_role(roles)(current_user)
             supplied=operation.options.model_dump(exclude_unset=True)
             if set(supplied)-set(fields):raise HTTPException(422,'Unsupported read parameters')
             values=operation.options.model_dump()
+            if chat and 'limit' not in supplied:values['limit']=100
             result=handler(current_user=current_user,db=db,**{key:values[key] for key in fields})
             results.append({'status':200,'data':result})
         except HTTPException as error:results.append({'status':error.status_code,'data':{'detail':error.detail}})
     return {'results':results}
+
+
+@app.get('/api/customer/workspace')
+def customer_workspace(selected_order_id: Optional[str]=Query(None,max_length=36),draft: bool=False,known_revision: Optional[int]=Query(None,ge=0),after_id: Optional[str]=Query(None,max_length=36),include_history: bool=False,include_addresses: bool=False,current_user: models.User=Depends(get_current_user),db: Session=Depends(get_db)):
+    """One fresh authenticated read for the visible customer's order and conversation.
+
+    Always scoped to the authenticated account, including when that account is staff.
+    Revision matching omits unchanged detail payload, never authorization checks.
+    """
+    active=get_order_history(current_user,db,100,0,True,True,None)
+    history=get_order_history(current_user,db,50,0,False,True,None) if include_history else None
+    target=None if draft else selected_order_id or (active[0]['id'] if active else None)
+    detail=None;messages=[];missing=None
+    if target:
+        row=db.get(models.Order,target)
+        if row is None:missing=target;target=None
+        else:
+            if row.user_id!=current_user.id:raise HTTPException(403,'Not your order workspace')
+            read_access(row,current_user)
+            if target!=selected_order_id or known_revision is None or row.revision!=known_revision:detail=serialize_order(row,current_user)
+            messages=get_chat_messages(current_user.id,current_user,db,target,after_id if target==selected_order_id else None,100)
+    return {'active':active,'history':history,'selected_order_id':target,'order':detail,'messages':messages,'missing_order_id':missing,'addresses':list_addresses(current_user,db) if include_addresses else None}

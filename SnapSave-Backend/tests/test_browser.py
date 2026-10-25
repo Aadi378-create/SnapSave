@@ -32,7 +32,7 @@ def open_app(browser,client,actor,db,file,firebase_unavailable=False,auth_unavai
             if "firebase-app.js" in parsed.path:
                 script="export const initializeApp=()=>({});export const getApps=()=>[];"
             else:
-                script='''const user={getIdToken:async()=>globalThis.__test_token};
+                script='''const user={getIdToken:async(force)=>{globalThis.__forced_token_refreshes=(globalThis.__forced_token_refreshes||0)+(force?1:0);return globalThis.__test_token;}};
                 export const getAuth=()=>({currentUser:user,authStateReady:async()=>{}});
                 export const onAuthStateChanged=(a,cb)=>queueMicrotask(()=>cb(user));
                 export const signOut=async()=>{globalThis.__test_signouts++;};export class RecaptchaVerifier{};

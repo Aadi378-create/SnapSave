@@ -1,0 +1,9 @@
+{
+  "scope": "Controlled local ASGI test, Firebase SDK stub adds 80 ms per verification; not an internet speed measurement",
+  "verification_delay_ms": 80,
+  "samples": 3,
+  "previous_sequential_checks": 3,
+  "workspace_checks": 1,
+  "previous_chain_median_ms": 256.11,
+  "workspace_median_ms": 87.24
+}

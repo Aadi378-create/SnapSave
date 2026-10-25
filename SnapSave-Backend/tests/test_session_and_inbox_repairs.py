@@ -91,8 +91,7 @@ def test_background_poll_keeps_draft_attached_to_original_order(browser,client,a
         page.wait_for_function("document.querySelector('#active-order-container').textContent.includes('pending review')")
         page.locator('#chat-textarea').fill('Clarification for the original order')
         page.evaluate('''()=>{const original=window.fetch;window.fetch=async(url,options)=>{
-          if(window.auditSawRefresh&&String(url).includes('/messages?'))window.auditPollFinished=true;
-          const response=await original(url,options);if(String(url).includes('active_only=true'))window.auditSawRefresh=true;return response;};}''')
+          const response=await original(url,options);if(String(url).includes('/api/customer/workspace'))window.auditPollFinished=true;return response;};}''')
         newer=client.post('/api/orders',headers=actor['headers'],json={
             'address_id':order['address_id'],'items':[{'name':'Eggs','quantity':1}]}).json()
         page.wait_for_function('window.auditPollFinished',timeout=15000)

@@ -1,0 +1,31 @@
+{
+  "checked_at": "2026-10-25T22:17:37.622061+00:00",
+  "scope": "Real restored Edge sessions after API restart. Handler-to-headers timing includes Firebase and local database work; other pre-existing tabs also remain open. No IDs, tokens, request queries or customer bodies retained.",
+  "routes": {
+    "GET /api/admin/help/summary": {
+      "samples": 32,
+      "median_ms": 342.91,
+      "max_ms": 2238.52
+    },
+    "GET /api/status": {
+      "samples": 18,
+      "median_ms": 3.21,
+      "max_ms": 7.39
+    },
+    "GET /api/auth/me": {
+      "samples": 2,
+      "median_ms": 328.67,
+      "max_ms": 338.52
+    },
+    "GET /api/customer/workspace": {
+      "samples": 17,
+      "median_ms": 349.66,
+      "max_ms": 1307.39
+    },
+    "POST /api/read-batch": {
+      "samples": 15,
+      "median_ms": 345.19,
+      "max_ms": 1639.62
+    }
+  }
+}

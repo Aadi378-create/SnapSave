@@ -1114,6 +1114,7 @@
       let newOrderDraft = false;
       let orderCache = [];
       let historyLoaded = false;
+      let workspaceMessages=null;
       let customerViewLoading = false;
       let historyCursor = null;
       let orderRequest = 0;
@@ -1121,6 +1122,7 @@
       let sendKey = null;
       let sendPayload = null;
       const chatCache = new Map();
+      const chatCursors=new Map();
       let chatPollingInterval = null;
       let selectedRating = 5;
       let pendingFeedbackOrderId = null;
@@ -1133,7 +1135,7 @@
         async verified(result) {
           auth=window.SnapSaveAuth.auth;
           const version=session.version;
-          const token=await result.user.getIdToken(true);
+          const token=await boundedAuth(result.user.getIdToken());
           if(!session.current(version))return;
           idToken=token;
           await checkUserSession(version);
@@ -1171,7 +1173,7 @@
         if(chatPollingInterval)chatPollingInterval();
         if(helpPolling)helpPolling();
         localStorage.removeItem(CUST_STORAGE_KEY);
-        activeOrder=null;orderCache=[];historyLoaded=false;customerViewLoading=false;chatCache.clear();selectedHistoryOrderId=null;newOrderDraft=false;
+        activeOrder=null;orderCache=[];historyLoaded=false;workspaceMessages=null;chatCursors.clear();customerViewLoading=false;chatCache.clear();selectedHistoryOrderId=null;newOrderDraft=false;
         _lastMsgSignature="";_lastOrderSignature="";
         document.querySelectorAll('.modal-overlay.active').forEach(n=>n.classList.remove('active'));
         document.querySelectorAll('.modal-overlay input,.modal-overlay textarea').forEach(n=>n.value='');
@@ -1233,7 +1235,7 @@
         document.getElementById("dashboard-app").style.display="flex";
         document.getElementById("user-name").innerText=`${user.first_name} ${user.last_name}`;
         document.getElementById("user-avatar").innerText=`${user.first_name[0]}${user.last_name[0]}`.toUpperCase();
-        await Promise.all([loadAddresses(),loadOrders(true),checkMaintenance()]);
+        await Promise.all([loadOrders(true),checkMaintenance()]);
         if(!session.current(version))return;
         await pollMessages();if(!session.current(version))return;
         if(chatPollingInterval)chatPollingInterval();
@@ -1380,12 +1382,15 @@
             const previous=customerRequests.get(context);
             const request=previous?.text===text?previous:{text,id:crypto.randomUUID()};
             customerRequests.set(context,request);
-            await apiRequest(`/api/chat/${encodeURIComponent(currentUser.id)}/send`,"POST",{message:text,order_id:orderId,request_id:request.id});
+            const sent=await apiRequest(`/api/chat/${encodeURIComponent(currentUser.id)}/send`,"POST",{message:text,order_id:orderId,request_id:request.id});
             customerRequests.delete(context);
+            if(workspaceMessages?.order_id===context)workspaceMessages=null;
+            if(activeOrder?.id===context&&!customerViewLoading)orderRequest++;
+            if(sent.message_data){const merged=mergeConversation(chatCache.get(context)||[],[sent.message_data]);chatCache.set(context,merged);if(activeOrder?.id===context){_lastMsgSignature=JSON.stringify([context,activeOrder.revision,merged]);renderChatMessages(merged);}}
           }
           if((!orderId || activeOrder?.id===orderId) && textarea.value.trim()===text) {textarea.value="";customerDrafts.delete(context);}
           conversationFeedback("customer-chat-feedback","Sent");
-          try { if(!orderId)await loadOrders(true); await pollMessages(); } catch(e) { conversationFeedback("customer-chat-feedback","Sent. Conversation will refresh when the connection returns."); }
+          try { if(!orderId){await loadOrders(true);await pollMessages();} } catch(e) { conversationFeedback("customer-chat-feedback","Sent. Conversation will refresh when the connection returns."); }
         } catch(e) { conversationFeedback("customer-chat-feedback","Could not send. Your draft is saved. "+e.message,true); }
         finally {customerSending=false;setLoading("btn-send-chat",false);document.getElementById("btn-send-chat").disabled=!!activeOrder && ["delivered","completed","cancelled"].includes(activeOrder.status);}
       };
@@ -1409,11 +1414,14 @@
         const cached=chatCache.get(context)||[];
         const params=new URLSearchParams();
         if(view) params.set("order_id",view);
-        if(cached.length) params.set("after_id",cached[cached.length-1].id);
-        const incoming=await apiRequest(`/api/chat/${encodeURIComponent(currentUser.id)}/messages?${params}`);
+        if(chatCursors.has(context))params.set("after_id",chatCursors.get(context));
+        const supplied=workspaceMessages?.order_id===view?workspaceMessages.messages:null;
+        workspaceMessages=null;
+        const incoming=supplied===null?await apiRequest(`/api/chat/${encodeURIComponent(currentUser.id)}/messages?${params}`):supplied;
         if((activeOrder?.id||null)!==view || !currentUser) return;
         const merged=mergeConversation(chatCache.get(context)||[],incoming);
         chatCache.set(context,merged);
+        if(incoming.length)chatCursors.set(context,incoming.at(-1).id);
         const signature=JSON.stringify([context,activeOrder?.revision,merged]);
         if(signature===_lastMsgSignature) return;
         _lastMsgSignature=signature;
@@ -1502,28 +1510,18 @@
         if(customerViewLoading && !viewRequest)return;
         const request=++orderRequest;
         const wantsHistory=refreshHistory || !historyLoaded;
-        const [active,loadedHistory]=await Promise.all([apiRequest("/api/orders?active_only=true&limit=100&summary_only=true"),wantsHistory?apiRequest("/api/orders?limit=50&summary_only=true"):Promise.resolve(null)]);
-        let history=loadedHistory||orderCache;
+        const selected=selectedHistoryOrderId || (newOrderDraft ? null : activeOrder?.id || null);
+        const params=new URLSearchParams({include_history:String(wantsHistory),include_addresses:String(wantsHistory),draft:String(newOrderDraft)});
+        if(selected){params.set('selected_order_id',selected);if(activeOrder?.id===selected&&!activeOrder.summary_only)params.set('known_revision',activeOrder.revision);if(chatCursors.has(selected))params.set('after_id',chatCursors.get(selected));}
+        const snapshot=await apiRequest('/api/customer/workspace?'+params);
         if(request!==orderRequest || !currentUser)return;
+        const active=snapshot.active,history=snapshot.history||orderCache;
         if(wantsHistory){historyLoaded=true;historyCursor=history.at(-1)?.cursor||null;}
-        if(request!==orderRequest || !currentUser)return;
+        if(snapshot.addresses!==null){savedAddresses=snapshot.addresses;renderAddresses();}
         const map=new Map([...orderCache,...history,...active].map(o=>[o.id,o]));
-        const target=selectedHistoryOrderId || (newOrderDraft ? null : activeOrder?.id || active[0]?.id || null);
-        let resolved=null;
-        if(target) {
-          const summary=map.get(target),live=active.some(o=>o.id===target);
-          if(live && activeOrder?.id===target && !activeOrder.summary_only && summary?.revision===activeOrder.revision)resolved=activeOrder;
-          else {
-            try {resolved=await apiRequest(`/api/orders/${encodeURIComponent(target)}`);}
-            catch(error) {
-              if(request!==orderRequest || !currentUser)return;
-              if(error.status!==404)throw error;
-              map.delete(target);selectedHistoryOrderId=null;newOrderDraft=true;
-              conversationFeedback('customer-chat-feedback','This order is no longer available. Your saved drafts have been retained.',true);
-            }
-          }
-        }
-        if(request!==orderRequest || !currentUser)return;
+        let resolved=snapshot.order || (snapshot.selected_order_id===activeOrder?.id?activeOrder:null);
+        if(snapshot.missing_order_id){map.delete(snapshot.missing_order_id);selectedHistoryOrderId=null;newOrderDraft=true;resolved=null;conversationFeedback('customer-chat-feedback','This order is no longer available. Your saved drafts have been retained.',true);}
+        workspaceMessages=snapshot.selected_order_id?{order_id:snapshot.selected_order_id,messages:snapshot.messages}:null;
         activeOrder=resolved;
         if(resolved)map.set(resolved.id,resolved);
         orderCache=[...map.values()].sort((a,b)=>b.created_at.localeCompare(a.created_at));
@@ -1602,7 +1600,7 @@
         customerDrafts.set(activeOrder?.id||"new",document.getElementById("chat-textarea").value);
         document.getElementById("chat-textarea").value=customerDrafts.get("new")||"";
         conversationFeedback("customer-chat-feedback");
-        selectedHistoryOrderId=null; newOrderDraft=true; activeOrder=null; sendKey=null;customerViewLoading=false;orderRequest++;
+        selectedHistoryOrderId=null; newOrderDraft=true; activeOrder=null; sendKey=null;workspaceMessages=null;customerViewLoading=false;orderRequest++;
         _lastOrderSignature=""; _lastMsgSignature="";
         document.getElementById("chat-textarea").placeholder="List your groceries…";
         document.getElementById("chat-textarea").disabled=false;
@@ -1938,7 +1936,7 @@
         if(!user)return;
         const version=session.version;
         try {
-          const token=await user.getIdToken(true);
+          const token=await boundedAuth(user.getIdToken());
           if(!session.current(version))return;
           idToken=token;
           await checkUserSession(version);

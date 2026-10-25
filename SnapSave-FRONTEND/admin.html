@@ -969,6 +969,53 @@
         background: linear-gradient(90deg, #ea580c 0%, #dc2626 100%) !important;
         box-shadow: 0 4px 20px rgba(234,88,12,0.4);
       }
+
+      /* Operational workspace: quiet surfaces, readable density, bounded repaint. */
+      body { --font-body: system-ui, -apple-system, "Segoe UI", sans-serif; --font-title: var(--font-body); background: #0b111b; background-image: none; }
+      .glass-panel, header, .admin-nav { backdrop-filter: none; -webkit-backdrop-filter: none; background: #101925; box-shadow: none; }
+      .btn, .queue-card, .metric-card, .admin-nav-item { transition: background-color .15s, border-color .15s; box-shadow: none; }
+      .btn:hover:not(:disabled), .metric-card:hover, .admin-nav-item:hover, .metric-card:hover .metric-icon { transform: none; box-shadow: none; }
+      .metric-card { padding: 12px 14px; background: #111d2c; border-radius: 10px; }
+      .metric-card::before { display: none; }
+      .metric-icon { width: 32px; height: 32px; font-size: 15px; background: #1c304b; border: 0; }
+      .metric-value { font-size: 21px; font-variant-numeric: tabular-nums; }
+      .metric-label { font-size: 10px; letter-spacing: .04em; }
+      .metrics-grid { gap: 10px; padding: 14px 20px; }
+      .panel-header { background: #111d2c; letter-spacing: .04em; }
+      .panel-scrollable { scrollbar-gutter: stable; }
+      #queue-list { display: grid; grid-template-columns: repeat(auto-fill,minmax(min(100%,300px),1fr)); align-content: start; gap: 12px; }
+      .queue-card { margin: 0; padding: 16px; background: #121e2d; border-radius: 10px; min-width: 0; }
+      .queue-card:hover { background: #17283d; box-shadow: none; transform: none; }
+      .queue-card.selected { background: #172b43; box-shadow: none; border-color: #4d94e8; }
+      .chat-bubble.customer, .chat-bubble.moderator { box-shadow: none; background: #1d4f87; }
+      .chat-bubble.moderator { background: #293b53; }
+      .admin-nav-item.active { background: #1a3049; box-shadow: inset 3px 0 #6ba8f1; }
+      .input-control { background: #0d1725; }
+      @media (max-width: 1024px) { #queue-list { grid-template-columns: 1fr; } .metrics-grid { padding: 10px; gap: 8px; } }
+      @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+
+      #dashboard-metrics { grid-template-columns: repeat(4,minmax(0,1fr)) !important; }
+      .metric-card, .metric-card > div { min-width: 0; }
+      .metric-value { overflow-wrap: anywhere; }
+      #workspace-container.view-ticket { grid-template-columns: minmax(0,1fr) 360px; }
+      @media (max-width: 1024px) {
+        #dashboard-header { flex-wrap: wrap; padding: 12px; gap: 12px; }
+        .header-profile { flex-wrap: wrap; gap: 8px; min-width: 0; }
+        .header-logo { font-size: 18px; }
+        #btn-beta-view { display: none; }
+        #dashboard-metrics { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
+        body.admin-shell .admin-nav { max-width: 100vw; min-width: 0; }
+      }
+
+      body.staff-ready { height: 100dvh; min-height: 0; overflow: hidden; }
+      #dashboard-header, #dashboard-metrics, .orders-tab-bar, .mobile-tabs-container { flex-shrink: 0; }
+      #dashboard-main, #workspace-container, .col-panel, .chat-messages { min-height: 0; }
+      #workspace-container.view-ticket { height: auto; }
+      .detail-card { flex-shrink: 0; }
+      @media (max-width: 1024px) {
+        #dashboard-metrics .metric-card:nth-child(n+3) { display: none; }
+        body.admin-shell .admin-nav { flex-shrink: 0; }
+      }
     </style>
     <link rel="stylesheet" href="phone-login.css">
     <script src="config.js"></script>
@@ -1377,7 +1424,6 @@
                 <label style="font-size: 11px; color: var(--text-muted);">Set Ticket Mode:</label>
                 <div style="display: flex; gap: 6px; margin-top: 4px;">
                   <button id="mode-btn-human" class="btn btn-secondary" onclick="setOrderMode('HUMAN')" style="flex:1; padding: 5px; font-size: 11px;" title="Fully human-operated. AI cannot act.">👤 Human</button>
-                  <button id="mode-btn-hybrid" class="btn btn-secondary" onclick="setOrderMode('HYBRID')" style="flex:1; padding: 5px; font-size: 11px;" title="AI assists, human verifies. Best of both.">🤝 Hybrid</button>
                   <button id="mode-btn-ai" class="btn btn-secondary" onclick="setOrderMode('AI')" style="flex:1; padding: 5px; font-size: 11px;" title="AI handles pricing automatically.">🤖 AI</button>
                 </div>
               </div>
@@ -2053,7 +2099,7 @@
     (async function() {
       const API_BASE = window.SNAPSAVE_API_BASE;
 
-      const queuePager=document.createElement("div");queuePager.innerHTML='<button class="btn btn-secondary" onclick="pageQueue(-1)">Previous tickets</button><button class="btn btn-secondary" onclick="pageQueue(1)">Next tickets</button>';
+      const queuePager=document.createElement("div");queuePager.innerHTML='<button class="btn btn-secondary" id="queue-previous" onclick="pageQueue(-1)">Previous tickets</button><button class="btn btn-secondary" id="queue-next" onclick="pageQueue(1)">Next tickets</button>';
       document.getElementById("queue-list").parentElement.appendChild(queuePager);
       // Role-management: enables RBAC for admin control over user roles
       const ENABLE_ROLE_MANAGEMENT = true;
@@ -2101,7 +2147,7 @@
         currentUser = null;
         selectedOrder = null;
         if(backgroundPolling)backgroundPolling();
-        document.body.classList.remove("admin-shell");
+        document.body.classList.remove("admin-shell","staff-ready");
         localStorage.removeItem(STORAGE_KEY);
         if(betaMetricsInterval)betaMetricsInterval();
         staffChatCache=[]; staffChatSignature=""; staffChatOrder=null; activeOrders=[];
@@ -2160,7 +2206,7 @@
         setupMetricCards();
         document.getElementById("auth-section").style.display = "none";
         document.getElementById("dashboard-header").style.display = "flex";
-        document.getElementById("dashboard-metrics").style.display = "flex";
+        document.getElementById("dashboard-metrics").style.display = "grid";
         document.getElementById("dashboard-main").style.display = "flex";
 
         document.getElementById("user-phone").innerText =
@@ -2171,6 +2217,7 @@
           "role-badge " +
           (currentUser.role === "ADMIN" ? "role-admin" : "role-moderator");
 
+        document.body.classList.add("staff-ready");
         // Setup role-specific UI
         if (currentUser.role === "ADMIN") {
           document.body.classList.add("admin-shell");
@@ -2187,15 +2234,15 @@
         // Always start on queue tab
         switchOrdersTab("queue");
 
-        await loadMetrics();if(!session.current(version))return;
-        await loadQueue();if(!session.current(version))return;
+        await Promise.all([loadMetrics(),loadQueue()]);if(!session.current(version))return;
 
         // Periodic background polling - only real-time updates (chat, queue, assignments)
         // Metrics are loaded only on Analytics section view and initial dashboard load
         const isAdmin = currentUser.role === "ADMIN";
         if(backgroundPolling)backgroundPolling();
         backgroundPolling=singleFlightPolling(async()=>{
-          for(const step of [loadQueue,pollChat]) {if(!session.current(version))return;await step();}
+          if(!session.current(version))return;
+          if(currentAdminSection==="tickets")await Promise.all([loadQueue(),pollChat()]);if(!session.current(version))return;
           if(isAdmin && session.current(version)) {
             await updateHelpBadge();if(!session.current(version))return;
             if(currentAdminSection==="help") {await loadHelpInbox();if(session.current(version)&&currentHelpThread)await openHelpThread(currentHelpThread);}
@@ -2934,11 +2981,14 @@
         if(filter!==lastQueueFilter){queuePage=0;lastQueueFilter=filter;}
         const page=queuePage;
         try {
-          const queue = await apiRequest(
-            `/api/moderator/queue?limit=50&offset=${page*50}${filter ? "&status_filter="+encodeURIComponent(filter):""}`,
+          let queue = await apiRequest(
+            `/api/moderator/queue?summary_only=true&limit=51&offset=${page*50}${filter ? "&status_filter="+encodeURIComponent(filter):""}`,
           );
           if(!currentUser || page!==queuePage || filter!==document.getElementById("queue-filter").value){queuePending=!!currentUser;return;}
 
+          document.getElementById("queue-previous").disabled=page===0;
+          document.getElementById("queue-next").disabled=queue.length<=50;
+          queue=queue.slice(0,50);
           // Build a signature to skip re-render when nothing changed
           const sig = JSON.stringify(queue);
           const queueChanged = sig !== _lastQueueSignature;
@@ -2951,8 +3001,13 @@
             const updated = activeOrders.find(o => o.order_id === selectedOrder.order_id);
             if (updated) {
               const statusChanged = selectedOrder.revision !== updated.revision;
-              selectedOrder = updated;
-              if (statusChanged) renderTicketDetails();
+              if(statusChanged) {
+                const previous=selectedOrder;
+                const latest=updated.requires_claim ? updated : await apiRequest(`/api/orders/${updated.order_id}`);
+                if(selectedOrder!==previous)return;
+                selectedOrder={...updated,...latest,order_id:updated.order_id,summary_only:!!updated.requires_claim};
+                renderTicketDetails();
+              }
             }
           }
 
@@ -3013,7 +3068,7 @@
                         <span style="font-family: monospace; font-size: 11px; font-weight: 600; color: var(--text-muted);">#${order.order_id.slice(0, 8)}</span>
                         <div>
                           <span class="badge ${order.status}">${order.status.replace(/_/g, " ")}</span>
-                          <span class="badge" style="background: var(--surface-light); color: var(--text-light); margin-left: 4px;">${order.mode || "HUMAN"}</span>
+                          <span class="badge" style="background: var(--surface-light); color: var(--text-light); margin-left: 4px;">${order.mode === "HYBRID" ? "Needs review" : order.mode || "HUMAN"}</span>
                         </div>
                     </div>
                     <div style="font-size: 13px; font-weight: 600; margin-bottom: 3px;">${escapeHTML(order.customer_name || order.customer_phone)}</div>
@@ -3073,9 +3128,28 @@
       function canStaffChat(order) {
         return !!currentUser && !!order && (currentUser.role==="ADMIN" || order.assigned_moderator_id===currentUser.id) && !["delivered","completed","cancelled"].includes(order.status);
       }
+      let ticketSelection=0;
       async function selectTicket(order) {
+        const selection=++ticketSelection,version=session.version;
         if(selectedOrder)staffDrafts.set(selectedOrder.order_id,document.getElementById("composer-text").value);
         selectedOrder = order;
+        document.getElementById("composer-text").value=staffDrafts.get(order.order_id)||"";
+        document.getElementById("chat-messages").textContent="";
+        document.getElementById("prices-list").replaceChildren();
+        currentQuotePreview=null;
+        document.getElementById("quote-preview-block").style.display="none";
+        document.getElementById("composer-text").disabled=true;
+        document.getElementById("btn-send-message").disabled=true;
+        if(order.summary_only && !order.requires_claim) {
+          try {
+            const details=await apiRequest(`/api/orders/${order.order_id}`);
+            if(!session.current(version) || selection!==ticketSelection || selectedOrder?.order_id!==order.order_id)return;
+            order={...order,...details,summary_only:false};selectedOrder=order;
+          } catch(error) {
+            if(session.current(version) && selection===ticketSelection)conversationFeedback("staff-chat-feedback",error.message,true);
+            return;
+          }
+        }
         document.getElementById("composer-text").value=staffDrafts.get(order.order_id)||"";
         conversationFeedback("staff-chat-feedback");
         staffChatCache=[];staffChatSignature="";staffChatOrder=order.order_id;
@@ -3184,7 +3258,20 @@
         if(!panel){panel=document.createElement('div');panel.id='research-evidence-panel';panel.className='detail-card';document.getElementById('ticket-detail-panel').prepend(panel);}
         panel.replaceChildren();panel.hidden=true;
         const eligible=['pending_review','reviewing'].includes(order.status) && (currentUser.role==='ADMIN'||order.assigned_moderator_id===currentUser.id);
-        if(eligible) {
+        let draft;try {draft=JSON.parse(order.manual_prices||'{}').research_draft;} catch(error) {}
+        const autonomous=!!draft?.autonomous_attempt || order.mode==='AI';
+        if(autonomous) {
+          panel.hidden=false;
+          const title=document.createElement('h4');title.textContent='Automatic store research';
+          const state=document.createElement('p');state.style.cssText='font-size:12px;line-height:1.6;margin-top:10px;';
+          state.textContent=order.ai_error || (order.assigned_worker_type==='AI' ? 'Research is running automatically. No capture or import is required.' : 'Automatic research could not verify this basket. Human takeover is required.');
+          panel.append(title,state);
+          for(const diagnostic of (draft?.diagnostics||[]).slice(0,15)) {
+            const line=document.createElement('p');line.style.cssText='font-size:12px;line-height:1.5;margin-top:8px;';
+            line.textContent=String(diagnostic.store||'Retailer')+': '+String(diagnostic.reason||diagnostic.status||'Needs review');panel.append(line);
+          }
+        }
+        if(eligible && !autonomous) {
           panel.hidden=false;
           const locationTitle=document.createElement('h4');locationTitle.textContent='Research delivery location';panel.append(locationTitle);
           const instructions=document.createElement('p');instructions.style.cssText='font-size:12px;line-height:1.5;margin:10px 0;';
@@ -3213,8 +3300,6 @@
             finally{if(session.current(version))file.disabled=false;}
           };
         }
-        let draft;
-        try {draft=JSON.parse(order.manual_prices||'{}').research_draft;} catch(error){return;}
         if(!draft || !Array.isArray(draft.items))return;
         panel.hidden=false;
         const heading=document.createElement('h4');heading.textContent='Catalogue research · needs verification';panel.append(heading);
@@ -3229,9 +3314,9 @@
           const block=document.createElement('div');block.style.cssText='padding:10px 0;border-top:1px solid var(--border);overflow-wrap:anywhere;';
           const title=document.createElement('strong');title.textContent=String(item.query||'Requested item');block.append(title);
           const copyQuery=document.createElement('button');copyQuery.type='button';copyQuery.className='btn btn-secondary';copyQuery.style.cssText='font-size:11px;margin:6px;';copyQuery.textContent='Copy item query';
-          copyQuery.onclick=async()=>{const version=session.version;try{await navigator.clipboard.writeText(String(item.query||''));session.assert(version);if(selectedOrder?.id===order.id)copyQuery.textContent='Copied';}catch(error){if(session.current(version))copyQuery.textContent='Copy failed';}};block.append(copyQuery);
+          copyQuery.onclick=async()=>{const version=session.version;try{await navigator.clipboard.writeText(String(item.query||''));session.assert(version);if(selectedOrder?.id===order.id)copyQuery.textContent='Copied';}catch(error){if(session.current(version))copyQuery.textContent='Copy failed';}};if(!autonomous)block.append(copyQuery);
           const candidates=Array.isArray(item.candidates)?item.candidates:[];
-          if(!candidates.length){const empty=document.createElement('p');empty.textContent='Capture the matching product/category for this item, or verify and enter its price manually. Missing evidence does not mean it is out of stock.';empty.style.fontSize='12px';block.append(empty);}
+          if(!candidates.length){const empty=document.createElement('p');empty.textContent=autonomous ? 'No verified result. Resolve this item during human takeover.' : 'Capture the matching product/category for this item, or verify and enter its price manually. Missing evidence does not mean it is out of stock.';empty.style.fontSize='12px';block.append(empty);}
           for(const [candidateIndex,candidate] of candidates.slice(0,6).entries()) {
             if(!candidate || typeof candidate!=='object')continue;
             if(candidate.observed_at){const age=Date.now()-Date.parse(candidate.observed_at);if(!Number.isFinite(age)||age<0||age>900000){const stale=document.createElement('p');stale.textContent='Previous evidence expired. Capture this product again.';stale.style.fontSize='12px';block.append(stale);continue;}}
@@ -3300,7 +3385,7 @@
             const mode = selectedOrder.mode || "HUMAN";
             const worker = selectedOrder.assigned_worker_type || "HUMAN";
 
-            document.getElementById("ai-mode-label").innerText = mode;
+            document.getElementById("ai-mode-label").innerText = mode === "HYBRID" ? "Needs review" : mode;
             document.getElementById("ai-mode-label").style.color = mode === "AI" ? "var(--accent-cyan)" : (mode === "HYBRID" ? "var(--accent-orange)" : "inherit");
             document.getElementById("ai-worker-label").innerText = worker === "AI" ? "🤖 AI" : "👤 Human";
             let pricingDraft={};
@@ -3313,7 +3398,7 @@
             const descriptions = {
                 "HUMAN": "👤 Fully human-operated. The moderator handles all pricing and customer communication. AI is disabled for this ticket.",
                 "HYBRID": "🤝 AI researches prices, but a human must review and approve before sending to the customer. Best for accuracy + speed.",
-                "AI": "🤖 AI handles pricing automatically and sends quotes directly to the customer. A human can take over at any time."
+                "AI": "Store research starts automatically. Quotes require verified location, products, stock and fees. A blocked or incomplete result requests human takeover."
             };
             descEl.innerText = selectedOrder.ai_error || descriptions[mode] || "";
 
@@ -3750,7 +3835,7 @@
       window.exitBetaView = function () {
         document.getElementById("beta-program-view").style.display = "none";
         document.getElementById("dashboard-main").style.display = "flex";
-        document.getElementById("dashboard-metrics").style.display = "flex";
+        document.getElementById("dashboard-metrics").style.display = "grid";
         if(betaMetricsInterval)betaMetricsInterval();
         if (currentUser && currentUser.role === "ADMIN") {
           showAdminSection("tickets");

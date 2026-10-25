@@ -8,7 +8,7 @@ from typing import Optional, List
 from fastapi import FastAPI, Depends, Header, HTTPException, status, Request, Query
 from pydantic import BaseModel, Field, ConfigDict
 from sqlalchemy import func, or_, case
-from sqlalchemy.orm import Session, selectinload, joinedload
+from sqlalchemy.orm import Session, selectinload, joinedload, load_only
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 import time
@@ -573,7 +573,7 @@ def create_order(order_data: OrderCreate, current_user: models.User = Depends(ge
     assigned=worker.id if worker and worker.role in {'MODERATOR','ADMIN'} and not worker.is_blacklisted else None
     ai_setting=db.get(models.SystemSetting,'ai_enabled')
     automatic=bool(flag('AUTO_RESEARCH_NEW_ORDERS') and research_enabled() and ai_setting and ai_setting.value=='true')
-    row = models.Order(user_id=current_user.id, address_id=address.id, request_key=idempotency_key, request_hash=request_hash, assigned_moderator_id=assigned, store="pending", status="pending_review", delivery_street=address.street_address, delivery_city=address.city, delivery_postal_code=address.postal_code, subtotal=0, delivery_fee=0, platform_fee=0, final_price=0,mode='HYBRID' if automatic else 'HUMAN',assigned_worker_type='AI' if automatic else 'HUMAN')
+    row = models.Order(user_id=current_user.id, address_id=address.id, request_key=idempotency_key, request_hash=request_hash, assigned_moderator_id=assigned, store="pending", status="pending_review", delivery_street=address.street_address, delivery_city=address.city, delivery_postal_code=address.postal_code, subtotal=0, delivery_fee=0, platform_fee=0, final_price=0,mode=('AI' if flag('AUTONOMOUS_ORDER_RESEARCH') else 'HYBRID') if automatic else 'HUMAN',assigned_worker_type='AI' if automatic else 'HUMAN')
     try:
         db.add(row)
         # Uniqueness can fail during flush, before the final commit.
@@ -842,15 +842,21 @@ def update_maintenance(data: MaintenanceUpdate, current_user: models.User = Depe
 
 
 @app.get("/api/moderator/queue")
-def get_moderator_queue(status_filter: Optional[str] = None, current_user: models.User = Depends(require_role(["ADMIN","MODERATOR"])), db: Session = Depends(get_db), limit: int = Query(50,ge=1,le=100), offset: int = Query(0,ge=0)):
-    query = db.query(models.Order).options(joinedload(models.Order.user),selectinload(models.Order.items))
+def get_moderator_queue(status_filter: Optional[str] = None, current_user: models.User = Depends(require_role(["ADMIN","MODERATOR"])), db: Session = Depends(get_db), limit: int = Query(50,ge=1,le=100), offset: int = Query(0,ge=0), summary_only: bool = False):
+    query = db.query(models.Order).options(joinedload(models.Order.user))
+    if summary_only:
+        query=query.options(load_only(*[getattr(models.Order,key) for key in ("id","user_id","status","mode","assigned_worker_type","assigned_moderator_id","revision","delivery_city","created_at")]))
+    else:
+        query=query.options(selectinload(models.Order.items))
     query = query.filter(models.Order.status == status_filter) if status_filter else query.filter(models.Order.status.in_(ACTIVE_STATUSES))
     if current_user.role=="MODERATOR":
         query=query.filter(or_(models.Order.assigned_moderator_id==None,models.Order.assigned_moderator_id==current_user.id))
     results=[]
     for o in query.order_by(models.Order.created_at.asc(),models.Order.id.asc()).offset(offset).limit(limit).all():
         needs_claim=current_user.role=='MODERATOR' and o.assigned_moderator_id is None and o.user_id!=current_user.id
-        entry={**serialize_order(o,current_user),'order_id':o.id,'customer_id':o.user_id,
+        data={key:getattr(o,key) for key in ('id','user_id','status','mode','assigned_worker_type','assigned_moderator_id','revision','delivery_city')} if summary_only else serialize_order(o,current_user)
+        if summary_only:data.update(created_at=o.created_at.isoformat()+'Z',items=[],summary_only=True)
+        entry={**data,'order_id':o.id,'customer_id':o.user_id,
                'customer_name':(f"{o.user.first_name or ''} {o.user.last_name or ''}".strip() or 'Customer') if o.user else 'Unknown',
                'customer_phone':o.user.phone_number if o.user and not needs_claim else None,'requires_claim':needs_claim}
         if needs_claim:
@@ -917,7 +923,7 @@ def import_research_evidence(order_id: str, data: ResearchCaptureSubmission, cur
     existing['research_draft']=merge_browser_evidence(existing.get('research_draft'),draft)
     encoded=json.dumps(existing)
     if len(encoded.encode())>200000:raise HTTPException(422,'Research evidence exceeds the supported size')
-    change_order(db,row,manual_prices=encoded,assigned_worker_type='HUMAN',ai_stopped_at=utcnow(),ai_error=None,mode='HYBRID' if row.mode=='AI' else row.mode)
+    change_order(db,row,manual_prices=encoded,assigned_worker_type='HUMAN',ai_stopped_at=utcnow(),ai_error=None,mode=('HUMAN' if flag('AUTONOMOUS_ORDER_RESEARCH') else 'HYBRID') if row.mode=='AI' else row.mode)
     db.commit()
     return serialize_order(row,current_user)
 
@@ -1088,6 +1094,8 @@ def get_chat_messages(customer_id: str, current_user: models.User = Depends(get_
 def set_order_mode(order_id: str, data: OrderModeRequest, current_user: models.User = Depends(require_role(["ADMIN"])), db: Session = Depends(get_db)):
     row=load_order(db,order_id)
     require_state(row,{"pending_review","reviewing","awaiting_customer"})
+    if flag("AUTONOMOUS_ORDER_RESEARCH") and data.mode=="HYBRID":
+        raise HTTPException(422,"Choose AI or HUMAN; hybrid operation is disabled")
     if data.mode not in {"HUMAN","AI","HYBRID"}:
         raise HTTPException(422,"Invalid mode")
     if data.mode!="HUMAN" and not research_enabled():

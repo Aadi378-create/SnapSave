@@ -1,0 +1,16 @@
+{
+  "database_bytes": 241664,
+  "counts": {
+    "users": 16,
+    "orders": 42,
+    "order_items": 58,
+    "messages": 121,
+    "feedbacks": 0,
+    "incidents": 0
+  },
+  "public_request_ms": {
+    "api": "URLError; service not reachable at start",
+    "customer": "URLError; service not reachable at start",
+    "admin": "URLError; service not reachable at start"
+  }
+}

@@ -46,7 +46,7 @@ def test_browser_typing_to_two_retailers_and_human_quote(browser,client,actors,o
         assert second['status']=='pending_review' and second['final_price']==0
         staff,staff_errors=open_app(browser,client,actors['admin'],db,'admin.html')
         staff.locator('.queue-card').filter(has_text=identity[:8]).click()
-        staff.wait_for_function("document.querySelector('#research-evidence-panel').textContent.includes('2 of 2 items')")
+        staff.wait_for_function("document.querySelector('#research-evidence-panel')?.textContent.includes('2 of 2 items')")
         staff.screenshot(path=str(evidence/'admin-research.png'),full_page=True)
         assert not staff_errors,staff_errors
 

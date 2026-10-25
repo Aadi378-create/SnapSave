@@ -66,6 +66,7 @@ def test_edits_during_preview_request_discard_the_stale_response(browser,client,
     page,errors=open_app(browser,client,actors['admin'],db,'admin.html')
     try:
         page.locator('#queue-list .queue-card').first.click()
+        page.wait_for_function("document.querySelectorAll('.pi-price').length>0")
         page.evaluate('''()=>{
             const original=window.fetch;
             window.fetch=async(url,options)=>{
@@ -94,12 +95,12 @@ def test_price_drafts_stay_with_their_ticket_and_clear_on_logout(browser,client,
         firstTitle=page.locator('.price-item-row').first.inner_text()
         page.locator('.orders-tab[data-tab="queue"]').click()
         page.locator('#queue-list .queue-card').nth(1).click()
-        page.wait_for_function("title=>document.querySelector('.price-item-row').innerText!==title",arg=firstTitle)
+        page.wait_for_function("title=>{const row=document.querySelector('.price-item-row');return row && row.innerText!==title;}",arg=firstTitle)
         assert page.locator('.pi-price').first.input_value()==''
         page.locator('.pi-price').first.fill('222')
         page.locator('.orders-tab[data-tab="queue"]').click()
         page.locator('#queue-list .queue-card').first.click()
-        page.wait_for_function("title=>document.querySelector('.price-item-row').innerText===title",arg=firstTitle)
+        page.wait_for_function("title=>document.querySelector('.price-item-row')?.innerText===title",arg=firstTitle)
         assert page.locator('.pi-price').first.input_value()=='111'
         assert page.locator('.pi-store').first.input_value()=='zepto'
         page.evaluate('window.handleLogout()')

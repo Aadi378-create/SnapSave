@@ -68,7 +68,9 @@ class AI_CONCIERGE_PROVIDER:
                 draft=quote
                 values={"manual_prices":encoded,"is_ai_priced":True,"ai_stopped_at":utcnow(),
                         "ai_error":None if quote.get('transport')=='browser_pending' else "Public catalogue research requires human verification of products, availability and checkout fees." if any(i.get("candidates") for i in quote["items"]) else "No usable public catalogue prices were available. Review the source diagnostics and price this ticket manually.",
-                        "mode":"HYBRID","assigned_worker_type":"HUMAN","revision":version+1,"updated_at":utcnow()}
+                        "mode":"HUMAN" if quote.get("autonomous_attempt") else "HYBRID","assigned_worker_type":"HUMAN","revision":version+1,"updated_at":utcnow()}
+                if quote.get("autonomous_attempt"):
+                    values["ai_error"]=quote.get("handover_reason") or "Automatic research could not verify all products, delivery coverage and checkout fees."
             else:
                 if not quote or quote.get("verified") is not True or quote.get("postal_code")!=location:
                     raise ValueError("Live inventory and pricing could not be verified. A human must price this ticket.")
@@ -100,7 +102,9 @@ class AI_CONCIERGE_PROVIDER:
         db.expire_all()
         current=db.get(models.Order,order_id)
         if draft is not None:
-            if draft.get('transport')=='browser_pending':
+            if draft.get('autonomous_attempt'):
+                message(db,current,"Automatic store research needs assistance. A concierge will resolve the unavailable or unverified retailer data before a quote is sent.")
+            elif draft.get('transport')=='browser_pending':
                 message(db,current,"Your grocery list is ready for retailer research. Your concierge will check the requested products and delivery area before sending a quote.")
             else:
                 message(db,current,"Catalogue research is ready for human review. Prices, delivery coverage and fees have not been confirmed." if any(i.get("candidates") for i in draft["items"]) else "Public sources did not provide usable product evidence. A concierge will price this order manually.")

@@ -1,6 +1,6 @@
 # SnapSave
 
-SnapSave is a human-first grocery concierge. Customers send a list; staff verify store prices, send an itemised quote, then record payment, placement and delivery. Each order has a separate conversation and history, and every fee is visible before confirmation. Optional AI research requires a configured provider and cannot overwrite human work.
+SnapSave accepts grocery lists and starts automatic store research when configured. Verified provider data can produce an itemised customer quote; blocked or unverified results require human takeover. Each order has its own conversation, and customers approve the disclosed quote before payment. AI cannot overwrite human work.
 
 The apps use vanilla JavaScript/HTML; the API uses FastAPI, SQLAlchemy and SQLite by default. Manual concierge fulfillment is the supported workflow. SMS, inventory and bank settlement have not been live-tested by the regression suite.
 
@@ -134,6 +134,16 @@ Unattended retailer pricing is still unavailable: checks on 25 October returned 
 Legacy scraping adapters remain disabled. Configuring a research callable does not enable a functioning live scraper for `/deal` or `/optimize-cart`; they safely report unavailable/incomplete data. Provider integration and checkout require live integration validation.
 
 Research uses two in-process workers and at most twenty outstanding orders. Use one API process with this executor; move research to a shared durable queue before using multiple API processes with AI enabled. SQLite serializes writers. JSON learning stores, caches and request limits are local to each process. Production capacity needs deployment measurements and appropriate shared database/cache/queue infrastructure.
+
+## Autonomous requests and evening performance changes
+
+For order-triggered permitted public requests, configure `ENABLE_LIVE_RESEARCH=true`, `AUTO_RESEARCH_NEW_ORDERS=true`, `AUTONOMOUS_ORDER_RESEARCH=true` and `RESEARCH_PROVIDER=core.autonomous_research:research`, then enable the existing admin AI switch and restart. New orders start in AI mode. Research shares a 30-second/12-request budget across the basket and caches blocked URL failures for 90 seconds to avoid repeated requests. It stops at policy restrictions and challenges. No capture/import step is needed to start this attempt.
+
+Public catalogue responses do not establish local stock, serviceability or checkout fees. Such results explicitly transfer to HUMAN with diagnostics, rather than inventing a verified quote or entering Hybrid mode. Fully unattended successful pricing still requires accessible verified data; there is no retailer API/feed account configured. Legacy offline-planner code remains for compatibility with historical tests/data, and is not the configured local provider. Default catalogue URLs cover limited categories, not every typed product.
+
+The frontend now avoids reopening delivered orders on login, loads empty history only once per session, runs independent startup requests concurrently and skips admin queue/chat polling on unrelated sections. The admin workspace uses compact responsive queue cards and opaque surfaces without blur/glow effects. See `audit/2026-10-25/evening-overhaul/REPORT.md` for evidence and remaining limits.
+
+The local maintenance command `reset_development_orders.py --confirm-development-orders-reset` is for an explicitly authorized development reset with the API stopped. It first integrity-checks a private SQLite snapshot, then transactionally removes orders, their items/messages/feedback/incidents and resets completion counters. Accounts, administrator roles, addresses and configuration are retained. Never use this as a production cleanup job; backups contain private data and stay out of Git.
 
 ## Verification
 

@@ -763,6 +763,12 @@
         padding: 40px 32px;
         text-align: center;
       }
+
+      /* Prefer opaque surfaces and system fonts for fast, stable rendering. */
+      body { --font-body: system-ui, -apple-system, "Segoe UI", sans-serif; --font-title: var(--font-body); }
+      header, .glass-panel { backdrop-filter: none; -webkit-backdrop-filter: none; background-color: #0c1422; }
+      .btn { transition: background-color .15s, border-color .15s; box-shadow: none; }
+      @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
     </style>
     <link rel="stylesheet" href="phone-login.css">
   </head>
@@ -913,7 +919,7 @@
               </div>
               <h2 class="chat-welcome-title">What groceries do you need?</h2>
               <p class="chat-welcome-desc">
-                Simply type your grocery list below just like talking to ChatGPT. Our live concierges will scan Zepto, Blinkit, Instamart &amp; BigBasket to find the lowest price and bring everything to your door.
+                Simply type your grocery list below just like talking to ChatGPT. Store research starts automatically. If products, local prices or delivery details cannot be verified, a concierge will step in before a quote is sent.
               </p>
               <div class="prompt-chips">
                 <div class="prompt-chip" onclick="usePrompt('2 packets Maggi, 1kg Basmati Rice, 500ml Milk')">
@@ -1136,6 +1142,7 @@
       let selectedHistoryOrderId = null;
       let newOrderDraft = false;
       let orderCache = [];
+      let historyLoaded = false;
       let historyOffset = 0;
       let orderRequest = 0;
       let helpPolling = null;
@@ -1209,7 +1216,7 @@
         if(chatPollingInterval)chatPollingInterval();
         if(helpPolling)helpPolling();
         localStorage.removeItem(CUST_STORAGE_KEY);
-        activeOrder=null;orderCache=[];chatCache.clear();selectedHistoryOrderId=null;newOrderDraft=false;
+        activeOrder=null;orderCache=[];historyLoaded=false;chatCache.clear();selectedHistoryOrderId=null;newOrderDraft=false;
         _lastMsgSignature="";_lastOrderSignature="";
         document.querySelectorAll('.modal-overlay.active').forEach(n=>n.classList.remove('active'));
         document.querySelectorAll('.modal-overlay input,.modal-overlay textarea').forEach(n=>n.value='');
@@ -1270,14 +1277,14 @@
         document.getElementById("dashboard-app").style.display="flex";
         document.getElementById("user-name").innerText=`${user.first_name} ${user.last_name}`;
         document.getElementById("user-avatar").innerText=`${user.first_name[0]}${user.last_name[0]}`.toUpperCase();
-        for(const step of [loadAddresses,()=>loadOrders(true),pollMessages,checkMaintenance]) {
-          await step();if(!session.current(version))return;
-        }
+        await Promise.all([loadAddresses(),loadOrders(true),checkMaintenance()]);
+        if(!session.current(version))return;
+        await pollMessages();if(!session.current(version))return;
         if(chatPollingInterval)chatPollingInterval();
         chatPollingInterval=singleFlightPolling(async()=>{
-          for(const step of [loadOrders,pollMessages,checkMaintenance]) {
-            if(!session.current(version))return;await step();
-          }
+          if(!session.current(version))return;
+          await Promise.all([loadOrders(),checkMaintenance()]);
+          if(session.current(version))await pollMessages();
         },8000);
       }
 
@@ -1441,7 +1448,8 @@
       async function pollMessages() {
         if(!currentUser) return;
         const view=activeOrder?.id||null;
-        const context=view||"general";
+        if(!view){_lastMsgSignature="";renderChatMessages([]);return;}
+        const context=view;
         const cached=chatCache.get(context)||[];
         const params=new URLSearchParams();
         if(view) params.set("order_id",view);
@@ -1538,7 +1546,7 @@
         const request=++orderRequest;
         const active=await apiRequest("/api/orders?active_only=true&limit=100");
         let history=orderCache;
-        if(refreshHistory || !orderCache.length) history=await apiRequest("/api/orders?limit=50");
+        if(refreshHistory || !historyLoaded) {history=await apiRequest("/api/orders?limit=50");if(request!==orderRequest || !currentUser)return;historyLoaded=true;}
         if(request!==orderRequest || !currentUser) return;
         const map=new Map([...orderCache,...history,...active].map(o=>[o.id,o]));
         if(activeOrder && !active.some(o=>o.id===activeOrder.id)) {
@@ -1550,7 +1558,7 @@
         if(selectedHistoryOrderId) activeOrder=map.get(selectedHistoryOrderId)||await apiRequest(`/api/orders/${selectedHistoryOrderId}`);
         else if(newOrderDraft) activeOrder=null;
         else if(activeOrder) activeOrder=map.get(activeOrder.id)||activeOrder;
-        else activeOrder=active[0]||orderCache.find(o=>o.status==="delivered")||null;
+        else activeOrder=active[0]||null;
         if(request!==orderRequest || !currentUser)return;
         const signature=JSON.stringify([selectedHistoryOrderId,newOrderDraft,activeOrder,orderCache]);
         if(signature!==_lastOrderSignature) {

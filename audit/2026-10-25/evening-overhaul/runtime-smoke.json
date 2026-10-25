@@ -1,0 +1,42 @@
+{
+  "checked_at": "2026-10-25T13:53:55.121042+00:00",
+  "responses": {
+    "api": {
+      "status": 200,
+      "ms": 24.84
+    },
+    "customer": {
+      "status": 200,
+      "ms": 14.78
+    },
+    "admin": {
+      "status": 200,
+      "ms": 16.39
+    },
+    "unauthenticated_orders": {
+      "status": 401,
+      "ms": 16.29
+    },
+    "private_environment": {
+      "status": 404,
+      "ms": 13.24
+    }
+  },
+  "autonomous_enabled": true,
+  "provider": "core.autonomous_research:research",
+  "status": {
+    "maintenance_mode": false,
+    "orders_enabled": true,
+    "dev_auth_enabled": false,
+    "research_available": true
+  },
+  "counts": {
+    "users": 16,
+    "addresses": 9,
+    "orders": 0,
+    "order_items": 0,
+    "messages": 60
+  },
+  "database_integrity": "ok",
+  "ai_switch_enabled": true
+}

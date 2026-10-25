@@ -1,0 +1,39 @@
+{
+  "observed_at": "2026-10-25T13:41:42.046339+00:00",
+  "research_location": "382421/Kudasan",
+  "verified": false,
+  "handover_reason": "Automatic retailer requests returned no matching product evidence. See retailer diagnostics.",
+  "diagnostics": [
+    {
+      "store": "bigbasket",
+      "url": "https://www.bigbasket.com/pc/bakery-cakes-dairy/dairy/milk/",
+      "status": "unavailable",
+      "reason": "HTTP 403; no catalogue data accepted"
+    },
+    {
+      "store": "zepto",
+      "url": "https://www.zepto.com/category/dairy-bread-eggs/milk",
+      "status": "unavailable",
+      "reason": "HTTP 202; no catalogue data accepted"
+    },
+    {
+      "store": "instamart",
+      "url": "https://www.swiggy.com/instamart/",
+      "status": "unavailable",
+      "reason": "HTTP 202; no catalogue data accepted"
+    },
+    {
+      "store": "blinkit",
+      "url": "https://blinkit.com/cn/milk/cid/14/922",
+      "status": "unavailable",
+      "reason": "HTTP 403; no catalogue data accepted"
+    },
+    {
+      "store": "jiomart",
+      "url": "https://www.jiomart.com/",
+      "status": "unavailable",
+      "reason": "Response exceeded size/time budget"
+    }
+  ],
+  "matched_items": 0
+}

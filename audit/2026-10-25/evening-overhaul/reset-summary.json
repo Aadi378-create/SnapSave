@@ -1,0 +1,23 @@
+{
+  "backup_file": "C:\\Users\\Aadi Jain\\Desktop\\SnapSave\\.private-backups\\snapsave-20261025T134234Z-777b43a8e1.sqlite3",
+  "backup_sha256": "170b2c4808196261a8ec7383ad29cde68005051227b21870d32d43cf49a87840",
+  "integrity_check": "ok",
+  "before": {
+    "users": 16,
+    "addresses": 9,
+    "orders": 42,
+    "order_items": 58,
+    "messages": 121,
+    "feedbacks": 0,
+    "incidents": 0
+  },
+  "after": {
+    "users": 16,
+    "addresses": 9,
+    "orders": 0,
+    "order_items": 0,
+    "messages": 60,
+    "feedbacks": 0,
+    "incidents": 0
+  }
+}

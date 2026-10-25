@@ -1,0 +1,37 @@
+{
+  "browser_attempt": "unavailable: transport closed before response on browser inventory and Edge selection",
+  "observations": [
+    {
+      "store": "instamart",
+      "source_url": "https://www.swiggy.com/instamart/",
+      "observed_at": "2026-10-25T08:32:08.247474+00:00",
+      "transport": "bounded_public_http",
+      "location_entered": false,
+      "status": "unavailable",
+      "reason": "HTTP 202; no catalogue data accepted",
+      "products": []
+    },
+    {
+      "store": "zepto",
+      "source_url": "https://www.zepto.com/category/dairy-bread-eggs/milk",
+      "observed_at": "2026-10-25T08:32:09.893334+00:00",
+      "transport": "bounded_public_http",
+      "location_entered": false,
+      "status": "unavailable",
+      "reason": "HTTP 202; no catalogue data accepted",
+      "products": []
+    },
+    {
+      "store": "blinkit",
+      "source_url": "https://blinkit.com/cn/milk/cid/14/922",
+      "observed_at": "2026-10-25T08:32:11.137134+00:00",
+      "transport": "bounded_public_http",
+      "location_entered": false,
+      "status": "unavailable",
+      "reason": "HTTP 403; no catalogue data accepted",
+      "products": []
+    }
+  ],
+  "serviceability_verified": false,
+  "live_product_verification": false
+}

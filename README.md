@@ -199,3 +199,5 @@ $env:API_ORIGIN='https://api.example.com'
 Replace the example with the deployed backend origin. Firebase publishes only `dist`; the builder copies app files/assets and writes the API origin. Building does not deploy. Never host the backend folder, environment, database or service account as static assets.
 
 The product inspection, prioritized feature roadmap and actual retailer-access results are recorded in `audit/2026-10-25/AI_ENGINE_AND_FEATURE_REVIEW.md`.
+
+The latest OAuth hardening and local security diagnostics are in `audit/2026-10-25/security-diagnostics/REPORT.md`: 301 isolated tests passed, 88 installed dependencies had no known advisories at review time, and local exposure/access checks passed. Both root and backend pytest commands now select the isolated suite. Retailer allowlisting remains unresolved; these security repairs do not establish live pricing access.

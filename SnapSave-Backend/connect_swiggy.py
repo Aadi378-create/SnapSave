@@ -19,8 +19,16 @@ def connection(store,ready=None,timeout=600):
     class Callback(BaseHTTPRequestHandler):
         def log_message(self,*args):pass  # Never log authorization codes or tokens.
         def do_GET(self):
-            parsed=urlsplit(self.path);query=parse_qs(parsed.query)
-            valid=(parsed.path=='/oauth/callback' and query.get('state')==[state] and len(query.get('code',[]))==1)
+            host=self.headers.get('Host','').lower()
+            origin=self.headers.get('Origin')
+            if host not in {'localhost:8765','127.0.0.1:8765'} or origin not in {None,BASE,'http://localhost:8765'} or len(self.path)>16384:
+                self.send_error(400,'Invalid callback origin');return
+            try:
+                parsed=urlsplit(self.path);query=parse_qs(parsed.query,max_num_fields=8)
+            except ValueError:self.send_error(400,'Invalid authorization callback');return
+            states=query.get('state',[])
+            state_valid=len(states)==1 and states[0].isascii() and secrets.compare_digest(states[0],state)
+            valid=(parsed.path=='/oauth/callback' and state_valid and len(query.get('code',[]))==1 and 1<=len(query['code'][0])<=8192)
             if not valid:self.send_error(400,'Invalid authorization callback');return
             try:
                 data=oauth_json('/auth/token',{'grant_type':'authorization_code','code':query['code'][0],'code_verifier':verifier,'redirect_uri':CALLBACK,'client_id':client_id})
@@ -28,8 +36,11 @@ def connection(store,ready=None,timeout=600):
                 message=b'Swiggy connected securely. You may close this tab.'
             except Exception:
                 outcome.append(False);message=b'Connection failed. Restart the connection setup; no tokens were logged.'
-            self.send_response(200 if outcome[-1] else 502);self.send_header('Content-Type','text/plain; charset=utf-8');self.send_header('Cache-Control','no-store');self.end_headers();self.wfile.write(message);finished.set()
-    server=HTTPServer(('127.0.0.1',8765),Callback);server.timeout=1
+            self.send_response(200 if outcome[-1] else 502);self.send_header('Content-Type','text/plain; charset=utf-8');self.send_header('Cache-Control','no-store');self.send_header('X-Content-Type-Options','nosniff');self.send_header('X-Frame-Options','DENY');self.send_header('Referrer-Policy','no-referrer');self.end_headers();self.wfile.write(message);finished.set()
+    class CallbackServer(HTTPServer):
+        def get_request(self):
+            connection,address=super().get_request();connection.settimeout(5);return connection,address
+    server=CallbackServer(('127.0.0.1',8765),Callback);server.timeout=1
     try:
         registration=oauth_json('/auth/register',{'client_name':'SnapSave Read-only Product Research','redirect_uris':[CALLBACK],'grant_types':['authorization_code','refresh_token'],'response_types':['code'],'token_endpoint_auth_method':'none'})
         client_id=registration.get('client_id')

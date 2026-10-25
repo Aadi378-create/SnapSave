@@ -1,0 +1,35 @@
+{
+  "checked_at": "2026-10-25T21:55:52.9582725+05:30",
+  "firewall": [
+    {
+      "Name": "Domain",
+      "Enabled": 1
+    },
+    {
+      "Name": "Private",
+      "Enabled": 1
+    },
+    {
+      "Name": "Public",
+      "Enabled": 1
+    }
+  ],
+  "defender": {
+    "AntivirusEnabled": true,
+    "RealTimeProtectionEnabled": true,
+    "BehaviorMonitorEnabled": true,
+    "IoavProtectionEnabled": true,
+    "AntivirusSignatureLastUpdated": "2026-10-25T09:56:30+05:30"
+  },
+  "listeners": [
+    {
+      "LocalAddress": "127.0.0.1",
+      "LocalPort": 8000
+    },
+    {
+      "LocalAddress": "127.0.0.1",
+      "LocalPort": 3000
+    }
+  ],
+  "tracked_private_file_count": 0
+}

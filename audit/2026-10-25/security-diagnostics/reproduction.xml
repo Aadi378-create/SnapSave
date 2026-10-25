@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="4" skipped="0" tests="4" time="5.882" timestamp="2026-10-25T21:52:59.749830+05:30" hostname="DESKTOP-41IMKUB"><testcase classname="tests.test_security_diagnostics" name="test_oauth_response_is_bounded_before_reading_the_entire_body" time="0.282"><failure message="Failed: OAuth must not buffer an unbounded response before enforcing the limit">def test_oauth_response_is_bounded_before_reading_the_entire_body():
+        class Response:
+            status_code=200
+            def __enter__(self):return self
+            def __exit__(self,*args):pass
+            @property
+            def content(self):pytest.fail('OAuth must not buffer an unbounded response before enforcing the limit')
+            def iter_content(self,size):
+                yield b'x'*100001
+        with pytest.raises(SwiggyUnavailable,match='size|Oversized'):
+&gt;           oauth_json('/auth/token',{},SimpleNamespace(post=lambda *args,**kwargs:Response()))
+
+SnapSave-Backend\tests\test_security_diagnostics.py:19: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+SnapSave-Backend\core\swiggy_mcp.py:58: in oauth_json
+    if len(response.content)&gt;100000:raise SwiggyUnavailable('Oversized authorization response')
+           ^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = &lt;tests.test_security_diagnostics.test_oauth_response_is_bounded_before_reading_the_entire_body.&lt;locals&gt;.Response object at 0x0000022DBA7D01A0&gt;
+
+    @property
+&gt;   def content(self):pytest.fail('OAuth must not buffer an unbounded response before enforcing the limit')
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: OAuth must not buffer an unbounded response before enforcing the limit
+
+SnapSave-Backend\tests\test_security_diagnostics.py:15: Failed</failure></testcase><testcase classname="tests.test_security_diagnostics" name="test_malformed_or_oversized_tokens_are_rejected[changes0]" time="0.373"><failure message="Failed: DID NOT RAISE SwiggyUnavailable">changes = {'access_token': 'bad\r\ntoken'}
+
+    @pytest.mark.parametrize('changes',[{'access_token':'bad\r\ntoken'},{'refresh_token':'x'*65537}])
+    def test_malformed_or_oversized_tokens_are_rejected(changes):
+&gt;       with pytest.raises(SwiggyUnavailable):token_record({'access_token':'fixture','refresh_token':'fixture-refresh','expires_in':3600,**changes},'client')
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE SwiggyUnavailable
+
+SnapSave-Backend\tests\test_security_diagnostics.py:24: Failed</failure></testcase><testcase classname="tests.test_security_diagnostics" name="test_malformed_or_oversized_tokens_are_rejected[changes1]" time="0.375"><failure message="Failed: DID NOT RAISE SwiggyUnavailable">changes = {'refresh_token': 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx...xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'}
+
+    @pytest.mark.parametrize('changes',[{'access_token':'bad\r\ntoken'},{'refresh_token':'x'*65537}])
+    def test_malformed_or_oversized_tokens_are_rejected(changes):
+&gt;       with pytest.raises(SwiggyUnavailable):token_record({'access_token':'fixture','refresh_token':'fixture-refresh','expires_in':3600,**changes},'client')
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE SwiggyUnavailable
+
+SnapSave-Backend\tests\test_security_diagnostics.py:24: Failed</failure></testcase><testcase classname="tests.test_security_diagnostics" name="test_oauth_callback_rejects_untrusted_host_without_exchanging_code" time="4.545"><failure message="assert (False is False and [] == [400]&#10;  &#10;  Right contains one more item: 400&#10;  Use -v to get more diff)">monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x0000022DBA7E5480&gt;
+
+    def test_oauth_callback_rejects_untrusted_host_without_exchanging_code(monkeypatch):
+        import connect_swiggy
+        calls=[];saved=[];statuses=[];threads=[]
+        def exchange(path,payload):
+            calls.append(path)
+            return {'client_id':'fixture'} if path=='/auth/register' else {'access_token':'fixture','refresh_token':'fixture','expires_in':3600}
+        monkeypatch.setattr(connect_swiggy,'oauth_json',exchange)
+        def ready(url):
+            state=parse_qs(urlsplit(url).query)['state'][0]
+            def callback():
+                response=requests.get('http://localhost:8765/oauth/callback',headers={'Host':'attacker.example'},params={'state':state,'code':'fixture-code'},timeout=5)
+                statuses.append(response.status_code)
+            thread=threading.Thread(target=callback);thread.start();threads.append(thread)
+        result=connect_swiggy.connection(SimpleNamespace(save=saved.append),ready=ready,timeout=2)
+        for thread in threads:thread.join(5)
+&gt;       assert result is False and statuses==[400] and not saved
+E       assert (False is False and [] == [400]
+E         
+E         Right contains one more item: 400
+E         Use -v to get more diff)
+
+SnapSave-Backend\tests\test_security_diagnostics.py:42: AssertionError</failure></testcase></testsuite></testsuites>

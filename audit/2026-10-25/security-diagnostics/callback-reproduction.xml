@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="0.527" timestamp="2026-10-25T21:53:49.548701+05:30" hostname="DESKTOP-41IMKUB"><testcase classname="tests.test_security_diagnostics" name="test_oauth_callback_rejects_untrusted_host_without_exchanging_code" time="0.361"><failure message="assert (True is False)">monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x0000028B7916C180&gt;
+
+    def test_oauth_callback_rejects_untrusted_host_without_exchanging_code(monkeypatch):
+        import connect_swiggy
+        calls=[];saved=[];statuses=[];threads=[]
+        def exchange(path,payload):
+            calls.append(path)
+            return {'client_id':'fixture'} if path=='/auth/register' else {'access_token':'fixture','refresh_token':'fixture','expires_in':3600}
+        monkeypatch.setattr(connect_swiggy,'oauth_json',exchange)
+        def ready(url):
+            state=parse_qs(urlsplit(url).query)['state'][0]
+            def callback():
+                response=requests.get('http://127.0.0.1:8765/oauth/callback',headers={'Host':'attacker.example'},params={'state':state,'code':'fixture-code'},timeout=5)
+                statuses.append(response.status_code)
+            thread=threading.Thread(target=callback);thread.start();threads.append(thread)
+        result=connect_swiggy.connection(SimpleNamespace(save=saved.append),ready=ready,timeout=2)
+        for thread in threads:thread.join(5)
+&gt;       assert result is False and statuses==[400] and not saved
+E       assert (True is False)
+
+SnapSave-Backend\tests\test_security_diagnostics.py:42: AssertionError</failure></testcase></testsuite></testsuites>

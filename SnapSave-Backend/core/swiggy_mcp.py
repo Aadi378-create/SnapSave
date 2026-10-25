@@ -39,8 +39,16 @@ class CredentialStore:
     def __init__(self,path):self.path=Path(path)
     def load(self):
         if not self.path.is_file():raise SwiggyAuthorizationRequired('Connect Swiggy once using connect_swiggy.py')
-        if self.path.stat().st_size>100000:raise SwiggyUnavailable('Invalid credential file')
-        return json.loads(dpapi(self.path.read_bytes(),True))
+        if self.path.stat().st_size>200000:raise SwiggyUnavailable('Invalid credential file')
+        try:
+            value=json.loads(dpapi(self.path.read_bytes(),True))
+            if (not isinstance(value,dict) or not valid_token(value.get('access_token'))
+                or (value.get('refresh_token') is not None and not valid_token(value['refresh_token']))
+                or type(value.get('expires_at')) not in {int,float} or not math.isfinite(value['expires_at'])
+                or not isinstance(value.get('client_id'),str) or not 1<=len(value['client_id'])<=256):
+                raise ValueError('Invalid credential data')
+            return value
+        except (ValueError,UnicodeError) as error:raise SwiggyAuthorizationRequired('Stored Swiggy credentials are invalid; reconnect') from error
     def save(self,data):
         protected=dpapi(json.dumps(data).encode())
         self.path.parent.mkdir(parents=True,exist_ok=True)
@@ -53,18 +61,28 @@ class CredentialStore:
 def oauth_json(path,payload,session=None):
     if path not in {'/auth/register','/auth/token'}:raise SwiggyUnavailable('Unsupported OAuth endpoint')
     try:
-        response=(session or requests).post(BASE+path,json=payload,timeout=15,allow_redirects=False)
-        if response.status_code not in {200,201}:raise SwiggyAuthorizationRequired('Swiggy authorization could not be completed; HTTP '+str(response.status_code))
-        if len(response.content)>100000:raise SwiggyUnavailable('Oversized authorization response')
-        result=response.json()
-        if not isinstance(result,dict):raise SwiggyUnavailable('Invalid authorization response')
-        return result
+        with (session or requests).post(BASE+path,json=payload,timeout=(4,15),stream=True,allow_redirects=False) as response:
+            if response.status_code not in {200,201}:
+                if response.status_code in {400,401,403,419}:raise SwiggyAuthorizationRequired('Swiggy authorization could not be completed; HTTP '+str(response.status_code))
+                raise SwiggyUnavailable('Swiggy authorization temporarily unavailable; HTTP '+str(response.status_code))
+            content=bytearray();deadline=time.monotonic()+20
+            for chunk in response.iter_content(8192):
+                if len(content)+len(chunk)>100000 or time.monotonic()>deadline:raise SwiggyUnavailable('Oversized authorization response or time budget exceeded')
+                content.extend(chunk)
+            try:result=json.loads(content.decode('utf-8'))
+            except (ValueError,UnicodeError) as error:raise SwiggyUnavailable('Invalid authorization response') from error
+            if not isinstance(result,dict):raise SwiggyUnavailable('Invalid authorization response')
+            return result
     except requests.RequestException as error:raise SwiggyUnavailable('Swiggy authorization connection failed') from error
+
+
+def valid_token(value):
+    return isinstance(value,str) and 1<=len(value)<=65536 and all(33<=ord(char)<=126 for char in value)
 
 
 def token_record(data,client_id):
     token=data.get('access_token');refresh=data.get('refresh_token');expires=data.get('expires_in')
-    if not isinstance(token,str) or not 1<=len(token)<=65536 or (refresh is not None and not isinstance(refresh,str)) or type(expires) not in {int,float} or not math.isfinite(expires) or not 0<expires<=31536000:
+    if not valid_token(token) or (refresh is not None and not valid_token(refresh)) or not isinstance(client_id,str) or not 1<=len(client_id)<=256 or type(expires) not in {int,float} or not math.isfinite(expires) or not 0<expires<=31536000:
         raise SwiggyUnavailable('Swiggy returned invalid credentials')
     return {'access_token':token,'refresh_token':refresh,'expires_at':time.time()+expires,'client_id':client_id}
 
@@ -83,7 +101,7 @@ def rpc_payload(text,request_id):
     for payload in candidates:
         if not isinstance(payload,dict) or payload.get('id')!=request_id:continue
         if 'error' in payload:
-            if payload['error'].get('code')==-32001:raise SwiggyAuthorizationRequired('Swiggy session needs authorization')
+            if isinstance(payload['error'],dict) and payload['error'].get('code')==-32001:raise SwiggyAuthorizationRequired('Swiggy session needs authorization')
             raise SwiggyUnavailable('Swiggy rejected the MCP request')
         if isinstance(payload.get('result'),dict):return payload['result']
     raise IncompleteRPCResponse('No matching MCP response was returned')

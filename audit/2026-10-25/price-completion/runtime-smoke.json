@@ -1,0 +1,13 @@
+{
+  "checked_at": "2026-10-25T16:27:21.4892009+05:30",
+  "backend_status": 200,
+  "status": {
+    "maintenance_mode": false,
+    "orders_enabled": true,
+    "dev_auth_enabled": false,
+    "research_available": true
+  },
+  "admin_status": 200,
+  "price_control_present": true,
+  "price_endpoint_present": true
+}

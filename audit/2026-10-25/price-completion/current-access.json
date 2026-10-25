@@ -1,0 +1,26 @@
+[
+  {
+    "store": "zepto",
+    "url": "https://www.zepto.com/category/dairy-bread-eggs/milk",
+    "observed_at": "2026-10-25T10:46:08.816416+00:00",
+    "stage": "catalogue",
+    "result": "unavailable",
+    "reason": "HTTP 202; no catalogue data accepted"
+  },
+  {
+    "store": "instamart",
+    "url": "https://www.swiggy.com/instamart/",
+    "observed_at": "2026-10-25T10:46:08.816985+00:00",
+    "stage": "catalogue",
+    "result": "unavailable",
+    "reason": "HTTP 202; no catalogue data accepted"
+  },
+  {
+    "store": "blinkit",
+    "url": "https://blinkit.com/cn/milk/cid/14/922",
+    "observed_at": "2026-10-25T10:46:08.817370+00:00",
+    "stage": "robots",
+    "result": "unavailable",
+    "reason": "HTTP 403; no catalogue data accepted"
+  }
+]

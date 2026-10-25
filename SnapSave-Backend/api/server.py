@@ -212,6 +212,14 @@ class ResearchCaptureSubmission(StrictRequest):
     revision: int = Field(..., ge=0)
     captures: List[dict] = Field(..., min_length=1, max_length=15)
 
+class ResearchPriceSelection(StrictRequest):
+    item_id: str = Field(...,max_length=36)
+    candidate_index: int = Field(...,ge=0,le=5,strict=True)
+
+class ResearchPriceRequest(StrictRequest):
+    revision: int = Field(...,ge=0)
+    selections: List[ResearchPriceSelection] = Field(default_factory=list,max_length=100)
+
 class DeliveryConfig(StrictRequest):
     thresholds: dict[str,float]
 class AiTakeoverRequest(StrictRequest):
@@ -912,6 +920,23 @@ def import_research_evidence(order_id: str, data: ResearchCaptureSubmission, cur
     change_order(db,row,manual_prices=encoded,assigned_worker_type='HUMAN',ai_stopped_at=utcnow(),ai_error=None,mode='HYBRID' if row.mode=='AI' else row.mode)
     db.commit()
     return serialize_order(row,current_user)
+
+
+@app.post('/api/moderator/orders/{order_id}/research-price-draft')
+def research_price_draft(order_id: str,data: ResearchPriceRequest,current_user: models.User = Depends(require_role(['ADMIN','MODERATOR'])),db: Session = Depends(get_db)):
+    from pricing.research_draft import price_proposal
+    row=load_order(db,order_id);staff_access(row,current_user)
+    require_state(row,{'pending_review','reviewing'})
+    if row.revision!=data.revision:raise HTTPException(409,'Order changed. Reload research before calculating prices')
+    try:
+        draft=json.loads(row.manual_prices or '{}').get('research_draft')
+        if not isinstance(draft,dict) or draft.get('postal_code')!=row.delivery_postal_code:
+            raise ValueError('Import fresh research for this order first')
+        choices={s.item_id:s.candidate_index for s in data.selections}
+        if len(choices)!=len(data.selections):raise ValueError('Select each item at most once')
+        result=price_proposal([{'item_id':i.id,'name':i.name,'quantity':i.quantity} for i in row.items],draft,row.delivery_postal_code,choices)
+    except (ValueError,TypeError,AttributeError) as error:raise HTTPException(422,str(error)) from error
+    return {**result,'order_id':row.id,'revision':row.revision}
 
 
 @app.post("/api/moderator/orders/{order_id}/price")

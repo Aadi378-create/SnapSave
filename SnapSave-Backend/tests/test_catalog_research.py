@@ -260,7 +260,10 @@ def test_admin_location_controls_and_capture_import(browser,client,actors,order,
         page.get_by_label('Import retailer capture JSON').set_input_files({'name':'capture.json','mimeType':'application/json','buffer':json.dumps([entry]).encode()})
         page.wait_for_function("document.querySelector('#research-evidence-panel').textContent.includes('staff confirmed postcode')")
         assert panel.locator('a',has_text='View source').count()>=1
-        assert all(value=='' for value in page.locator('.pi-price').evaluate_all('(nodes)=>nodes.map(n=>n.value)'))
+        page.wait_for_function("document.querySelector('.pi-price').value==='146'")
+        assert page.locator('.pi-price').first.input_value()=='146'
+        saved=client.get(f"/api/orders/{order['id']}",headers=headers).json()
+        assert saved['final_price']==0 and all(item['line_total'] is None for item in saved['items'])
         assert not errors,errors
     finally:page.close()
 

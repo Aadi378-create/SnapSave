@@ -1,15 +1,13 @@
 """Independent trial runs of the configured engine with disposable identities/data."""
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+import os
 import time
 import pytest
 import models
 from tests.test_browser import browser,open_app
 from tests.test_order_research_integration import automatic,real_submit_ai,import_store
 from tests.test_catalog_research import zepto_card,instamart_card
-
-EVIDENCE=Path(__file__).resolve().parents[2]/'audit/2026-10-25/engine-trial-runs'
-
 
 def wait_for_research(client,headers,identity):
     deadline=time.monotonic()+5
@@ -20,12 +18,13 @@ def wait_for_research(client,headers,identity):
     pytest.fail('Background research did not become ready within five seconds')
 
 
-def test_browser_typing_to_two_retailers_and_human_quote(browser,client,actors,order,automatic,monkeypatch,db):
+def test_browser_typing_to_two_retailers_and_human_quote(browser,client,actors,order,automatic,monkeypatch,db,tmp_path):
     from api import server
     monkeypatch.setattr(server,'submit_ai',real_submit_ai)
     customer,errors=open_app(browser,client,actors['customer'],db,'index.html')
     staff=None
-    EVIDENCE.mkdir(parents=True,exist_ok=True)
+    evidence=Path(os.environ.get('SNAPSAVE_TEST_ARTIFACT_DIR',str(tmp_path)))
+    evidence.mkdir(parents=True,exist_ok=True)
     try:
         customer.locator('[onclick="startNewOrder()"]').click()
         customer.locator('#chat-textarea').fill('2x Amul milk 1 L, Epigamia High Protein Paneer 200 g')
@@ -37,7 +36,7 @@ def test_browser_typing_to_two_retailers_and_human_quote(browser,client,actors,o
         assert planned['research']['total_items']==2 and planned['final_price']==0
         staff_plan=client.get(f'/api/orders/{identity}',headers=actors['admin']['headers']).json()
         assert staff_plan['ai_error'] is None
-        customer.screenshot(path=str(EVIDENCE/'customer-plan.png'),full_page=True)
+        customer.screenshot(path=str(evidence/'customer-plan.png'),full_page=True)
 
         first=import_store(client,actors,identity,'zepto',zepto_card())
         assert first['research']['matched_items']==1 and first['research']['state']=='partial'
@@ -48,7 +47,7 @@ def test_browser_typing_to_two_retailers_and_human_quote(browser,client,actors,o
         staff,staff_errors=open_app(browser,client,actors['admin'],db,'admin.html')
         staff.locator('.queue-card').filter(has_text=identity[:8]).click()
         staff.wait_for_function("document.querySelector('#research-evidence-panel').textContent.includes('2 of 2 items')")
-        staff.screenshot(path=str(EVIDENCE/'admin-research.png'),full_page=True)
+        staff.screenshot(path=str(evidence/'admin-research.png'),full_page=True)
         assert not staff_errors,staff_errors
 
         prices=[{'item_id':i['id'],'line_total':154 if 'milk' in i['name'].lower() else 150,'store':'zepto' if 'milk' in i['name'].lower() else 'instamart'} for i in second['items']]
@@ -61,7 +60,7 @@ def test_browser_typing_to_two_retailers_and_human_quote(browser,client,actors,o
         customer.reload()
         customer.locator('#active-order-container .quote-card').wait_for()
         assert customer.locator('.research-progress').count()==0
-        customer.screenshot(path=str(EVIDENCE/'customer-quote.png'),full_page=True)
+        customer.screenshot(path=str(evidence/'customer-quote.png'),full_page=True)
         assert not errors,errors
     finally:
         customer.close()

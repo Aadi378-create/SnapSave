@@ -2094,7 +2094,7 @@
 
       function clearStaffSession() {
         session.reset();staffLogin.reset();
-        staffDrafts.clear();staffRequests.clear();staffPriceDrafts.clear();
+        staffDrafts.clear();staffRequests.clear();staffPriceDrafts.clear();staffPriceSelections.clear();
         helpDrafts.clear();helpRequest++;renderedHelpUser=null;selectedHelpUserId=null;currentHelpThread=null;
         document.getElementById("help-conversation").textContent="";
         idToken = null;
@@ -3031,6 +3031,36 @@
 
       const staffDrafts=new Map();
       const staffPriceDrafts=new Map();
+      const staffPriceSelections=new Map();
+      async function fillResearchPrices(order,explicitItem=null,candidateIndex=null) {
+        const version=session.version,revision=order.revision,editVersion=priceEditVersion;
+        const feedback=document.getElementById('research-price-feedback');
+        let choices=staffPriceSelections.get(order.id);
+        if(!choices || choices.revision!==revision){choices={revision,items:{}};staffPriceSelections.set(order.id,choices);}
+        if(explicitItem!==null)choices.items[explicitItem]=candidateIndex;
+        try {
+          const result=await apiRequest('/api/moderator/orders/'+encodeURIComponent(order.id)+'/research-price-draft','POST',{
+            revision,selections:Object.entries(choices.items).map(([item_id,candidate_index])=>({item_id,candidate_index}))});
+          session.assert(version);
+          if(selectedOrder?.id!==order.id || selectedOrder.revision!==revision)return;
+          if(priceEditVersion!==editVersion){if(feedback)feedback.textContent='Prices changed while calculating. Calculate the draft again.';return;}
+          if(!staffPriceDrafts.has(order.order_id))staffPriceDrafts.set(order.order_id,new Map());
+          const drafts=staffPriceDrafts.get(order.order_id);let filled=0;
+          for(const item of result.items) {
+            const existing=drafts.get(item.item_id);
+            if(existing && existing.origin!=='research' && item.item_id!==explicitItem)continue;
+            const price=document.querySelector('.pi-price[data-item-id="'+item.item_id+'"]');
+            const store=document.querySelector('.pi-store[data-item-id="'+item.item_id+'"]');
+            if(!price || !store)continue;
+            if(item.state==='priced'){
+              price.value=item.line_total;store.value=item.store;
+              drafts.set(item.item_id,{price:price.value,store:store.value,origin:'research'});filled++;
+            } else if(existing?.origin==='research') {price.value='';store.value='';drafts.delete(item.item_id);}
+          }
+          invalidateQuotePreview();updatePriceSubtotal();
+          if(feedback)feedback.textContent=filled+' item price(s) calculated from observed pack prices and quantities. '+result.items.filter(i=>i.state!=='priced').length+' need a pack, selection or fresh evidence. Verify stock and checkout fees before sending a quote.';
+        } catch(error){if(session.current(version) && selectedOrder?.id===order.id && feedback)feedback.textContent=error.message;}
+      }
       let priceEditVersion=0;
       function invalidateQuotePreview() {
         priceEditVersion++;
@@ -3178,7 +3208,7 @@
               if(selected.size>60000)throw new Error('Capture exceeds 60 KB. Export fewer product cards and retry.');
               const captures=JSON.parse(await selected.text());session.assert(version);if(selectedOrder?.id!==order.id)return;
               const updated=await apiRequest('/api/moderator/orders/'+encodeURIComponent(order.id)+'/research-evidence','POST',{revision,captures});
-              session.assert(version);if(selectedOrder?.id!==order.id)return;selectedOrder={...selectedOrder,...updated};renderTicketDetails();
+              session.assert(version);if(selectedOrder?.id!==order.id)return;selectedOrder={...selectedOrder,...updated};renderTicketDetails();void fillResearchPrices(selectedOrder);
             }catch(error){if(session.current(version))feedback.textContent=error.message;}
             finally{if(session.current(version))file.disabled=false;}
           };
@@ -3191,6 +3221,7 @@
         const note=document.createElement('p');note.style.cssText='font-size:12px;color:var(--text-muted);line-height:1.5;margin:10px 0;';
         note.textContent='Public unit prices are evidence only. Verify the exact pack, postcode, stock and checkout fees before sending a quote.';panel.append(note);
         if(order.research){const coverage=document.createElement('p');coverage.setAttribute('role','status');coverage.textContent=String(order.research.matched_items)+' of '+String(order.research.total_items)+' items have fresh matches. '+String(order.research.missing_items)+' still need evidence.';panel.append(coverage);}
+        if(eligible){const calculate=document.createElement('button');calculate.type='button';calculate.className='btn btn-secondary';calculate.textContent='Calculate item price draft';calculate.onclick=()=>fillResearchPrices(order);const feedback=document.createElement('p');feedback.id='research-price-feedback';feedback.setAttribute('role','status');feedback.style.cssText='font-size:12px;line-height:1.5;';feedback.textContent='Calculates pack price × requested count. Missing sizes or multiple matches need selection. Stock and checkout fees remain unverified.';panel.append(calculate,feedback);}
         if(draft.observed_at){const time=document.createElement('p');time.style.fontSize='11px';time.textContent='Collected: '+String(draft.observed_at);panel.append(time);}
         const allowed=new Set(['www.bigbasket.com','bigbasket.com','www.zepto.com','zepto.com','blinkit.com','www.blinkit.com','www.swiggy.com','swiggy.com','www.jiomart.com','jiomart.com']);
         for(const item of draft.items.slice(0,100)) {
@@ -3201,7 +3232,7 @@
           copyQuery.onclick=async()=>{const version=session.version;try{await navigator.clipboard.writeText(String(item.query||''));session.assert(version);if(selectedOrder?.id===order.id)copyQuery.textContent='Copied';}catch(error){if(session.current(version))copyQuery.textContent='Copy failed';}};block.append(copyQuery);
           const candidates=Array.isArray(item.candidates)?item.candidates:[];
           if(!candidates.length){const empty=document.createElement('p');empty.textContent='Capture the matching product/category for this item, or verify and enter its price manually. Missing evidence does not mean it is out of stock.';empty.style.fontSize='12px';block.append(empty);}
-          for(const candidate of candidates.slice(0,6)) {
+          for(const [candidateIndex,candidate] of candidates.slice(0,6).entries()) {
             if(!candidate || typeof candidate!=='object')continue;
             if(candidate.observed_at){const age=Date.now()-Date.parse(candidate.observed_at);if(!Number.isFinite(age)||age<0||age>900000){const stale=document.createElement('p');stale.textContent='Previous evidence expired. Capture this product again.';stale.style.fontSize='12px';block.append(stale);continue;}}
             const amount=Number(candidate.price);if(!Number.isFinite(amount)||amount<=0)continue;
@@ -3215,6 +3246,7 @@
                 const link=document.createElement('a');link.href=url.href;link.target='_blank';link.rel='noopener noreferrer';link.textContent='View source';line.append(link);
               }
             } catch(error) {}
+            if(eligible){const use=document.createElement('button');use.type='button';use.className='btn btn-secondary';use.style.cssText='display:block;font-size:11px;margin-top:5px;';use.textContent='Use this observed price';use.onclick=()=>fillResearchPrices(order,item.item_id,candidateIndex);line.append(use);}
             block.append(line);
           }
           panel.append(block);

@@ -566,15 +566,15 @@ def create_order(order_data: OrderCreate, current_user: models.User = Depends(ge
     ai_setting=db.get(models.SystemSetting,'ai_enabled')
     automatic=bool(flag('AUTO_RESEARCH_NEW_ORDERS') and research_enabled() and ai_setting and ai_setting.value=='true')
     row = models.Order(user_id=current_user.id, address_id=address.id, request_key=idempotency_key, request_hash=request_hash, assigned_moderator_id=assigned, store="pending", status="pending_review", delivery_street=address.street_address, delivery_city=address.city, delivery_postal_code=address.postal_code, subtotal=0, delivery_fee=0, platform_fee=0, final_price=0,mode='HYBRID' if automatic else 'HUMAN',assigned_worker_type='AI' if automatic else 'HUMAN')
-    db.add(row)
-    db.flush()
-    for item in entries:
-        # Structured item names are already separate from their quantity;
-        # stripping numeric prefixes here destroys brands such as "7 Up".
-        db.add(models.OrderItem(order_id=row.id, name=item.name.strip(), quantity=item.quantity))
-    order_message(db,row,", ".join(f"{i.quantity}× {i.name}" for i in entries),role="CUSTOMER",sender=current_user.id)
-    order_message(db,row,"Order received. Your concierge will verify availability and prices.")
     try:
+        db.add(row)
+        # Uniqueness can fail during flush, before the final commit.
+        db.flush()
+        for item in entries:
+            # Structured names are already separate from their quantities.
+            db.add(models.OrderItem(order_id=row.id,name=item.name.strip(),quantity=item.quantity))
+        order_message(db,row,", ".join(f"{i.quantity}× {i.name}" for i in entries),role="CUSTOMER",sender=current_user.id)
+        order_message(db,row,"Order received. Your concierge will verify availability and prices.")
         db.commit()
     except IntegrityError:
         db.rollback()
@@ -909,7 +909,7 @@ def import_research_evidence(order_id: str, data: ResearchCaptureSubmission, cur
     existing['research_draft']=merge_browser_evidence(existing.get('research_draft'),draft)
     encoded=json.dumps(existing)
     if len(encoded.encode())>200000:raise HTTPException(422,'Research evidence exceeds the supported size')
-    change_order(db,row,manual_prices=encoded,assigned_worker_type='HUMAN',ai_stopped_at=utcnow(),mode='HYBRID' if row.mode=='AI' else row.mode)
+    change_order(db,row,manual_prices=encoded,assigned_worker_type='HUMAN',ai_stopped_at=utcnow(),ai_error=None,mode='HYBRID' if row.mode=='AI' else row.mode)
     db.commit()
     return serialize_order(row,current_user)
 

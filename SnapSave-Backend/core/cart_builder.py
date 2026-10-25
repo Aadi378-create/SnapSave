@@ -21,7 +21,7 @@ def build_cart_from_text(user_text):
         items.append({
             "original_query": raw,
             "product": match["matched_product"],
-            "quantity": match["quantity"] or 1,
+            "quantity": match["quantity"] if match["quantity"] is not None else 1,
             "unit": match["unit"],
             "volume": match["volume"],
             "confidence": match["confidence"]

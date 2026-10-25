@@ -67,7 +67,7 @@ class AI_CONCIERGE_PROVIDER:
                     raise ValueError("Research evidence exceeds the supported size")
                 draft=quote
                 values={"manual_prices":encoded,"is_ai_priced":True,"ai_stopped_at":utcnow(),
-                        "ai_error":"Public catalogue research requires human verification of products, availability and checkout fees." if any(i.get("candidates") for i in quote["items"]) else "No usable public catalogue prices were available. Review the source diagnostics and price this ticket manually.",
+                        "ai_error":None if quote.get('transport')=='browser_pending' else "Public catalogue research requires human verification of products, availability and checkout fees." if any(i.get("candidates") for i in quote["items"]) else "No usable public catalogue prices were available. Review the source diagnostics and price this ticket manually.",
                         "mode":"HYBRID","assigned_worker_type":"HUMAN","revision":version+1,"updated_at":utcnow()}
             else:
                 if not quote or quote.get("verified") is not True or quote.get("postal_code")!=location:

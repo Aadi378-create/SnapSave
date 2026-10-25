@@ -44,7 +44,7 @@ def test_large_workload_profile(browser,client,actors,db,monkeypatch,tmp_path):
     original=browser.new_page
     def instrumented(*args,**kwargs):
         page=original(*args,**kwargs)
-        page.add_init_script("window.__loadLongTasks=[];new PerformanceObserver(list=>window.__loadLongTasks.push(...list.getEntries().map(e=>e.duration))).observe({type:'longtask',buffered:true});")
+        page.add_init_script("window.__loadLongTasks=[];window.__loadLongTaskDetails=[];new PerformanceObserver(list=>{window.__loadLongTaskDetails.push(...list.getEntries().map(e=>({start_ms:e.startTime,duration_ms:e.duration})));window.__loadLongTasks.push(...list.getEntries().map(e=>e.duration));}).observe({type:'longtask',buffered:true});")
         return page
     monkeypatch.setattr(browser,'new_page',instrumented)
     output=Path(os.environ.get('SNAPSAVE_TEST_ARTIFACT_DIR',str(tmp_path)));output.mkdir(parents=True,exist_ok=True)
@@ -57,10 +57,10 @@ def test_large_workload_profile(browser,client,actors,db,monkeypatch,tmp_path):
             else:page.locator('.queue-card').nth(49).wait_for()
             ready=(time.perf_counter()-before)*1000
             if actor=='admin':
-                click=time.perf_counter();page.locator('.queue-card').first.click();page.wait_for_function("document.querySelectorAll('.pi-price').length===100");page.locator('#chat-messages .chat-bubble').last.wait_for()
+                click=time.perf_counter();page.locator('.queue-card').first.click();page.wait_for_function("document.querySelectorAll('.pi-price').length===100");page.wait_for_function("document.querySelectorAll('#chat-messages .chat-bubble').length===100")
                 result['admin_ticket_open_ms']=round((time.perf_counter()-click)*1000,2)
             page.wait_for_timeout(100)
-            result[file]={'ready_ms':round(ready,2),'dom_elements':page.locator('*').count(),'long_tasks_ms':page.evaluate('window.__loadLongTasks')}
+            result[file]={'ready_ms':round(ready,2),'dom_elements':page.locator('*').count(),'long_tasks_ms':page.evaluate('window.__loadLongTasks'),'long_task_details':page.evaluate('window.__loadLongTaskDetails')}
             if actor=='customer':
                 typing=time.perf_counter();page.locator('#chat-textarea').press_sequentially('milk 1 L');result[file]['typing_8_chars_ms']=round((time.perf_counter()-typing)*1000,2)
             page.screenshot(path=str(output/(actor+'-large.png')),full_page=True)
@@ -150,7 +150,7 @@ def test_admin_queue_does_not_wait_for_slow_settings(browser,client,actors,order
     original=browser.new_page
     def instrumented(*args,**kwargs):
         page=original(*args,**kwargs)
-        page.add_init_script("""const originalFetch=window.fetch;window.fetch=async(url,options)=>{if(String(url).includes('/api/admin/settings/orders'))await new Promise(resolve=>window.releaseSettings=resolve);return originalFetch(url,options);};""")
+        page.add_init_script("""const originalFetch=window.fetch;window.fetch=async(url,options)=>{if(String(url).includes('/api/admin/settings/orders')||(String(url).endsWith('/api/read-batch')&&String(options?.body).includes('/api/admin/settings/orders')))await new Promise(resolve=>window.releaseSettings=resolve);return originalFetch(url,options);};""")
         return page
     monkeypatch.setattr(browser,'new_page',instrumented)
     page,errors=open_app(browser,client,actors['admin'],db,'admin.html')

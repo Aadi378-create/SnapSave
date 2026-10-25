@@ -1,0 +1,8 @@
+{
+  "destination": "D:/SnapSave-Backups",
+  "consistent_snapshot": true,
+  "checksum_verified": true,
+  "disposable_restore": true,
+  "integrity_check": "ok",
+  "foreign_key_check": "ok"
+}

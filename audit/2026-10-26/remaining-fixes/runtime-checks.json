@@ -1,0 +1,74 @@
+{
+  "checked_at": "2026-10-25T20:02:04.303496+00:00",
+  "checks": [
+    {
+      "name": "status",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "name": "development_auth_disabled",
+      "passed": true
+    },
+    {
+      "name": "security_headers",
+      "passed": true
+    },
+    {
+      "name": "orders_without_auth",
+      "status": 401,
+      "passed": true
+    },
+    {
+      "name": "batch_without_auth",
+      "status": 405,
+      "passed": true
+    },
+    {
+      "name": "env_private",
+      "status": 404,
+      "passed": true
+    },
+    {
+      "name": "database_private",
+      "status": 404,
+      "passed": true
+    },
+    {
+      "name": "frontend_source_private",
+      "status": 404,
+      "passed": true
+    },
+    {
+      "name": "font_local",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "name": "icon_local",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "name": "license_local",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "name": "bad_host",
+      "status": 400,
+      "passed": true
+    },
+    {
+      "name": "batch_post_requires_auth",
+      "status": 401,
+      "passed": true
+    },
+    {
+      "name": "bad_origin",
+      "status": 400,
+      "passed": true
+    }
+  ],
+  "passed": true
+}

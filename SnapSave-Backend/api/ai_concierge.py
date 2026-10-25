@@ -16,7 +16,7 @@ class AI_CONCIERGE_PROVIDER:
         return provider(items, location) if provider else None
 
     @staticmethod
-    def process_ticket(order_id, db):
+    def process_ticket(order_id, db, lease_owner=None):
         order=db.get(models.Order,order_id)
         enabled=db.get(models.SystemSetting,"ai_enabled")
         if not order:
@@ -30,7 +30,8 @@ class AI_CONCIERGE_PROVIDER:
             return
         version=order.revision
         global_enabled=exists(select(models.SystemSetting.key).where(models.SystemSetting.key=="ai_enabled",models.SystemSetting.value=="true"))
-        count=db.query(models.Order).filter(models.Order.id==order_id,models.Order.revision==version,global_enabled).update({models.Order.ai_started_at:utcnow(),models.Order.revision:version+1},synchronize_session=False)
+        lease_valid=exists(select(models.ResearchJob.order_id).where(models.ResearchJob.order_id==order_id,models.ResearchJob.owner==lease_owner,models.ResearchJob.state=='running',models.ResearchJob.lease_until>utcnow())) if lease_owner else True
+        count=db.query(models.Order).filter(models.Order.id==order_id,models.Order.revision==version,global_enabled,lease_valid).update({models.Order.ai_started_at:utcnow(),models.Order.revision:version+1},synchronize_session=False)
         if count!=1:
             db.rollback()
             return
@@ -94,7 +95,8 @@ class AI_CONCIERGE_PROVIDER:
             values={"ai_error":str(exc)[:1000],"ai_stopped_at":utcnow(),"revision":version+1,"assigned_worker_type":"HUMAN","mode":"HUMAN"}
             rows=None;draft=None
         # This predicate is evaluated in the same UPDATE that writes the result.
-        predicates=[models.Order.id==order_id,models.Order.revision==version,models.Order.assigned_worker_type=="AI",models.Order.mode.in_(["AI","HYBRID"]),models.Order.status.in_(["pending_review","reviewing"]),global_enabled]
+        if lease_owner:lease_valid=exists(select(models.ResearchJob.order_id).where(models.ResearchJob.order_id==order_id,models.ResearchJob.owner==lease_owner,models.ResearchJob.state=='running',models.ResearchJob.lease_until>utcnow()))
+        predicates=[models.Order.id==order_id,models.Order.revision==version,models.Order.assigned_worker_type=="AI",models.Order.mode.in_(["AI","HYBRID"]),models.Order.status.in_(["pending_review","reviewing"]),global_enabled,lease_valid]
         count=db.query(models.Order).filter(*predicates).update(values,synchronize_session=False)
         if count!=1:
             db.rollback()

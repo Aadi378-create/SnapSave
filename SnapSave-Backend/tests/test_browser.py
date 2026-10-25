@@ -15,28 +15,32 @@ def browser():
         yield browser
         browser.close()
 
-def open_app(browser,client,actor,db,file):
+def open_app(browser,client,actor,db,file,firebase_unavailable=False,auth_unavailable=False):
     user=db.get(models.User,actor["id"])
     user.first_name="Test";user.last_name="User";user.email=actor["id"]+"@example.com";db.commit()
     page=browser.new_page()
     errors=[]
     page.on("pageerror",lambda error:errors.append(str(error)))
     token=actor["headers"]["Authorization"][7:]
-    page.add_init_script("globalThis.__test_token="+__import__('json').dumps(token))
+    page.add_init_script("globalThis.__test_signouts=0;globalThis.__test_token="+__import__('json').dumps(token))
     def route(request_route):
         request=request_route.request
         parsed=urlparse(request.url)
         if parsed.netloc=="www.gstatic.com":
+            if firebase_unavailable:
+                request_route.abort('failed');return
             if "firebase-app.js" in parsed.path:
                 script="export const initializeApp=()=>({});export const getApps=()=>[];"
             else:
                 script='''const user={getIdToken:async()=>globalThis.__test_token};
                 export const getAuth=()=>({currentUser:user,authStateReady:async()=>{}});
                 export const onAuthStateChanged=(a,cb)=>queueMicrotask(()=>cb(user));
-                export const signOut=async()=>{};export class RecaptchaVerifier{};
+                export const signOut=async()=>{globalThis.__test_signouts++;};export class RecaptchaVerifier{};
                 export const signInWithPhoneNumber=async()=>({confirm:async()=>({user})});'''
             request_route.fulfill(body=script,content_type="application/javascript",headers={"Access-Control-Allow-Origin":"*"})
         elif parsed.path.startswith("/api/"):
+            if auth_unavailable and parsed.path=='/api/auth/me':
+                request_route.fulfill(status=503,body='{"detail":"Synthetic authentication outage"}',headers={"Content-Type":"application/json","Access-Control-Allow-Origin":"*"});return
             headers={k:v for k,v in request.headers.items() if k in {"authorization","content-type","idempotency-key"}}
             result=client.request(request.method,parsed.path+("?"+parsed.query if parsed.query else ""),headers=headers,content=request.post_data)
             request_route.fulfill(status=result.status_code,body=result.content,headers={"Content-Type":result.headers.get("content-type","application/json"),"Access-Control-Allow-Origin":"*"})

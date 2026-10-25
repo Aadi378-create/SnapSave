@@ -7,7 +7,7 @@ def migrate(engine):
     tables = inspector.get_table_names()
     old_items = "order_items" in tables and "line_total" not in {c["name"] for c in inspector.get_columns("order_items")}
     old_assignment = "orders" in tables and "assigned_moderator_id" not in {c["name"] for c in inspector.get_columns("orders")}
-    defaults = {"revision": "0", "service_fee": "0", "mode": "'HUMAN'", "assigned_worker_type": "'HUMAN'", "is_ai_priced": "false", "coordinates_verified": "false", "payment_status": "'unpaid'", "kind": "'text'", "is_blacklisted": "false", "maintenance_mode": "false"}
+    defaults = {"order_revision":"0","revision": "0", "service_fee": "0", "mode": "'HUMAN'", "assigned_worker_type": "'HUMAN'", "is_ai_priced": "false", "coordinates_verified": "false", "payment_status": "'unpaid'", "kind": "'text'", "is_blacklisted": "false", "maintenance_mode": "false"}
     with engine.begin() as conn:
         conn.execute(text("CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY)"))
         for table in models.Base.metadata.sorted_tables:
@@ -59,3 +59,6 @@ def migrate(engine):
         if not duplicates:
             conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS uq_feedback_order_idx ON feedbacks(order_id)"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_message_thread ON messages(user_id, order_id, created_at, id)"))
+
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_order_history_cursor ON orders(user_id,created_at,id)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_order_queue_cursor ON orders(status,created_at,id)"))

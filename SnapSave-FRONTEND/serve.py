@@ -9,6 +9,7 @@ PORT = 3000
 
 class NoCacheHandler(http.server.SimpleHTTPRequestHandler):
     PUBLIC_FILES={'index.html','admin.html','common.js','phone-login.js','phone-login.css','conversation.js','conversation.css','config.js','404.html','QR.jpeg','favicon.ico'}
+    PUBLIC_FILES.update({'assets/vendor/fontawesome/LICENSE.txt','assets/vendor/fonts/outfit-OFL.txt','assets/vendor/fonts/plusjakartasans-OFL.txt','assets/vendor/fonts/jetbrainsmono-OFL.txt'})
     def send_head(self):
         try:
             host=urlsplit('//'+self.headers.get('Host','')).hostname

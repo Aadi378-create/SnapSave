@@ -1,0 +1,3 @@
+
+# Preserve upstream vendor bytes, including license whitespace, for provenance hashes.
+SnapSave-FRONTEND/assets/vendor/** -text -whitespace

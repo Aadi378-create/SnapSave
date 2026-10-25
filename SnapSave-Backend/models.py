@@ -215,3 +215,16 @@ class Incident(Base):
     # Relationships
     order = relationship("Order")
     moderator = relationship("User")
+
+
+class ResearchJob(Base):
+    """Durable work intent; leases fence duplicate dispatch across processes."""
+    __tablename__='research_jobs'
+    order_id=Column(String(36),ForeignKey('orders.id',ondelete='CASCADE'),primary_key=True)
+    state=Column(String(20),nullable=False,default='queued',index=True)
+    attempts=Column(Integer,nullable=False,default=0)
+    order_revision=Column(Integer,nullable=False,default=0)
+    owner=Column(String(36),nullable=True)
+    lease_until=Column(DateTime,nullable=True,index=True)
+    created_at=Column(DateTime,nullable=False,default=utcnow)
+    updated_at=Column(DateTime,nullable=False,default=utcnow)

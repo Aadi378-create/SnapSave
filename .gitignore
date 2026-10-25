@@ -50,3 +50,6 @@ SnapSave-Backend/tools/retailer-capture-extension/dist/
 Thumbs.db
 .vscode/
 .idea/
+
+# Public upstream license; the general out*.txt rule is for runtime output.
+!SnapSave-FRONTEND/assets/vendor/fonts/outfit-OFL.txt

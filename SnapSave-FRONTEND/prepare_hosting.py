@@ -6,10 +6,11 @@ import shutil
 from urllib.parse import urlparse
 
 PUBLIC_FILES={"index.html","admin.html","common.js","phone-login.js","phone-login.css","conversation.js","conversation.css","404.html","config.js"}
+PUBLIC_LICENSES={'assets/vendor/fontawesome/LICENSE.txt','assets/vendor/fonts/outfit-OFL.txt','assets/vendor/fonts/plusjakartasans-OFL.txt','assets/vendor/fonts/jetbrainsmono-OFL.txt'}
 ASSET_TYPES={'.png','.jpg','.jpeg','.webp','.gif','.svg','.ico','.css','.js','.woff','.woff2','.ttf'}
 
 def public_output(path):
-    return path.as_posix() in PUBLIC_FILES or (len(path.parts)>1 and path.parts[0]=='assets' and path.suffix.lower() in ASSET_TYPES and not any(part.startswith('.') for part in path.parts))
+    return path.as_posix() in PUBLIC_FILES or path.as_posix() in PUBLIC_LICENSES or (len(path.parts)>1 and path.parts[0]=='assets' and path.suffix.lower() in ASSET_TYPES and not any(part.startswith('.') for part in path.parts))
 
 def prepare(origin, destination=None):
     parsed=urlparse(origin)
@@ -26,7 +27,7 @@ def prepare(origin, destination=None):
     (target/"config.js").write_text("window.SNAPSAVE_API_BASE="+json.dumps(origin.rstrip("/"))+";\n",encoding="utf-8")
     assets=(root/'assets').resolve()
     for source in assets.rglob('*'):
-        if source.is_file() and source.suffix.lower() in ASSET_TYPES and source.resolve().is_relative_to(assets) and not any(part.startswith('.') for part in source.relative_to(assets).parts):
+        if source.is_file() and public_output(Path('assets')/source.relative_to(assets)) and source.resolve().is_relative_to(assets) and not any(part.startswith('.') for part in source.relative_to(assets).parts):
             output=target/'assets'/source.relative_to(assets);output.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(source,output)
     return target
 

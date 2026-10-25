@@ -1,0 +1,63 @@
+{
+  "fixture": {
+    "orders": 500,
+    "items": 50000,
+    "messages": 1000,
+    "active_orders": 50,
+    "items_per_order": 100,
+    "internal_draft_bytes": 150024
+  },
+  "api": {
+    "customer_full_history": {
+      "median_ms": 158.32,
+      "worst_of_5_ms": 222.79,
+      "response_bytes": 666951,
+      "select_queries": 3
+    },
+    "customer_summary_history": {
+      "median_ms": 10.62,
+      "worst_of_5_ms": 12.71,
+      "response_bytes": 12451,
+      "select_queries": 2
+    },
+    "admin_queue": {
+      "median_ms": 11.45,
+      "worst_of_5_ms": 15.0,
+      "response_bytes": 24601,
+      "select_queries": 2
+    },
+    "admin_metrics": {
+      "median_ms": 11.5,
+      "worst_of_5_ms": 18.4,
+      "response_bytes": 338,
+      "select_queries": 3
+    },
+    "admin_beta_metrics": {
+      "median_ms": 10.65,
+      "worst_of_5_ms": 12.5,
+      "response_bytes": 213,
+      "select_queries": 3
+    }
+  },
+  "index.html": {
+    "ready_ms": 396.89,
+    "dom_elements": 904,
+    "long_tasks_ms": [],
+    "long_task_details": [],
+    "typing_8_chars_ms": 32.85
+  },
+  "admin_ticket_open_ms": 174.7,
+  "admin.html": {
+    "ready_ms": 255.39,
+    "dom_elements": 2664,
+    "long_tasks_ms": [
+      73
+    ],
+    "long_task_details": [
+      {
+        "start_ms": 266.80000019073486,
+        "duration_ms": 73
+      }
+    ]
+  }
+}

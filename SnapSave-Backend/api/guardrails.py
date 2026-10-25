@@ -36,7 +36,9 @@ class RequestLimits(BaseHTTPMiddleware):
 
         # Limit before reading the body or running authentication/database work.
         mutation=request.method in {'POST','PUT','PATCH','DELETE'}
-        bucket='dev-auth' if request.url.path=='/api/auth/test-token' else 'write' if mutation else 'read'
+        batch=request.url.path=='/api/read-batch' and request.method=='POST'
+        units=8 if batch else 1
+        bucket='dev-auth' if request.url.path=='/api/auth/test-token' else 'write' if mutation and not batch else 'read'
         limit={'dev-auth':10,'write':120,'read':300}[bucket]
         key=(request.client.host if request.client else 'unknown',bucket)
         now=time.monotonic()
@@ -46,8 +48,8 @@ class RequestLimits(BaseHTTPMiddleware):
                 if key not in self.requests and len(self.requests)>=10000:return reject('Too many requests. Try again shortly',429)
             queue=self.requests[key]
             while queue and queue[0]<=now-60:queue.popleft()
-            if len(queue)>=limit:return reject('Too many requests. Try again shortly',429)
-            queue.append(now)
+            if len(queue)+units>limit:return reject('Too many requests. Try again shortly',429)
+            queue.extend([now]*units)
         if len(request.headers.get('authorization',''))>8192:return reject('Authorization header too large',431)
         if mutation:
             length=request.headers.get('content-length')

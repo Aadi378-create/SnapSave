@@ -4,18 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SnapSave - AI Concierge Grocery Optimizer</title>
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
-      rel="stylesheet"
-    />
-    <!-- FontAwesome -->
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-    />
+    <!-- Locally served licensed fonts and icons. -->
+    <link rel="stylesheet" href="assets/vendor/fonts/fonts.css" />
+    <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
 
     <style>
       :root {
@@ -1111,28 +1102,8 @@
     <link rel="stylesheet" href="conversation.css" />
     <!-- Firebase & Frontend Logic -->
     <script type="module">
-      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-      import {
-        getAuth,
-        RecaptchaVerifier,
-        signInWithPhoneNumber,
-        signOut,
-        onAuthStateChanged,
-      } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
       const API_BASE = window.SNAPSAVE_API_BASE;
-
-      const firebaseConfig = {
-        apiKey: "AIzaSyC2usgMofYuKhLrmERkuYgFY0WmNkfMXIY",
-        authDomain: "snapsave-501c7.firebaseapp.com",
-        projectId: "snapsave-501c7",
-        storageBucket: "snapsave-501c7.firebasestorage.app",
-        messagingSenderId: "20754709166",
-        appId: "1:20754709166:web:22949551e251e0e9078b3f",
-      };
-
-      const app = initializeApp(firebaseConfig);
-      const auth = getAuth(app);
+      let auth={currentUser:null};
 
       let idToken = null;
       let currentUser = null;
@@ -1144,7 +1115,7 @@
       let orderCache = [];
       let historyLoaded = false;
       let customerViewLoading = false;
-      let historyOffset = 0;
+      let historyCursor = null;
       let orderRequest = 0;
       let helpPolling = null;
       let sendKey = null;
@@ -1157,33 +1128,16 @@
       const CUST_STORAGE_KEY = 'snapsave_customer_token';
 
       const customerLogin=createPhoneLogin(document.getElementById("customer-login-card"),{
-        async captcha(container,options) {
-          const verifier=new RecaptchaVerifier(auth,container,options);
-          try {await verifier.render();return verifier;}
-          catch(error){try {verifier.clear();} catch(e) {} throw error;}
-        },
-        send:(phone,verifier)=>signInWithPhoneNumber(auth,phone,verifier),
+        captcha:(container,options)=>window.SnapSaveAuth.createVerifier(container,options),
+        send:(phone,verifier)=>window.SnapSaveAuth.send(phone,verifier),
         async verified(result) {
+          auth=window.SnapSaveAuth.auth;
           const version=session.version;
           const token=await result.user.getIdToken(true);
           if(!session.current(version))return;
           idToken=token;
           await checkUserSession(version);
         }
-      });
-
-      // Firebase session changes invalidate all pending private reads.
-      onAuthStateChanged(auth, async (user) => {
-        if(user && customerLogin.isVerifying())return;
-        clearCustomerSession();
-        if(!user)return;
-        const version=session.version;
-        try {
-          const token=await user.getIdToken(true);
-          if(!session.current(version))return;
-          idToken=token;
-          await checkUserSession(version);
-        } catch(error) {if(session.current(version))clearCustomerSession();}
       });
 
       fetch(`${API_BASE}/api/status`).then(r=>r.json()).then(s=>{document.getElementById("demo-login").style.display=s.dev_auth_enabled ? "block" : "none";}).catch(()=>{});
@@ -1212,7 +1166,7 @@
 
       function clearCustomerSession() {
         session.reset();customerLogin.reset();
-        customerRequests.clear();customerDrafts.clear();historyOffset=0;orderRequest++;
+        customerRequests.clear();customerDrafts.clear();historyCursor=null;orderRequest++;
         idToken=null;currentUser=null;savedAddresses=[];sendKey=null;sendPayload=null;pendingFeedbackOrderId=null;
         if(chatPollingInterval)chatPollingInterval();
         if(helpPolling)helpPolling();
@@ -1234,7 +1188,7 @@
       }
       window.handleLogout = async function () {
         clearCustomerSession();
-        try {await signOut(auth);} catch(error) {}
+        try {await window.SnapSaveAuth.logout();} catch(error) {}
       };
 
       async function checkUserSession(version=session.version) {
@@ -1250,8 +1204,9 @@
           }
         } catch (err) {
           if(!session.current(version))return;
-          console.error("Session check failed:", err);
-          await window.handleLogout();
+          console.error("Session check failed:", err.message);
+          if(!err.status || err.status>=500 || err.status===429){clearCustomerSession();showAuthUnavailable(document.getElementById('customer-login-card'));}
+          else await window.handleLogout();
         }
       }
 
@@ -1546,9 +1501,11 @@
       async function loadOrders(refreshHistory=false,viewRequest=false) {
         if(customerViewLoading && !viewRequest)return;
         const request=++orderRequest;
-        const active=await apiRequest("/api/orders?active_only=true&limit=100&summary_only=true");
-        let history=orderCache;
-        if(refreshHistory || !historyLoaded) {history=await apiRequest("/api/orders?limit=50&summary_only=true");if(request!==orderRequest || !currentUser)return;historyLoaded=true;}
+        const wantsHistory=refreshHistory || !historyLoaded;
+        const [active,loadedHistory]=await Promise.all([apiRequest("/api/orders?active_only=true&limit=100&summary_only=true"),wantsHistory?apiRequest("/api/orders?limit=50&summary_only=true"):Promise.resolve(null)]);
+        let history=loadedHistory||orderCache;
+        if(request!==orderRequest || !currentUser)return;
+        if(wantsHistory){historyLoaded=true;historyCursor=history.at(-1)?.cursor||null;}
         if(request!==orderRequest || !currentUser)return;
         const map=new Map([...orderCache,...history,...active].map(o=>[o.id,o]));
         const target=selectedHistoryOrderId || (newOrderDraft ? null : activeOrder?.id || active[0]?.id || null);
@@ -1701,6 +1658,7 @@
           `;
           container.appendChild(row);
         });
+        if(!historyCursor)return;
         const more=document.createElement("button");more.textContent="Load older orders";more.className="btn btn-secondary";more.onclick=()=>loadMoreHistory();container.appendChild(more);
       }
 
@@ -1918,10 +1876,13 @@
       window.loadMoreHistory = async function() {
         if(historyLoading)return;
         historyLoading=true;
-        const nextOffset=historyOffset+50;
+        const cursor=historyCursor;
+        if(!cursor){historyLoading=false;return;}
+        const version=session.version;
         try {
-          const rows=await apiRequest(`/api/orders?limit=50&summary_only=true&offset=${nextOffset}`);
-          historyOffset=nextOffset;
+          const rows=await apiRequest(`/api/orders?limit=50&summary_only=true&before=${encodeURIComponent(cursor)}`);
+          if(!session.current(version))return;
+          historyCursor=rows.at(-1)?.cursor||null;
           orderCache=[...new Map([...orderCache,...rows].map(o=>[o.id,o])).values()];renderRecentHistory(orderCache);
         } catch(e){conversationFeedback("customer-chat-feedback","Could not load older orders. Please try again.",true);}
         finally{historyLoading=false;}
@@ -1936,7 +1897,8 @@
         if(requestKey) headers["Idempotency-Key"]=requestKey;
         const opt = { method, headers };
         if (body) opt.body = JSON.stringify(body);
-        const res = await fetch(`${API_BASE}${endpoint}`, {...opt,signal:AbortSignal.any([signal,AbortSignal.timeout(20000)])});
+        const requestOptions={...opt,signal:AbortSignal.any([signal,AbortSignal.timeout(20000)])};
+        const res = await (method==="GET"?readFetch(API_BASE,endpoint,requestOptions):fetch(`${API_BASE}${endpoint}`,requestOptions));
         session.assert(version);
         if (!res.ok) {
           const err = await res.json().catch(() => ({ detail: "Server error" }));
@@ -1967,6 +1929,23 @@
           btn.disabled = false;
         }
       }
+      try {
+        await window.SnapSaveAuth.initialize();auth=window.SnapSaveAuth.auth;
+      // Firebase session changes invalidate all pending private reads.
+      window.SnapSaveAuth.api.onAuthStateChanged(auth, async (user) => {
+        if(user && customerLogin.isVerifying())return;
+        clearCustomerSession();
+        if(!user)return;
+        const version=session.version;
+        try {
+          const token=await user.getIdToken(true);
+          if(!session.current(version))return;
+          idToken=token;
+          await checkUserSession(version);
+        } catch(error) {if(session.current(version))clearCustomerSession();}
+      });
+
+      } catch(error){showAuthUnavailable(document.getElementById('customer-login-card'));}
     </script>
   </body>
 </html>

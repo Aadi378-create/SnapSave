@@ -1,0 +1,45 @@
+{
+  "scope": "Real restored browser sessions after restart; handler-to-headers timing includes Firebase, database work and concurrent local tests. No private identifiers or bodies retained.",
+  "routes": {
+    "GET /api/admin/help/summary": {
+      "samples": 12,
+      "median_ms": 364.98,
+      "max_ms": 1017.89
+    },
+    "GET /api/auth/me": {
+      "samples": 2,
+      "median_ms": 707.89,
+      "max_ms": 1075.88
+    },
+    "POST /api/read-batch": {
+      "samples": 3,
+      "median_ms": 393.64,
+      "max_ms": 461.57
+    },
+    "GET /api/status": {
+      "samples": 8,
+      "median_ms": 2.42,
+      "max_ms": 54.78
+    },
+    "GET /api/orders/{order_id}": {
+      "samples": 1,
+      "median_ms": 351.83,
+      "max_ms": 351.83
+    },
+    "GET /api/chat/{customer_id}/messages": {
+      "samples": 6,
+      "median_ms": 344.2,
+      "max_ms": 512.74
+    },
+    "GET /api/moderator/queue": {
+      "samples": 5,
+      "median_ms": 322.33,
+      "max_ms": 358.52
+    },
+    "GET /api/orders": {
+      "samples": 5,
+      "median_ms": 374.6,
+      "max_ms": 1647.0
+    }
+  }
+}

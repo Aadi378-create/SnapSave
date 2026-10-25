@@ -7,14 +7,14 @@ def test_created_order_refresh_failure_and_history_retry(browser,client,actors,o
         page.locator('#chat-textarea').wait_for(state='visible')
         page.wait_for_function("document.querySelector('#active-order-container').textContent.includes('pending review')")
         page.evaluate('''()=>{window.startNewOrder();const original=window.fetch;
-          window.__created=false;window.__offsets=[];window.__failHistory=true;
+          window.__created=false;window.__cursors=[];window.__failHistory=true;
           window.fetch=async(url,options)=>{
             const path=String(url);
-            if(path.includes('offset=')){
-              window.__offsets.push(new URL(path).searchParams.get('offset'));
+            if(path.includes('before=')){
+              window.__cursors.push(new URL(path).searchParams.get('before'));
               if(window.__failHistory){window.__failHistory=false;throw Error('History offline');}
             }
-            if(window.__created&&path.includes('active_only=true'))throw Error('Refresh offline');
+            if(window.__created&&(path.includes('active_only=true')||(path.endsWith('/api/read-batch')&&String(options?.body).includes('\"active_only\":true'))))throw Error('Refresh offline');
             const response=await original(url,options);
             if(path.endsWith('/api/orders')&&options?.method==='POST')window.__created=true;
             return response;
@@ -26,7 +26,8 @@ def test_created_order_refresh_failure_and_history_retry(browser,client,actors,o
         assert page.locator('#customer-chat-feedback').get_attribute('data-error')=='false'
         page.evaluate('window.loadMoreHistory()')
         page.evaluate('window.loadMoreHistory()')
-        assert page.evaluate('window.__offsets')==['50','50']
+        cursors=page.evaluate('window.__cursors')
+        assert len(cursors)==2 and cursors[0]==cursors[1]
         assert not errors,errors
     finally:page.close()
 

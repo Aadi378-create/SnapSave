@@ -4,20 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SnapSave - Concierge Management Console</title>
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
-    <!-- Icon sets -->
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-    />
+    <!-- Locally served licensed fonts and icons. -->
+    <link rel="stylesheet" href="assets/vendor/fonts/fonts.css" />
+    <link rel="stylesheet" href="assets/vendor/fontawesome/css/all.min.css" />
 
     <style>
+      .price-item-row {content-visibility:auto;contain-intrinsic-size:auto 96px;}
+
       :root {
         --bg-dark: #070b14;
         --bg-card: rgba(16, 22, 38, 0.7);
@@ -2124,6 +2117,7 @@
       let queueBusy=false;
       let queuePending=false;
       let queuePage=0;
+      let queueCursors=[null],queueNextCursor=null;
       let lastQueueFilter="";
       const staffLogin=createPhoneLogin(document.getElementById("phone-login-card"),{
         captcha:(container,options)=>window.SnapSaveAuth.createVerifier(container,options),
@@ -2153,7 +2147,7 @@
         staffChatCache=[]; staffChatSignature=""; staffChatOrder=null; activeOrders=[];configurationStatus.hidden=true;configurationStatus.textContent="";configurationRequest++;queueStatus.hidden=true;queueStatus.textContent="";
         document.getElementById("beta-program-view").style.display="none";
         moderatorsList=[];customersList=[];helpPage=0;helpListRequest++;
-        _lastQueueSignature="";queuePage=0;lastQueueFilter="";
+        _lastQueueSignature="";queuePage=0;queueCursors=[null];queueNextCursor=null;lastQueueFilter="";
         for(const id of ['chat-messages','queue-list','help-thread-list','customers-admin-list','roles-admin-list','admin-assignments-list','user-phone','research-evidence-panel','delivery-address-panel']) {
           const node=document.getElementById(id);if(node)node.textContent='';
         }
@@ -2196,8 +2190,8 @@
         } catch (err) {
           if(!session.current(version))return;
           console.error("❌ [SESSION] Error checking session:", err.message);
-          showAuthAlert("Session check failed: " + err.message, "error");
-          handleLogout();
+          if(!err.status || err.status>=500 || err.status===429){clearStaffSession();showAuthUnavailable(document.getElementById('phone-login-card'));}
+          else {showAuthAlert("Session check failed: " + err.message, "error");handleLogout();}
         }
       }
 
@@ -2966,18 +2960,18 @@
       window.loadQueue = async function () {
         if(queueBusy) {queuePending=true;return;} queueBusy=true;
         const filter = document.getElementById("queue-filter").value;
-        if(filter!==lastQueueFilter){queuePage=0;lastQueueFilter=filter;}
+        if(filter!==lastQueueFilter){queuePage=0;queueCursors=[null];queueNextCursor=null;lastQueueFilter=filter;}
         const page=queuePage;
         try {
           let queue = await apiRequest(
-            `/api/moderator/queue?summary_only=true&limit=51&offset=${page*50}${filter ? "&status_filter="+encodeURIComponent(filter):""}`,
+            `/api/moderator/queue?summary_only=true&limit=51${queueCursors[page]?"&after="+encodeURIComponent(queueCursors[page]):""}${filter ? "&status_filter="+encodeURIComponent(filter):""}`,
           );
           if(!currentUser || page!==queuePage || filter!==document.getElementById("queue-filter").value){queuePending=!!currentUser;return;}
 
           queueStatus.hidden=true;queueStatus.textContent="";
           document.getElementById("queue-previous").disabled=page===0;
           document.getElementById("queue-next").disabled=queue.length<=50;
-          queue=queue.slice(0,50);
+          queue=queue.slice(0,50);queueNextCursor=queue.at(-1)?.cursor||null;
           // Build a signature to skip re-render when nothing changed
           const sig = JSON.stringify(queue);
           const queueChanged = sig !== _lastQueueSignature;
@@ -3011,7 +3005,7 @@
         } finally {queueBusy=false;if(queuePending){queuePending=false;if(currentUser)await loadQueue();}}
       };
 
-      window.pageQueue=async function(step){queuePage=Math.max(0,queuePage+step);await loadQueue();};
+      window.pageQueue=async function(step){if(queueBusy)return;if(step>0){if(!queueNextCursor)return;queueCursors[queuePage+1]=queueNextCursor;}queuePage=Math.max(0,queuePage+step);await loadQueue();};
       function renderQueue() {
         const container = document.getElementById("queue-list");
         container.innerHTML = "";
@@ -3174,7 +3168,9 @@
         staffChatSignature=sig;renderMessages(staffChatCache);
       }
 
-      function renderMessages(msgs) {
+      let chatRenderGeneration=0;
+      async function renderMessages(msgs) {
+        const generation=++chatRenderGeneration,orderId=selectedOrder?.order_id,version=session.version;
         const chat = document.getElementById("chat-messages");
         const nearBottom=chat.scrollHeight-chat.scrollTop-chat.clientHeight<100;
         chat.innerHTML = "";
@@ -3184,10 +3180,12 @@
           return;
         }
 
-        const fragment=document.createDocumentFragment();
-        msgs.forEach((m) => {
+        let fragment=document.createDocumentFragment();
+        for(let index=0;index<msgs.length;index++) {
+          if(!session.current(version)||generation!==chatRenderGeneration||selectedOrder?.order_id!==orderId)return;
+          const m=msgs[index];
           const event=conversationEvent(m,formatConversationTime(m.created_at));
-          if(event){fragment.appendChild(event);return;}
+          if(event){fragment.appendChild(event);continue;}
           const bubble = document.createElement("div");
           let senderClass = "system";
           let senderName = "System";
@@ -3213,7 +3211,9 @@
                     <div class="chat-timestamp">${formatConversationTime(m.created_at)}</div>
                 `;
           fragment.appendChild(bubble);
-        });
+          if((index+1)%20===0){chat.appendChild(fragment);fragment=document.createDocumentFragment();await new Promise(resolve=>setTimeout(resolve,0));}
+        }
+        if(!session.current(version)||generation!==chatRenderGeneration||selectedOrder?.order_id!==orderId)return;
         chat.appendChild(fragment);
 
         if(nearBottom)chat.scrollTop = chat.scrollHeight;
@@ -3336,6 +3336,7 @@
       }
 
       function renderTicketDetails() {
+        priceRenderGeneration++;priceRowsRendering=false;
         const placeholder = document.getElementById(
           "ticket-unselected-placeholder",
         );
@@ -3498,19 +3499,26 @@
         "jiomart",
       ];
 
-      function renderPriceRows() {
+      let priceRenderGeneration=0,priceRowsRendering=false;
+      async function renderPriceRows() {
+        const generation=++priceRenderGeneration,orderId=selectedOrder.order_id,version=session.version;
+        priceRowsRendering=true;
+        const previewButton=document.getElementById("btn-preview-quote");previewButton.disabled=true;
         const list = document.getElementById("prices-list");
         list.innerHTML = "";
         const items = selectedOrder.items || [];
         if (!items.length) {
           list.innerHTML = `<p style="font-size:12px;color:var(--text-muted);">This order has no line items.</p>`;
-          return;
+          priceRowsRendering=false;previewButton.disabled=false;return;
         }
         const storeOptions = KNOWN_STORES.map(
           (s) =>
             `<option value="${s}">${s.charAt(0).toUpperCase() + s.slice(1)}</option>`,
         ).join("");
-        items.forEach((it, idx) => {
+        let fragment=document.createDocumentFragment();
+        for(let idx=0;idx<items.length;idx++) {
+          const it=items[idx];
+          if(!session.current(version)||generation!==priceRenderGeneration||selectedOrder?.order_id!==orderId)return;
           const row = document.createElement("div");
           row.className = "price-item-row";
           row.style.cssText =
@@ -3525,34 +3533,32 @@
                 ${storeOptions}
               </select>
             </div>`;
-          list.appendChild(row);
+          fragment.appendChild(row);
           if (it.store) {
             const sel = row.querySelector(".pi-store");
             sel.value = KNOWN_STORES.includes(it.store) ? it.store : "";
           }
           const priceInput=row.querySelector('.pi-price');
           const storeInput=row.querySelector('.pi-store');
-          const draft=staffPriceDrafts.get(selectedOrder.order_id)?.get(it.id);
+          const draft=staffPriceDrafts.get(orderId)?.get(it.id);
           if(draft){priceInput.value=draft.price;storeInput.value=draft.store;}
           const rememberEdit=()=>{
-            const orderId=selectedOrder.order_id;
+            if(selectedOrder?.order_id!==orderId)return;
             if(!staffPriceDrafts.has(orderId))staffPriceDrafts.set(orderId,new Map());
             staffPriceDrafts.get(orderId).set(it.id,{price:priceInput.value,store:storeInput.value});
             invalidateQuotePreview();updatePriceSubtotal();
           };
           priceInput.addEventListener('input',rememberEdit);
           storeInput.addEventListener('change',rememberEdit);
-        });
-        updatePriceSubtotal();
+          if((idx+1)%20===0){list.appendChild(fragment);fragment=document.createDocumentFragment();await new Promise(resolve=>setTimeout(resolve,0));}
+        }
+        if(!session.current(version)||generation!==priceRenderGeneration||selectedOrder?.order_id!==orderId)return;
+        list.appendChild(fragment);priceRowsRendering=false;previewButton.disabled=false;updatePriceSubtotal();
       }
 
       function updatePriceSubtotal() {
         let subtotal = 0;
-        (selectedOrder.items || []).forEach((it) => {
-          const inp = document.querySelector(`.pi-price[data-item-id="${it.id}"]`);
-          const val = inp ? parseFloat(inp.value) : NaN;
-          if (!isNaN(val)) subtotal += val;
-        });
+        document.querySelectorAll('#prices-list .pi-price').forEach(input=>{const value=parseFloat(input.value);if(Number.isFinite(value))subtotal+=value;});
         document.getElementById("prices-subtotal").innerText =
           `Subtotal: ₹${subtotal.toFixed(2)}`;
       }
@@ -3589,6 +3595,7 @@
 
       window.previewQuote = async function() {
         if (!selectedOrder) return;
+        if(priceRowsRendering)return conversationFeedback('staff-chat-feedback','Please wait for the item editors to finish loading.');
         const items = [];
         let missing = false;
         (selectedOrder.items || []).forEach((it) => {
@@ -3757,7 +3764,8 @@
           options.body = JSON.stringify(body);
         }
 
-        const res = await fetch(`${API_BASE}${endpoint}`, {...options,signal:AbortSignal.any([signal,AbortSignal.timeout(20000)])});
+        const requestOptions={...options,signal:AbortSignal.any([signal,AbortSignal.timeout(20000)])};
+        const res = await (method==="GET"?readFetch(API_BASE,endpoint,requestOptions):fetch(`${API_BASE}${endpoint}`,requestOptions));
         session.assert(version);
         if (!res.ok) {
           const errorData = await res
@@ -3773,7 +3781,7 @@
           } else if (errorData.message) {
             msg = errorData.message;
           }
-          throw new Error(msg);
+          const error=new Error(msg);error.status=res.status;throw error;
         }
         const data=await res.json();session.assert(version);return data;
       }
@@ -4043,7 +4051,7 @@
             idToken=token;await checkUserSession(version);
           } catch(error){if(session.current(version))clearStaffSession();}
         });
-      } catch(error){showAuthAlert("Authentication is unavailable. Please retry.","error");}
+      } catch(error){showAuthUnavailable(document.getElementById("phone-login-card"));}
     })();
     </script>
   </body>

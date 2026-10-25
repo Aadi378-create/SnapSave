@@ -82,15 +82,15 @@ def test_research_requires_global_enable(client,actors,order,monkeypatch):
     response=client.put(f"/api/admin/orders/{order['id']}/mode",headers=actors["admin"]["headers"],json={"mode":"AI"})
     assert response.status_code==409
 
-def test_saturated_worker_capacity_returns_ticket_to_human(db,ai_order):
+def test_saturated_worker_capacity_keeps_durable_ai_intent(db,ai_order):
     from api import server
     with server._ai_jobs_lock:
         server._ai_jobs.update(f"occupied-{n}" for n in range(20))
     try:
         server.submit_ai(ai_order.id)
         db.refresh(ai_order)
-        assert ai_order.mode=="HUMAN" and ai_order.assigned_worker_type=="HUMAN"
-        assert "capacity" in ai_order.ai_error
+        assert ai_order.mode=="AI" and ai_order.assigned_worker_type=="AI"
+        assert db.get(models.ResearchJob,ai_order.id).state=="queued"
     finally:
         with server._ai_jobs_lock:
             server._ai_jobs.clear()

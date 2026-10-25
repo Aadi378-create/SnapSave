@@ -17,6 +17,7 @@ import requests
 import threading
 import json
 import hashlib
+import base64
 import logging
 from contextlib import asynccontextmanager
 from decimal import Decimal
@@ -42,7 +43,8 @@ from pricing.pivot_layer import convert_to_legacy_prices, resolve_best_candidate
 
 # Initialize Firebase Admin
 import firebase_admin
-from firebase_admin import credentials, auth
+from firebase_admin import credentials, auth, exceptions as firebase_errors
+from google.auth import exceptions as google_auth_errors
 
 firebase_initialized = False
 cred_path = os.getenv("FIREBASE_CREDENTIALS", str(BASE_DIR / "admin/firebase-service-account.json"))
@@ -53,7 +55,7 @@ if not os.path.isabs(cred_path):
 if os.path.exists(cred_path):
     try:
         cred = credentials.Certificate(cred_path)
-        firebase_admin.initialize_app(cred)
+        firebase_admin.initialize_app(cred,options={'httpTimeout':8})
         firebase_initialized = True
         print("Firebase Admin SDK initialized with Service Account.")
     except Exception as e:
@@ -63,7 +65,7 @@ if os.path.exists(cred_path):
 # Fallback: Initialize with Project ID for public certificate verification
 if not firebase_initialized:
     try:
-        firebase_admin.initialize_app(options={"projectId": os.getenv("FIREBASE_PROJECT_ID","snapsave-501c7")})
+        firebase_admin.initialize_app(options={"projectId": os.getenv("FIREBASE_PROJECT_ID","snapsave-501c7"),"httpTimeout":8})
         firebase_initialized = True
         print("[OK] Firebase Admin SDK initialized with Project ID fallback.")
     except Exception as e:
@@ -125,11 +127,10 @@ def startup_event():
             db.add(models.AppSetting(id=1, orders_enabled=True))
         if not db.get(models.SystemSetting, "ai_enabled"):
             db.add(models.SystemSetting(key="ai_enabled", value="false"))
-        # A server restart invalidates unfinished in-process research jobs.
-        for row in db.query(models.Order).filter(models.Order.assigned_worker_type=="AI",models.Order.status.in_(["pending_review","reviewing"])):
-            change_order(db,row,mode="HUMAN",assigned_worker_type="HUMAN",ai_stopped_at=utcnow(),ai_error="Research was interrupted by a restart. Human review is required.")
-            order_message(db,row,"Research was interrupted. A human concierge will review this ticket.")
         db.commit()
+    from core.research_jobs import recover_intents
+    recover_intents()
+    start_dispatcher()
 
 
 # -------------------------------
@@ -332,6 +333,8 @@ def get_current_user(authorization: str = Header(None), db: Session = Depends(ge
             raise ValueError("Missing identity")
     except HTTPException:
         raise
+    except (auth.CertificateFetchError,firebase_errors.UnavailableError,firebase_errors.DeadlineExceededError,requests.exceptions.RequestException,google_auth_errors.GoogleAuthError):
+        raise HTTPException(503,"Secure authentication is temporarily unavailable. Please retry.")
     except Exception:
         raise HTTPException(401, "Invalid or expired session")
     phone = decoded.get("phone_number") or None
@@ -583,6 +586,7 @@ def create_order(order_data: OrderCreate, current_user: models.User = Depends(ge
             db.add(models.OrderItem(order_id=row.id,name=item.name.strip(),quantity=item.quantity))
         order_message(db,row,", ".join(f"{i.quantity}× {i.name}" for i in entries),role="CUSTOMER",sender=current_user.id)
         order_message(db,row,"Order received. Your concierge will verify availability and prices.")
+        if automatic:db.add(models.ResearchJob(order_id=row.id,state='queued',attempts=0,order_revision=row.revision))
         db.commit()
     except IntegrityError:
         db.rollback()
@@ -598,8 +602,21 @@ def create_order(order_data: OrderCreate, current_user: models.User = Depends(ge
 
 
 
+def encode_cursor(row,scope):
+    return base64.urlsafe_b64encode(json.dumps([scope,row.created_at.isoformat(),row.id],separators=(',',':')).encode()).decode().rstrip('=')
+
+def cursor_position(value,scope):
+    if not value or len(value)>512:raise HTTPException(422,"Invalid pagination cursor")
+    try:
+        data=json.loads(base64.b64decode(value+'='*(-len(value)%4),altchars=b'-_',validate=True))
+        if not isinstance(data,list) or len(data)!=3 or data[0]!=scope or not isinstance(data[2],str) or len(data[2])>36:raise ValueError()
+        when=datetime.fromisoformat(data[1])
+        if when.tzinfo is not None:raise ValueError()
+        return when,data[2]
+    except (ValueError,TypeError,KeyError):raise HTTPException(422,"Invalid pagination cursor")
+
 @app.get("/api/orders")
-def get_order_history(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db), limit: int = Query(50,ge=1,le=100), offset: int = Query(0,ge=0), active_only: bool = False, summary_only: bool = False):
+def get_order_history(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db), limit: int = Query(50,ge=1,le=100), offset: int = Query(0,ge=0), active_only: bool = False, summary_only: bool = False, before: Optional[str] = Query(None,max_length=512)):
     query = db.query(models.Order).filter_by(user_id=current_user.id)
     if summary_only:
         query=query.options(load_only(*[getattr(models.Order,key) for key in ('id','status','revision','created_at','final_price','savings')]))
@@ -607,9 +624,12 @@ def get_order_history(current_user: models.User = Depends(get_current_user), db:
         query=query.options(selectinload(models.Order.items))
     if active_only:
         query = query.filter(models.Order.status.in_(ACTIVE_STATUSES))
+    if before:
+        when,identity=cursor_position(before,'history')
+        query=query.filter(or_(models.Order.created_at<when,(models.Order.created_at==when)&(models.Order.id<identity)))
     rows = query.order_by(models.Order.created_at.desc(),models.Order.id.desc()).offset(offset).limit(limit).all()
     if summary_only:
-        return [{'id':o.id,'status':o.status,'revision':o.revision,'created_at':o.created_at.isoformat()+'Z','final_price':float(o.final_price or 0),'savings':float(o.savings or 0),'summary_only':True} for o in rows]
+        return [{'id':o.id,'status':o.status,'revision':o.revision,'created_at':o.created_at.isoformat()+'Z','final_price':float(o.final_price or 0),'savings':float(o.savings or 0),'summary_only':True,'cursor':encode_cursor(o,'history')} for o in rows]
     return [serialize_order(o,current_user) for o in rows]
 
 
@@ -848,7 +868,7 @@ def update_maintenance(data: MaintenanceUpdate, current_user: models.User = Depe
 
 
 @app.get("/api/moderator/queue")
-def get_moderator_queue(status_filter: Optional[str] = None, current_user: models.User = Depends(require_role(["ADMIN","MODERATOR"])), db: Session = Depends(get_db), limit: int = Query(50,ge=1,le=100), offset: int = Query(0,ge=0), summary_only: bool = False):
+def get_moderator_queue(status_filter: Optional[str] = None, current_user: models.User = Depends(require_role(["ADMIN","MODERATOR"])), db: Session = Depends(get_db), limit: int = Query(50,ge=1,le=100), offset: int = Query(0,ge=0), summary_only: bool = False, after: Optional[str] = Query(None,max_length=512)):
     query = db.query(models.Order).options(joinedload(models.Order.user))
     if summary_only:
         query=query.options(load_only(*[getattr(models.Order,key) for key in ("id","user_id","status","mode","assigned_worker_type","assigned_moderator_id","revision","delivery_city","created_at")]))
@@ -857,11 +877,14 @@ def get_moderator_queue(status_filter: Optional[str] = None, current_user: model
     query = query.filter(models.Order.status == status_filter) if status_filter else query.filter(models.Order.status.in_(ACTIVE_STATUSES))
     if current_user.role=="MODERATOR":
         query=query.filter(or_(models.Order.assigned_moderator_id==None,models.Order.assigned_moderator_id==current_user.id))
+    if after:
+        when,identity=cursor_position(after,'queue:'+str(status_filter or ''))
+        query=query.filter(or_(models.Order.created_at>when,(models.Order.created_at==when)&(models.Order.id>identity)))
     results=[]
     for o in query.order_by(models.Order.created_at.asc(),models.Order.id.asc()).offset(offset).limit(limit).all():
         needs_claim=current_user.role=='MODERATOR' and o.assigned_moderator_id is None and o.user_id!=current_user.id
         data={key:getattr(o,key) for key in ('id','user_id','status','mode','assigned_worker_type','assigned_moderator_id','revision','delivery_city')} if summary_only else serialize_order(o,current_user)
-        if summary_only:data.update(created_at=o.created_at.isoformat()+'Z',items=[],summary_only=True)
+        if summary_only:data.update(created_at=o.created_at.isoformat()+'Z',items=[],summary_only=True,cursor=encode_cursor(o,'queue:'+str(status_filter or '')))
         entry={**data,'order_id':o.id,'customer_id':o.user_id,
                'customer_name':(f"{o.user.first_name or ''} {o.user.last_name or ''}".strip() or 'Customer') if o.user else 'Unknown',
                'customer_phone':o.user.phone_number if o.user and not needs_claim else None,'requires_claim':needs_claim}
@@ -1477,55 +1500,93 @@ def require_ai_enabled(db):
     if not setting or setting.value!="true":
         raise HTTPException(409,"Enable the global AI switch before assigning research")
 
-def ai_fallback(order_id, reason):
+def ai_fallback(order_id, reason, lease_owner=None):
     from database import SessionLocal
+    from sqlalchemy import exists,select
     with SessionLocal() as db:
         row=db.get(models.Order,order_id)
-        if row and row.assigned_worker_type=="AI" and row.status in {"pending_review","reviewing"}:
-            change_order(db,row,mode="HUMAN",assigned_worker_type="HUMAN",ai_stopped_at=utcnow(),ai_error=reason)
-            order_message(db,row,reason+" A human concierge will review this ticket.")
-            db.commit()
+        if not row:return
+        predicates=[models.Order.id==order_id,models.Order.revision==row.revision,models.Order.assigned_worker_type=='AI',models.Order.status.in_(['pending_review','reviewing'])]
+        if lease_owner:predicates.append(exists(select(models.ResearchJob.order_id).where(models.ResearchJob.order_id==order_id,models.ResearchJob.owner==lease_owner,models.ResearchJob.state=='running',models.ResearchJob.lease_until>utcnow())))
+        count=db.query(models.Order).filter(*predicates).update({'mode':'HUMAN','assigned_worker_type':'HUMAN','ai_stopped_at':utcnow(),'ai_error':reason,'revision':row.revision+1,'updated_at':utcnow()},synchronize_session=False)
+        if count!=1:db.rollback();return
+        db.expire_all();row=db.get(models.Order,order_id)
+        order_message(db,row,reason+' A human concierge will review this ticket.');db.commit()
+
+_dispatcher_stop=threading.Event()
+_dispatcher_thread=None
+
+def start_dispatcher():
+    global _dispatcher_thread
+    if os.getenv('APP_ENV')=='test':return
+    if _dispatcher_thread and _dispatcher_thread.is_alive():return
+    _dispatcher_stop.clear()
+    def run():
+        from core.research_jobs import pending
+        tick=0
+        while not _dispatcher_stop.is_set():
+            try:
+                if tick%15==0:
+                    from core.research_jobs import recover_intents
+                    recover_intents()
+                tick+=1
+                for identity in pending():dispatch_ai(identity)
+            except Exception:logging.exception('Research scheduler tick failed')
+            _dispatcher_stop.wait(1)
+    _dispatcher_thread=threading.Thread(target=run,name='research-scheduler',daemon=True);_dispatcher_thread.start()
 
 def submit_ai(order_id):
+    from core.research_jobs import enqueue
+    if enqueue(order_id):dispatch_ai(order_id)
+
+def dispatch_ai(order_id):
+    from core.research_jobs import claim,renew,finish,MAX_ATTEMPTS
     with _ai_jobs_lock:
-        if order_id in _ai_jobs:
-            return
-        busy=len(_ai_jobs)>=20
-        if not busy:
-            _ai_jobs.add(order_id)
-    if busy:
-        ai_fallback(order_id,"Research capacity is full.")
-        return
+        if order_id in _ai_jobs or len(_ai_jobs)>=2 or _ai_executor is None:return
+        _ai_jobs.add(order_id)
+    lease=None
+    try:lease=claim(order_id)
+    except Exception:logging.exception('Research claim deferred; durable intent retained')
+    finally:
+        if lease is None:
+            with _ai_jobs_lock:_ai_jobs.discard(order_id)
+    if lease is None:return
+    owner,attempts=lease
     def work():
         from database import SessionLocal
+        heartbeat_stop=threading.Event()
+        def heartbeat():
+            while not heartbeat_stop.wait(20):
+                try:
+                    if not renew(order_id,owner):return
+                except Exception:logging.exception('Research lease renewal failed')
+        heartbeat_thread=threading.Thread(target=heartbeat,name='research-lease',daemon=True);heartbeat_thread.start()
         try:
-            with SessionLocal() as db:
-                AI_CONCIERGE_PROVIDER.process_ticket(order_id,db)
+            if attempts>MAX_ATTEMPTS:
+                ai_fallback(order_id,'Research could not recover after repeated interruptions.',lease_owner=owner)
+            else:
+                with SessionLocal() as db:AI_CONCIERGE_PROVIDER.process_ticket(order_id,db,lease_owner=owner)
         except Exception:
-            logging.exception("Concierge worker failed for order %s",order_id)
-            ai_fallback(order_id,"Research could not be completed.")
+            logging.exception('Concierge worker failed')
+            ai_fallback(order_id,'Research could not be completed.',lease_owner=owner)
         finally:
-            with _ai_jobs_lock:
-                _ai_jobs.discard(order_id)
-    if _ai_executor is None:
-        with _ai_jobs_lock:
-            _ai_jobs.discard(order_id)
-        ai_fallback(order_id,"Research is shutting down.")
-        return
-    try:
-        _ai_executor.submit(work)
+            heartbeat_stop.set();heartbeat_thread.join(2)
+            try:finish(order_id,owner)
+            finally:
+                with _ai_jobs_lock:_ai_jobs.discard(order_id)
+    try:_ai_executor.submit(work)
     except RuntimeError:
-        with _ai_jobs_lock:
-            _ai_jobs.discard(order_id)
-        ai_fallback(order_id,"Research is shutting down.")
+        # Keep the durable intent queued for the next process, rather than lose it.
+        finish(order_id,owner,'queued')
+        with _ai_jobs_lock:_ai_jobs.discard(order_id)
 
 def stop_workers():
-    global _ai_executor
+    global _ai_executor,_dispatcher_thread
+    _dispatcher_stop.set()
+    if _dispatcher_thread:_dispatcher_thread.join(3);_dispatcher_thread=None
     if _ai_executor is not None:
-        _ai_executor.shutdown(wait=True,cancel_futures=True)
-        _ai_executor=None
-    with _ai_jobs_lock:
-        _ai_jobs.clear()
+        _ai_executor.shutdown(wait=True,cancel_futures=True);_ai_executor=None
+    with _ai_jobs_lock:_ai_jobs.clear()
 
 @app.get("/api/orders/{order_id}/payment-qr")
 def payment_qr(order_id: str, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -1606,3 +1667,53 @@ def average_seconds(db,column):
     else:
         delta=func.extract("epoch",column-models.Order.created_at)
     return float(db.query(func.avg(delta)).filter(column!=None).scalar() or 0)
+
+
+class ReadOptions(StrictRequest):
+    model_config=ConfigDict(extra='forbid')
+    limit: int = Field(50,ge=1,le=100)
+    offset: int = Field(0,ge=0,le=1000000)
+    summary_only: bool = False
+    active_only: bool = False
+    status_filter: Optional[str] = Field(None,max_length=50)
+    before: Optional[str] = Field(None,max_length=512)
+    after: Optional[str] = Field(None,max_length=512)
+
+class ReadOperation(StrictRequest):
+    model_config=ConfigDict(extra='forbid')
+    path: str = Field(...,max_length=100)
+    options: ReadOptions = Field(default_factory=ReadOptions)
+
+class ReadBatch(StrictRequest):
+    model_config=ConfigDict(extra='forbid')
+    reads: List[ReadOperation] = Field(...,min_length=1,max_length=8)
+
+@app.post('/api/read-batch')
+def read_batch(data: ReadBatch,current_user: models.User=Depends(get_current_user),db: Session=Depends(get_db)):
+    # This allowlist deliberately excludes mutations, dynamic paths and arbitrary HTTP forwarding.
+    routes={
+        '/api/addresses':(list_addresses,None,()),
+        '/api/orders':(get_order_history,None,('limit','offset','active_only','summary_only','before')),
+        '/api/moderator/queue':(get_moderator_queue,['ADMIN','MODERATOR'],('limit','offset','summary_only','status_filter','after')),
+        '/api/admin/dashboard/metrics':(get_dashboard_metrics,['ADMIN','MODERATOR'],()),
+        '/api/admin/settings/orders':(get_order_setting,['ADMIN'],()),
+        '/api/admin/settings/maintenance':(get_maintenance,['ADMIN'],()),
+        '/api/admin/delivery-config':(get_delivery_config,['ADMIN'],()),
+        '/api/admin/settings/ai-status':(lambda current_user,db:get_global_ai_status(db),['ADMIN','MODERATOR'],()),
+        '/api/admin/moderators':(list_moderators,['ADMIN','MODERATOR'],()),
+        '/api/admin/customers':(list_customers,['ADMIN'],()),
+    }
+    results=[]
+    for operation in data.reads:
+        try:
+            route=routes.get(operation.path)
+            if route is None:raise HTTPException(422,'Unsupported read operation')
+            handler,roles,fields=route
+            if roles:require_role(roles)(current_user)
+            supplied=operation.options.model_dump(exclude_unset=True)
+            if set(supplied)-set(fields):raise HTTPException(422,'Unsupported read parameters')
+            values=operation.options.model_dump()
+            result=handler(current_user=current_user,db=db,**{key:values[key] for key in fields})
+            results.append({'status':200,'data':result})
+        except HTTPException as error:results.append({'status':error.status_code,'data':{'detail':error.detail}})
+    return {'results':results}

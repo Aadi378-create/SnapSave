@@ -22,7 +22,7 @@ from contextlib import asynccontextmanager
 from decimal import Decimal
 from zoneinfo import ZoneInfo
 from sqlalchemy.exc import IntegrityError
-from settings import BASE_DIR, dev_auth_enabled, research_enabled, ACTIVE_STATUSES, STORES
+from settings import BASE_DIR, dev_auth_enabled, research_enabled, flag, ACTIVE_STATUSES, STORES
 from migrations import migrate
 from core.order_policy import staff_access, read_access, require_state, change_order, has_human_prices, message as order_message
 from pricing.quotes import money, quote_items, totals as preview_totals, final_amount, store_id
@@ -551,13 +551,21 @@ def create_order(order_data: OrderCreate, current_user: models.User = Depends(ge
         raise HTTPException(404, "Delivery address not found")
     entries = order_data.items or []
     if not entries and order_data.items_text:
+        from core.basket_parser import parse_basket_input
+        if len(parse_basket_input(order_data.items_text))>100:
+            raise HTTPException(422,'Provide between 1 and 100 grocery items')
         for item in build_cart_from_text(order_data.items_text):
-            entries.append(OrderItemInput(name=clean_item_name(item["original_query"],item["quantity"]), quantity=item["quantity"]))
+            name=clean_item_name(item['original_query'],item['quantity'])
+            if not 1<=len(name)<=255 or not 1<=item['quantity']<=1000:
+                raise HTTPException(422,'Each item needs a name of at most 255 characters and quantity between 1 and 1000')
+            entries.append(OrderItemInput(name=name,quantity=item['quantity']))
     if not entries or len(entries)>100 or any(not i.name.strip() for i in entries):
         raise HTTPException(422, "Provide between 1 and 100 grocery items")
     worker=db.get(models.User,current_user.assigned_moderator_id) if current_user.assigned_moderator_id else None
     assigned=worker.id if worker and worker.role in {'MODERATOR','ADMIN'} and not worker.is_blacklisted else None
-    row = models.Order(user_id=current_user.id, address_id=address.id, request_key=idempotency_key, request_hash=request_hash, assigned_moderator_id=assigned, store="pending", status="pending_review", delivery_street=address.street_address, delivery_city=address.city, delivery_postal_code=address.postal_code, subtotal=0, delivery_fee=0, platform_fee=0, final_price=0)
+    ai_setting=db.get(models.SystemSetting,'ai_enabled')
+    automatic=bool(flag('AUTO_RESEARCH_NEW_ORDERS') and research_enabled() and ai_setting and ai_setting.value=='true')
+    row = models.Order(user_id=current_user.id, address_id=address.id, request_key=idempotency_key, request_hash=request_hash, assigned_moderator_id=assigned, store="pending", status="pending_review", delivery_street=address.street_address, delivery_city=address.city, delivery_postal_code=address.postal_code, subtotal=0, delivery_fee=0, platform_fee=0, final_price=0,mode='HYBRID' if automatic else 'HUMAN',assigned_worker_type='AI' if automatic else 'HUMAN')
     db.add(row)
     db.flush()
     for item in entries:
@@ -574,6 +582,10 @@ def create_order(order_data: OrderCreate, current_user: models.User = Depends(ge
         if not existing or existing.request_hash!=request_hash:
             raise HTTPException(409,"Order could not be saved; check the retry key")
         row = existing
+        automatic=False
+    if automatic:
+        submit_ai(row.id)
+        db.refresh(row)
     return serialize_order(row,current_user)
 
 
@@ -874,7 +886,8 @@ def research_location_plan(order_id: str, current_user: models.User = Depends(re
 
 @app.post("/api/moderator/orders/{order_id}/research-evidence")
 def import_research_evidence(order_id: str, data: ResearchCaptureSubmission, current_user: models.User = Depends(require_role(["ADMIN","MODERATOR"])), db: Session = Depends(get_db)):
-    from core.catalog_research import BrowserCaptureClient, research_catalog, ResearchUnavailable, capture_location
+    from core.catalog_research import BrowserCaptureClient, ResearchUnavailable, capture_location
+    from core.order_research import research_basket, merge_browser_evidence
     row=load_order(db,order_id);staff_access(row,current_user)
     require_state(row,{"pending_review","reviewing"})
     if row.revision!=data.revision:raise HTTPException(409,'Order changed. Copy a new research context and recapture.')
@@ -885,7 +898,7 @@ def import_research_evidence(order_id: str, data: ResearchCaptureSubmission, cur
                 raise ResearchUnavailable('Evidence must be captured with this order ID, revision and postcode')
         if any(capture_location(context,row.delivery_postal_code)['status']=='needs_location' for context in client.locations.values()):
             raise ResearchUnavailable('Select the retailer location and confirm this customer postcode before importing')
-        draft=research_catalog([{'item_id':i.id,'name':i.name,'quantity':i.quantity} for i in row.items],row.delivery_postal_code,client)
+        draft=research_basket([{'item_id':i.id,'name':i.name,'quantity':i.quantity} for i in row.items],row.delivery_postal_code,client)
         if any(d.get('status')=='unavailable' for d in draft['diagnostics']):
             raise ResearchUnavailable('Capture has a location mismatch or unavailable source. Check the retailer location and recapture.')
     except (ValueError,TypeError) as exc:
@@ -893,7 +906,7 @@ def import_research_evidence(order_id: str, data: ResearchCaptureSubmission, cur
     try:existing=json.loads(row.manual_prices or '{}')
     except ValueError:raise HTTPException(409,'Existing pricing draft is invalid; review it before importing evidence')
     if not isinstance(existing,dict):raise HTTPException(409,'Existing pricing draft is invalid')
-    existing['research_draft']=draft
+    existing['research_draft']=merge_browser_evidence(existing.get('research_draft'),draft)
     encoded=json.dumps(existing)
     if len(encoded.encode())>200000:raise HTTPException(422,'Research evidence exceeds the supported size')
     change_order(db,row,manual_prices=encoded,assigned_worker_type='HUMAN',ai_stopped_at=utcnow(),mode='HYBRID' if row.mode=='AI' else row.mode)
@@ -1425,6 +1438,14 @@ def serialize_order(row, viewer=None):
     result["items"]=serialize_order_items(row)
     result["payment_uri"]=payment_uri(row) if row.status=="awaiting_payment" else None
     result['requires_claim']=bool(viewer and viewer.role=='MODERATOR' and row.assigned_moderator_id is None and row.user_id!=viewer.id)
+    if row.status in {'pending_review','reviewing'}:
+        from core.order_research import research_summary
+        try:research=json.loads(row.manual_prices or '{}').get('research_draft')
+        except (ValueError,AttributeError):research=None
+        if research:
+            result['research']=research_summary(research)
+        elif row.assigned_worker_type=='AI':
+            result['research']={'state':'queued','matched_items':0,'total_items':len(row.items),'missing_items':len(row.items),'requires_human_review':True}
     staff_view=viewer and not viewer.is_blacklisted and (viewer.role=='ADMIN' or (viewer.role=='MODERATOR' and row.assigned_moderator_id==viewer.id))
     if viewer and not staff_view:
         for key in ("store_cost","profit","ai_error","manual_prices"):

@@ -40,10 +40,19 @@ class AI_CONCIERGE_PROVIDER:
         order=db.get(models.Order,order_id)
         items=[{"item_id":i.id,"name":i.name,"quantity":i.quantity} for i in order.items]
         location=order.delivery_postal_code
+        previous_prices=order.manual_prices
         db.rollback() # Do not retain a transaction/connection while researching.
         draft=None;rows=None
         try:
             quote=AI_CONCIERGE_PROVIDER.research(items,location)
+            if isinstance(quote,dict) and quote.get('transport')=='browser_pending':
+                from core.order_research import merge_browser_evidence
+                try:previous=json.loads(previous_prices or '{}').get('research_draft')
+                except (ValueError,AttributeError):previous=None
+                quote=merge_browser_evidence(previous,quote)
+                if any(item['candidates'] for item in quote['items']):
+                    quote['transport']='browser_capture'
+                    quote['source']='Fresh order-bound browser evidence'
             if isinstance(quote,dict) and quote.get("requires_human_review") is True and quote.get("verified") is False:
                 contexts=quote.get('research_contexts',[])
                 if not isinstance(contexts,list) or any(not isinstance(context,dict) or context.get('order_id')!=order_id or context.get('revision')!=version or context.get('postal_code')!=location for context in contexts):
@@ -91,7 +100,10 @@ class AI_CONCIERGE_PROVIDER:
         db.expire_all()
         current=db.get(models.Order,order_id)
         if draft is not None:
-            message(db,current,"Catalogue research is ready for human review. Prices, delivery coverage and fees have not been confirmed." if any(i.get("candidates") for i in draft["items"]) else "Public sources did not provide usable product evidence. A concierge will price this order manually.")
+            if draft.get('transport')=='browser_pending':
+                message(db,current,"Your grocery list is ready for retailer research. Your concierge will check the requested products and delivery area before sending a quote.")
+            else:
+                message(db,current,"Catalogue research is ready for human review. Prices, delivery coverage and fees have not been confirmed." if any(i.get("candidates") for i in draft["items"]) else "Public sources did not provide usable product evidence. A concierge will price this order manually.")
         elif rows:
             by_id={i.id:i for i in current.items}
             for i in rows:

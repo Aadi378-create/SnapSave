@@ -111,6 +111,22 @@ The authenticated import endpoint checks staff assignment, order state, revision
 
 The optional **SnapSave Retailer Capture** Edge toolbar helper packages the same exporter for an explicit click on a supported public retailer tab. Build/install instructions and its temporary permissions are in `SnapSave-Backend/tools/retailer-capture-extension/README.md`. The user installed it during the 25 October follow-up: real downloaded files produced 30 Zepto, 30 Instamart and 20 Blinkit parsed products. Blinkit and Instamart were selected to the user-authorized Kudasan locality; Zepto's locality search returned no match. These samples do not establish exact-postcode coverage or checkout availability. See `audit/2026-10-25/retailer-browser-resolution/REPORT.md` for observation times and limitations. The management ticket's context-copy instructions now describe the toolbar-to-import workflow.
 
+### Automatic research for new grocery lists
+
+For the browser-assisted workflow, configure:
+
+```dotenv
+ENABLE_LIVE_RESEARCH=true
+AUTO_RESEARCH_NEW_ORDERS=true
+RESEARCH_PROVIDER=core.order_research:prepare_research
+```
+
+Restart the backend and enable the existing administrator AI switch. A new typed or structured list now automatically starts HYBRID research through the background executor. The built-in planner prepares every item without making blocked retailer requests or inventing prices. Use commas, newlines, semicolons or `and` between items; up to 100 items are supported. Normal messages on an existing order remain chat, not silent changes to its grocery list.
+
+The customer sees research progress; the staff ticket lists every requested item with a **Copy item query** control. Staff navigate to relevant permitted retailer product/category pages, select the delivery area, capture fresh evidence with the toolbar helper using the ticket context, and import it. Successive captures retain fresh evidence from other sources; recapturing one source replaces its prior candidates. Evidence expires after 15 minutes. Missing products remain explicit research tasks, including unsupported names/languages; this is not an unrestricted conversational language model or a guarantee of every retailer's inventory.
+
+The order remains in review and no candidate price is automatically converted to a payable quote. Actual amounts, quantities, packs, stock, serviceability and checkout fees require staff verification. The global AI switch stops automatic planning; existing human quotes stay protected. The previous locality restrictions, especially Zepto's unresolved Kudasan search, still apply. See `audit/2026-10-25/automatic-order-research/REPORT.md` for the integration checks and local enablement.
+
 Legacy scraping adapters remain disabled. Configuring a research callable does not enable a functioning live scraper for `/deal` or `/optimize-cart`; they safely report unavailable/incomplete data. Provider integration and checkout require live integration validation.
 
 Research uses two in-process workers and at most twenty outstanding orders. Use one API process with this executor; move research to a shared durable queue before using multiple API processes with AI enabled. SQLite serializes writers. JSON learning stores, caches and request limits are local to each process. Production capacity needs deployment measurements and appropriate shared database/cache/queue infrastructure.

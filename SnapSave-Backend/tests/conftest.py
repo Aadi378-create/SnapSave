@@ -10,6 +10,7 @@ sys.path.insert(0,str(BACKEND))
 os.environ["APP_ENV"]="test"
 os.environ["ENABLE_DEV_AUTH"]="true"
 os.environ["ENABLE_LIVE_RESEARCH"]="false"
+os.environ["AUTO_RESEARCH_NEW_ORDERS"]="false"
 os.environ["UPI_ID"]="audit@upi"
 TEMP=tempfile.TemporaryDirectory(prefix="snapsave-tests-")
 os.environ["DATABASE_URL"]="sqlite:///"+str(Path(TEMP.name)/"tests.db").replace("\\","/")

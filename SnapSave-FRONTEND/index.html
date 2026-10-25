@@ -1586,6 +1586,11 @@
               <span class="badge ${order.status}">${order.status.replace(/_/g, " ")}</span>
             </div>
 
+            ${order.research ? `<div class="research-progress" role="status" style="font-size:12px;line-height:1.6;margin-top:12px;">
+              <strong>Product research</strong><br>
+              ${order.research.state==='queued' ? 'Preparing your grocery list for research.' : order.research.state==='ready_for_review' ? 'Product matches found. Your concierge is verifying prices and availability.' : order.research.state==='needs_refresh' ? 'Product evidence needs refreshing. Your concierge will recheck it.' : `${Number(order.research.matched_items)||0} of ${Number(order.research.total_items)||0} items have product matches. Your concierge is checking the remaining items.`}
+              <br><span style="color:var(--text-muted)">A verified quote will appear here when ready.</span>
+            </div>` : ''}
             <div class="order-stepper">
               <div class="step-item ${curIdx >= 0 ? (curIdx === 0 ? "active" : "completed") : ""}">1. List Submitted</div>
               <div class="step-item ${curIdx >= 1 ? (curIdx === 1 ? "active" : "completed") : ""}">2. Concierge Scanning Stores</div>

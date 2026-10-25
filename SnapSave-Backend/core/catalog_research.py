@@ -453,7 +453,7 @@ def research_catalog(items,postal_code,client=None):
                             raise ResearchUnavailable('Retailer location postcode does not match this order')
                         rows=matching_candidates(query,parsed_pages[key])
                         for row in rows:
-                            candidates.append({**row,'store':store,'location_context':location,**({'observed_at':client.observed_at[key]} if captured else {})})
+                            candidates.append({**row,'store':store,'capture_url':url,'location_context':location,**({'observed_at':client.observed_at[key]} if captured else {})})
                         diagnostics.append({'store':store,'url':url,'status':'candidates' if rows else 'no_product_evidence','count':len(rows)})
                     except ResearchUnavailable as exc:
                         diagnostics.append({'store':store,'url':url,'status':'unavailable','reason':str(exc)})

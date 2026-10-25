@@ -31,6 +31,11 @@ def research(items,postal_code):
         draft=research_basket(items,postal_code,client)
     finally:
         client.close()
+    # Repeated failed URLs affect many basket items; one source diagnostic suffices.
+    unique={}
+    for diagnostic in draft['diagnostics']:
+        unique.setdefault((diagnostic.get('store'),diagnostic.get('url'),diagnostic.get('status')),diagnostic)
+    draft['diagnostics']=list(unique.values())
     found=sum(bool(item['candidates']) for item in draft['items'])
     draft.update(autonomous_attempt=True, handover_reason=(
         'Automatic retailer requests returned no matching product evidence. See retailer diagnostics.' if not found else

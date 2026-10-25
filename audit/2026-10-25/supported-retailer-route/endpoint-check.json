@@ -1,0 +1,12 @@
+{
+  "checked_date_ist": "2026-10-25",
+  "oauth_metadata_status": 200,
+  "resource_metadata_status": 200,
+  "instamart_initialize_without_account_status": 401,
+  "authorization_endpoint": "https://mcp.swiggy.com/auth/authorize",
+  "registration_endpoint": "https://mcp.swiggy.com/auth/register",
+  "token_endpoint": "https://mcp.swiggy.com/auth/token",
+  "instamart_endpoint": "https://mcp.swiggy.com/im",
+  "authorization_granted": false,
+  "live_products_received": false
+}

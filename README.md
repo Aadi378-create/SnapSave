@@ -145,6 +145,12 @@ The frontend now avoids reopening delivered orders on login, loads empty history
 
 The local maintenance command `reset_development_orders.py --confirm-development-orders-reset` is for an explicitly authorized development reset with the API stopped. It first integrity-checks a private SQLite snapshot, then transactionally removes orders, their items/messages/feedback/incidents and resets completion counters. Accounts, administrator roles, addresses and configuration are retained. Never use this as a production cleanup job; backups contain private data and stay out of Git.
 
+## Official Instamart connection (prepared, not activated)
+
+Swiggy now documents an official Instamart MCP product-search interface: https://mcp.swiggy.com/builders/docs/reference/instamart/search_products/. The endpoint is reachable and requires OAuth. The new `connect_swiggy.py --prepare` check validates local readiness without authorizing an account. Actual connection must be approved and completed by the account owner through the official phone/OTP/consent screen.
+
+The search-only client rejects cart/order/address calls and protects tokens using Windows DPAPI in ignored local storage. Swiggy's upstream OAuth scope itself is broader than read-only, which must be disclosed before consent. Live product responses and verified location/price units must be checked before this client replaces the order research provider. No automatic provider switch has been made, and no account token belongs in chat, Git or frontend configuration. See `audit/2026-10-25/supported-retailer-route/REPORT.md`.
+
 ## Verification
 
 ```powershell

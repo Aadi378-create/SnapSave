@@ -3266,7 +3266,7 @@
           const state=document.createElement('p');state.style.cssText='font-size:12px;line-height:1.6;margin-top:10px;';
           state.textContent=order.ai_error || (order.assigned_worker_type==='AI' ? 'Research is running automatically. No capture or import is required.' : 'Automatic research could not verify this basket. Human takeover is required.');
           panel.append(title,state);
-          for(const diagnostic of (draft?.diagnostics||[]).slice(0,15)) {
+          for(const diagnostic of [...new Map((draft?.diagnostics||[]).map(d=>[[d.store,d.url,d.status].join('|'),d])).values()].slice(0,15)) {
             const line=document.createElement('p');line.style.cssText='font-size:12px;line-height:1.5;margin-top:8px;';
             line.textContent=String(diagnostic.store||'Retailer')+': '+String(diagnostic.reason||diagnostic.status||'Needs review');panel.append(line);
           }
@@ -3301,6 +3301,7 @@
           };
         }
         if(!draft || !Array.isArray(draft.items))return;
+        if(autonomous && !draft.items.some(item=>item.candidates?.length))return;
         panel.hidden=false;
         const heading=document.createElement('h4');heading.textContent='Catalogue research · needs verification';panel.append(heading);
         const note=document.createElement('p');note.style.cssText='font-size:12px;color:var(--text-muted);line-height:1.5;margin:10px 0;';

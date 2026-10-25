@@ -1,0 +1,14 @@
+{
+  "checked_at": "2026-10-25T16:55:01.3624261+05:30",
+  "api": 200,
+  "status": {
+    "maintenance_mode": false,
+    "orders_enabled": true,
+    "dev_auth_enabled": false,
+    "research_available": true
+  },
+  "customer": 200,
+  "admin": 200,
+  "unauthenticated_orders": 401,
+  "private_env": 404
+}

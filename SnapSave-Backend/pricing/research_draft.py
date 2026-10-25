@@ -13,8 +13,15 @@ from pricing.quotes import money
 
 
 def pack_size(text):
+    # A bundle or choice is not a single sellable pack. Leave it for review.
+    if re.search(r'\d\s*[x×*]\s*\d|[x×*]\s*\d\s*$|\bor\b|\bplus\b|\+',text,re.I):
+        return None
     parsed=parse_query(text)
     if parsed['volume'] is not None:
+        bundle=re.search(r'\bpack\s+of\s+(\d+)\b',text,re.I)
+        if bundle and int(bundle[1])!=1:return None
+        counts=re.findall(r'\b(\d+)\s*(?:packs?|packets?|bottles?|pouches?|cans?|boxes|pcs|pieces)\b',text,re.I)
+        if any(int(count)!=1 for count in counts):return None
         amount=Decimal(str(parsed['volume']));unit=parsed['unit']
         if amount<=0:return None
         return (amount*1000,'g') if unit=='kg' else (amount*1000,'ml') if unit=='l' else (amount,unit)

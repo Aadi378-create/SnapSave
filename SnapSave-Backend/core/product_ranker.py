@@ -3,11 +3,22 @@ from core.categories_parser import detect_category
 from pricing.quotes import money
 from fastapi import HTTPException
 
+def product_words(text):
+    """Ignore pack measurements/counts while retaining numeric brand/variant names."""
+    text=text.lower()
+    number=r'\d+(?:\.\d+)?'
+    text=re.sub(r'\b(?:under|below|less\s+than)\s*(?:(?:rs\.?|rupees)\s*|₹\s*)?'+number,' ',text)
+    text=re.sub(number+r'\s*(?:kg|gm|g|ml|litres?|liters?|ltr|l)\b',' ',text)
+    text=re.sub(r'\bpack\s+of\s+\d+\b|\b\d+\s*(?:pcs|pieces|packs?|packets?)\b',' ',text)
+    text=re.sub(r'^\s*\d+\s*(?:x\b|×|\*)',' ',text)
+    text=re.sub(number+r'\s*(?:(?:rs|rupees)\b|₹)|(?:rs\.?|₹)\s*'+number,' ',text)
+    return set(re.findall(r'\b[a-z0-9]+(?:\.\d+)?\b',text))
+
 def score_product(query, product_name):
 
     ignored={"x","l","ltr","litre","liter","litres","liters","kg","g","gm","ml","of","and","a","the","under","below","less","than","rs","rupees","packet","packets","pack","packs","pcs","pieces"}
-    q_words = set(re.findall(r"\b[a-z]+\b",query.lower()))-ignored
-    p_words = set(re.findall(r"\b[a-z]+\b",product_name.lower()))-ignored
+    q_words = product_words(query)-ignored
+    p_words = product_words(product_name)-ignored
     category=detect_category(query)
     if category and category not in product_name.lower():
         return 0

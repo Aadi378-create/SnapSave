@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="6" skipped="0" tests="9" time="3.693" timestamp="2026-10-25T16:50:02.514612+05:30" hostname="DESKTOP-41IMKUB"><testcase classname="tests.test_research_price_draft" name="test_requested_bundles_and_alternative_sizes_are_not_priced_as_one_pack[Amul milk 2 x 500 ml]" time="0.297"><failure message="assert (not True)">name = 'Amul milk 2 x 500 ml'
+
+    @pytest.mark.parametrize('name',[
+        'Amul milk 2 x 500 ml','Amul milk 500 ml x 2',
+        'Amul milk 500 ml pack of 2','Amul milk 1 L or 500 ml',
+        'Amul milk 500 ml + 500 ml',
+    ])
+    def test_requested_bundles_and_alternative_sizes_are_not_priced_as_one_pack(name):
+        result=proposal([candidate(pack_size='500 ml')],name=name)
+&gt;       assert not result['complete'] and result['subtotal'] is None
+E       assert (not True)
+
+tests\test_research_price_draft.py:68: AssertionError</failure></testcase><testcase classname="tests.test_research_price_draft" name="test_requested_bundles_and_alternative_sizes_are_not_priced_as_one_pack[Amul milk 500 ml x 2]" time="0.377"><failure message="assert (not True)">name = 'Amul milk 500 ml x 2'
+
+    @pytest.mark.parametrize('name',[
+        'Amul milk 2 x 500 ml','Amul milk 500 ml x 2',
+        'Amul milk 500 ml pack of 2','Amul milk 1 L or 500 ml',
+        'Amul milk 500 ml + 500 ml',
+    ])
+    def test_requested_bundles_and_alternative_sizes_are_not_priced_as_one_pack(name):
+        result=proposal([candidate(pack_size='500 ml')],name=name)
+&gt;       assert not result['complete'] and result['subtotal'] is None
+E       assert (not True)
+
+tests\test_research_price_draft.py:68: AssertionError</failure></testcase><testcase classname="tests.test_research_price_draft" name="test_requested_bundles_and_alternative_sizes_are_not_priced_as_one_pack[Amul milk 500 ml pack of 2]" time="0.389"><failure message="assert (not True)">name = 'Amul milk 500 ml pack of 2'
+
+    @pytest.mark.parametrize('name',[
+        'Amul milk 2 x 500 ml','Amul milk 500 ml x 2',
+        'Amul milk 500 ml pack of 2','Amul milk 1 L or 500 ml',
+        'Amul milk 500 ml + 500 ml',
+    ])
+    def test_requested_bundles_and_alternative_sizes_are_not_priced_as_one_pack(name):
+        result=proposal([candidate(pack_size='500 ml')],name=name)
+&gt;       assert not result['complete'] and result['subtotal'] is None
+E       assert (not True)
+
+tests\test_research_price_draft.py:68: AssertionError</failure></testcase><testcase classname="tests.test_research_price_draft" name="test_requested_bundles_and_alternative_sizes_are_not_priced_as_one_pack[Amul milk 1 L or 500 ml]" time="0.383" /><testcase classname="tests.test_research_price_draft" name="test_requested_bundles_and_alternative_sizes_are_not_priced_as_one_pack[Amul milk 500 ml + 500 ml]" time="0.399"><failure message="assert (not True)">name = 'Amul milk 500 ml + 500 ml'
+
+    @pytest.mark.parametrize('name',[
+        'Amul milk 2 x 500 ml','Amul milk 500 ml x 2',
+        'Amul milk 500 ml pack of 2','Amul milk 1 L or 500 ml',
+        'Amul milk 500 ml + 500 ml',
+    ])
+    def test_requested_bundles_and_alternative_sizes_are_not_priced_as_one_pack(name):
+        result=proposal([candidate(pack_size='500 ml')],name=name)
+&gt;       assert not result['complete'] and result['subtotal'] is None
+E       assert (not True)
+
+tests\test_research_price_draft.py:68: AssertionError</failure></testcase><testcase classname="tests.test_research_price_draft" name="test_numeric_product_variants_are_not_treated_as_the_same_product[7 Up 750 ml-8 Up 750 ml]" time="0.406"><failure message="AssertionError: assert 1 == 0&#10; +  where 1 = &lt;function score_product at 0x000001FD374B5900&gt;('7 Up 750 ml', '8 Up 750 ml')">query = '7 Up 750 ml', product = '8 Up 750 ml'
+
+    @pytest.mark.parametrize('query,product',[
+        ('7 Up 750 ml','8 Up 750 ml'),
+        ('7up 750 ml','8up 750 ml'),
+        ('Milk 1% fat 1 L','Milk 3% fat 1 L'),
+    ])
+    def test_numeric_product_variants_are_not_treated_as_the_same_product(query,product):
+        from core.product_ranker import score_product
+&gt;       assert score_product(query,product)==0
+E       AssertionError: assert 1 == 0
+E        +  where 1 = &lt;function score_product at 0x000001FD374B5900&gt;('7 Up 750 ml', '8 Up 750 ml')
+
+tests\test_research_price_draft.py:78: AssertionError</failure></testcase><testcase classname="tests.test_research_price_draft" name="test_numeric_product_variants_are_not_treated_as_the_same_product[7up 750 ml-8up 750 ml]" time="0.399" /><testcase classname="tests.test_research_price_draft" name="test_numeric_product_variants_are_not_treated_as_the_same_product[Milk 1% fat 1 L-Milk 3% fat 1 L]" time="0.402"><failure message="AssertionError: assert 2 == 0&#10; +  where 2 = &lt;function score_product at 0x000001FD374B5900&gt;('Milk 1% fat 1 L', 'Milk 3% fat 1 L')">query = 'Milk 1% fat 1 L', product = 'Milk 3% fat 1 L'
+
+    @pytest.mark.parametrize('query,product',[
+        ('7 Up 750 ml','8 Up 750 ml'),
+        ('7up 750 ml','8up 750 ml'),
+        ('Milk 1% fat 1 L','Milk 3% fat 1 L'),
+    ])
+    def test_numeric_product_variants_are_not_treated_as_the_same_product(query,product):
+        from core.product_ranker import score_product
+&gt;       assert score_product(query,product)==0
+E       AssertionError: assert 2 == 0
+E        +  where 2 = &lt;function score_product at 0x000001FD374B5900&gt;('Milk 1% fat 1 L', 'Milk 3% fat 1 L')
+
+tests\test_research_price_draft.py:78: AssertionError</failure></testcase><testcase classname="tests.test_research_price_draft" name="test_numeric_brand_still_matches_with_equivalent_pack_units" time="0.400" /></testsuite></testsuites>

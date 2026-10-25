@@ -58,6 +58,38 @@ def test_missing_pack_and_multiple_variants_require_a_choice():
     with pytest.raises(ValueError):proposal([candidate(pack_size='500 ml')],selections={'a':0})
 
 
+@pytest.mark.parametrize('name,pack',[
+    ('Amul milk 2 x 500 ml','500 ml'),('Amul milk 500 ml x 2','500 ml'),
+    ('Amul milk 500 ml pack of 2','500 ml'),('Amul milk 1 L or 500 ml','1 L'),
+    ('Amul milk 500 ml + 500 ml','500 ml'),('Amul milk 2 packs 500 ml','500 ml'),
+])
+def test_requested_bundles_and_alternative_sizes_are_not_priced_as_one_pack(name,pack):
+    result=proposal([candidate(pack_size=pack)],name=name)
+    assert not result['complete'] and result['subtotal'] is None
+
+
+@pytest.mark.parametrize('query,product',[
+    ('7 Up 750 ml','8 Up 750 ml'),
+    ('7up 750 ml','8up 750 ml'),
+    ('Milk 1% fat 1 L','Milk 3% fat 1 L'),
+])
+def test_numeric_product_variants_are_not_treated_as_the_same_product(query,product):
+    from core.product_ranker import score_product
+    assert score_product(query,product)==0
+
+
+@pytest.mark.parametrize('brand',['7 Up','7up'])
+def test_numeric_brand_still_matches_with_equivalent_pack_units(brand):
+    from core.product_ranker import score_product
+    assert score_product(brand+' 1000 ml',brand+' 1 L')>0
+
+
+@pytest.mark.parametrize('query',['milk under 20','milk below ₹20','milk less than Rs. 20','milk 20₹','milk ₹20'])
+def test_budget_numbers_are_not_product_variant_numbers(query):
+    from core.product_ranker import score_product
+    assert score_product(query,'milk')>0
+
+
 def test_api_prices_current_order_evidence_but_does_not_publish_a_quote(client,actors,order,automatic):
     created=make_order(client,actors,order['address_id'],items=[{'name':'Amul milk 1 L','quantity':2},{'name':'Epigamia High Protein Paneer 200 g','quantity':1}])
     import_store(client,actors,created['id'],'zepto',zepto_card())

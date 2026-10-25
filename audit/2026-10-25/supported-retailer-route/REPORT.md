@@ -36,3 +36,12 @@ Zepto, Blinkit and BigBasket are not solved by this Instamart integration. No eq
 Repeated source errors are deduplicated across basket items and in the staff display. Automatic failures with zero candidates no longer repeat a second catalogue-verification heading and empty item instructions. These presentation changes do not turn failure into success.
 
 The focused client checks passed **18 tests**. The complete isolated regression suite passed **297 tests**, with one existing Starlette/httpx deprecation warning (`full-tests.xml`). Source validation passed for 128 Python files, eight application JavaScript scripts and hosting JSON. An initial full-suite command from the repository root picked up archived scraper scripts outside the configured test suite; it failed during collection. The full regression command was corrected to run from `SnapSave-Backend`, where `pytest.ini` restricts collection to the isolated `tests` directory. No archived scraper request succeeded or database reset was performed in this turn.
+
+
+## Live sign-in attempt after owner approval
+
+The owner approved opening the official Swiggy sign-in. The helper completed documented public client registration and opened the authorization URL using its own random state and PKCE challenge. A transient DNS failure delayed loading; no network settings were changed. The page eventually loaded and explicitly reported **“Local Application isn't whitelisted yet”**. It did not present a usable phone/OTP form for this client. No account was linked, no phone/OTP was submitted, and no account token or product data was received. The unused loopback callback listener was stopped.
+
+The developer quickstart's self-serve wording did not establish usable live access for this custom client. Swiggy's more specific access/onboarding guide states that redirect allowlisting is required for staging, which uses seeded data, and that production has separate approval. See https://mcp.swiggy.com/builders/docs/operate/access/. Do not spoof an approved client's identity or claim staging prices are live retailer prices.
+
+`live-signin-result.json` and `swiggy-client-blocked.png` record this result without OAuth state, verifier, authorization code, account information or tokens. `SWIGGY_ACCESS_REQUEST_DRAFT.md` is an unsent draft for the owner to review and complete. No application, email or GitHub issue was submitted. The official route remains blocked on provider allowlisting; the client is not activated in SnapSave's order worker.

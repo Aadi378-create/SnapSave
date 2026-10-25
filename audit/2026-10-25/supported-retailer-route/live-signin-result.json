@@ -1,0 +1,12 @@
+{
+  "date_ist": "2026-10-25",
+  "public_client_registration_returned": true,
+  "oauth_page_loaded": true,
+  "page_title": "Swiggy - Sign in to continue",
+  "result": "client_not_whitelisted",
+  "visible_message": "Oops, Local Application isn't whitelisted yet",
+  "phone_or_otp_submitted": false,
+  "account_connected": false,
+  "new_tokens_received": false,
+  "local_callback_listener_stopped": true
+}
